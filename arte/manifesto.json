@@ -1,6 +1,6 @@
 {
   "gerado_por": "npm run arte",
-  "total": 116,
+  "total": 138,
   "arquivos": {
     "aranha-filhote.png": {
       "hash": "73b3d6cc5fac3ef6",
@@ -23,6 +23,12 @@
     "aranha-pequena.png": {
       "hash": "aaf936064aade6e6",
       "bytes": 2345,
+      "largura": 96,
+      "altura": 256
+    },
+    "aranha.png": {
+      "hash": "84bcdee66d279a7b",
+      "bytes": 2381,
       "largura": 96,
       "altura": 256
     },
@@ -56,11 +62,41 @@
       "largura": 5,
       "altura": 16
     },
+    "brasanegra.png": {
+      "hash": "4704f6534d7c8996",
+      "bytes": 19692,
+      "largura": 288,
+      "altura": 384
+    },
+    "bruxa.png": {
+      "hash": "3750c0999c676466",
+      "bytes": 3552,
+      "largura": 96,
+      "altura": 256
+    },
+    "cavaleiro-cinzas.png": {
+      "hash": "0e366f4b37bd8e0d",
+      "bytes": 4155,
+      "largura": 144,
+      "altura": 320
+    },
+    "cursor.png": {
+      "hash": "0df80daf4a9a546e",
+      "bytes": 868,
+      "largura": 208,
+      "altura": 16
+    },
+    "espantalho.png": {
+      "hash": "e3e8ca1e7bdaf86d",
+      "bytes": 4067,
+      "largura": 96,
+      "altura": 256
+    },
     "fonte.png": {
-      "hash": "d082115f02bf683a",
-      "bytes": 1033,
-      "largura": 256,
-      "altura": 25
+      "hash": "4921c647d9df7088",
+      "bytes": 1221,
+      "largura": 128,
+      "altura": 40
     },
     "goblin-chefe.png": {
       "hash": "d61fadd2ef767cd3",
@@ -91,6 +127,12 @@
       "bytes": 3569,
       "largura": 96,
       "altura": 256
+    },
+    "grulo.png": {
+      "hash": "703c125d5b58a0f3",
+      "bytes": 6163,
+      "largura": 144,
+      "altura": 320
     },
     "heroi-bracos-anao-0.png": {
       "hash": "51c1650b16129348",
@@ -350,6 +392,18 @@
       "largura": 96,
       "altura": 256
     },
+    "icones.png": {
+      "hash": "e780c393596d099a",
+      "bytes": 1332,
+      "largura": 272,
+      "altura": 16
+    },
+    "lobo-nevoa.png": {
+      "hash": "3503902f4e0d6352",
+      "bytes": 3936,
+      "largura": 96,
+      "altura": 256
+    },
     "logo.png": {
       "hash": "59ab17917bce4452",
       "bytes": 30766,
@@ -446,6 +500,12 @@
       "largura": 56,
       "altura": 72
     },
+    "objetos/arvore-raio.png": {
+      "hash": "09abcbc4e98cc171",
+      "bytes": 453,
+      "largura": 38,
+      "altura": 58
+    },
     "objetos/arvore.png": {
       "hash": "358c22b078cf6417",
       "bytes": 1044,
@@ -488,6 +548,18 @@
       "largura": 16,
       "altura": 20
     },
+    "objetos/cogumelo-azul.png": {
+      "hash": "61f3777d18b8b107",
+      "bytes": 250,
+      "largura": 18,
+      "altura": 14
+    },
+    "objetos/cogumelo.png": {
+      "hash": "b28eee0e7a45cb23",
+      "bytes": 285,
+      "largura": 18,
+      "altura": 14
+    },
     "objetos/ferraria.png": {
       "hash": "2376c6f5820f9c3e",
       "bytes": 815,
@@ -499,6 +571,30 @@
       "bytes": 276,
       "largura": 20,
       "altura": 18
+    },
+    "objetos/grande-ouvinte.png": {
+      "hash": "ee0738706dcb115b",
+      "bytes": 1272,
+      "largura": 84,
+      "altura": 112
+    },
+    "objetos/pedra-musgo.png": {
+      "hash": "a47425bf17053a6c",
+      "bytes": 380,
+      "largura": 28,
+      "altura": 22
+    },
+    "objetos/pinheiro-baixo.png": {
+      "hash": "f64c4c6d9c389ff3",
+      "bytes": 556,
+      "largura": 26,
+      "altura": 50
+    },
+    "objetos/pinheiro.png": {
+      "hash": "6a4e12ec2ced7b80",
+      "bytes": 664,
+      "largura": 30,
+      "altura": 62
     },
     "objetos/placa.png": {
       "hash": "e4e41c35e569bfb7",
@@ -523,6 +619,36 @@
       "bytes": 303,
       "largura": 20,
       "altura": 46
+    },
+    "objetos/raizes.png": {
+      "hash": "9a3d55dd47e1d27a",
+      "bytes": 413,
+      "largura": 24,
+      "altura": 44
+    },
+    "objetos/samambaia.png": {
+      "hash": "e4c89cbf1404f919",
+      "bytes": 346,
+      "largura": 22,
+      "altura": 18
+    },
+    "objetos/teia.png": {
+      "hash": "7e34494f1469f9bd",
+      "bytes": 431,
+      "largura": 34,
+      "altura": 30
+    },
+    "objetos/toco.png": {
+      "hash": "3122a0fb88174171",
+      "bytes": 253,
+      "largura": 20,
+      "altura": 16
+    },
+    "objetos/tronco-caido.png": {
+      "hash": "4f381fe0b04ad327",
+      "bytes": 289,
+      "largura": 56,
+      "altura": 22
     },
     "objetos/varal.png": {
       "hash": "d223fc2093902c12",
@@ -680,11 +806,17 @@
       "largura": 64,
       "altura": 60
     },
+    "serpente.png": {
+      "hash": "30d5a4c168b2882a",
+      "bytes": 4574,
+      "largura": 144,
+      "altura": 320
+    },
     "tileset.png": {
-      "hash": "d0b24ad8924fab51",
-      "bytes": 1263,
+      "hash": "58d2fb58b327d9b4",
+      "bytes": 2242,
       "largura": 128,
-      "altura": 32
+      "altura": 48
     },
     "titulo.png": {
       "hash": "70e4d42af7de2702",
