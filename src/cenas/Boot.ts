@@ -7,6 +7,7 @@ import {
 } from "../dados/config";
 import { prepararArmazenamento } from "../sistemas/armazenamento";
 import { guardarEncaixes, Encaixes } from "../sistemas/encaixes";
+import { vigiarCarregamento } from "../sistemas/doutor";
 
 export class Boot extends Phaser.Scene {
   constructor() {
@@ -14,6 +15,8 @@ export class Boot extends Phaser.Scene {
   }
 
   preload() {
+    // no iPad nao existe console: se um PNG faltar, o doutor e quem conta
+    vigiarCarregamento(this);
     const g = this.add.graphics();
     g.fillStyle(COR.papel2, 1).fillRect(60, ALTURA / 2 - 4, LARGURA - 120, 8);
     const barra = this.add.graphics();

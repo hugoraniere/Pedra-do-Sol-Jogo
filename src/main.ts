@@ -12,6 +12,10 @@ import { Pausa } from "./cenas/Pausa";
 import { instalarAuditor } from "./sistemas/auditoria";
 import { vigiarJanela } from "./sistemas/visao";
 import { instalarBancada } from "./sistemas/bancada";
+import { ligarDoutor } from "./sistemas/doutor";
+
+// escuta antes do Phaser subir, senao um erro na propria subida passa batido
+ligarDoutor();
 
 function comecar() {
   // a visao escolhida define a resolucao logica antes de qualquer cena montar
