@@ -2,7 +2,7 @@
  *  e cuida de andar, esbarrar e conversar. */
 import Phaser from "phaser";
 import { TILE, SOLIDOS, COR } from "../dados/config";
-import { MAPAS, VILA, montarChao, plantarMata, Mapa, Saida } from "../dados/mapas";
+import { MAPAS, VILA, montarChao, bordasDeGrama, plantarMata, Mapa, Saida } from "../dados/mapas";
 import { acharCriatura } from "../dados/conteudo";
 import { DIALOGOS } from "../dados/dialogos";
 import { estado, salvar, marcarVisitado, foiDerrotado } from "../sistemas/estado";
@@ -78,6 +78,17 @@ export class Mundo extends Phaser.Scene {
     camada.setCollision(SOLIDOS);
     camada.setDepth(-1000);
     this.chao = camada;
+
+    // As beiras: onde a grama avanca sobre o vizinho, para o encontro dos dois
+    // parar de ser um corte reto de 16 px. E uma segunda camada, quase toda
+    // vazia (-1 nao desenha nada), no MESMO tileset. Fica acima do chao e
+    // abaixo de tudo que anda por cima dele, entao a profundidade e so um
+    // tico maior que a do chao, nunca positiva: pessoa e objeto usam
+    // `setDepth(y)`, e uma beira nao pode competir com quem esta em pe nela.
+    const bordas = bordasDeGrama(chao);
+    const tilemapBordas = this.make.tilemap({ data: bordas, tileWidth: TILE, tileHeight: TILE });
+    const tilesBordas = tilemapBordas.addTilesetImage("tileset")!;
+    tilemapBordas.createLayer(0, tilesBordas, 0, 0)!.setDepth(-999);
 
     // ------------------------------------------------------- objetos
     // Os objetos escritos a mao sao os marcos. A mata e o enfeite de chao vem

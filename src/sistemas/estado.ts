@@ -54,11 +54,15 @@ export const VAZIO: Estado = {
     tomPele: 0,
     estiloCabelo: "comprido",
     corCabelo: 0x3e9b62,
-    estiloRoupa: "mago",
+    // Simples de proposito: camisa, sem chapeu, sem arma. O heroi comeca assim
+    // em qualquer classe, e veste a armadura ou pega a arma da classe depois,
+    // por conta ou achado. A classe MOSTRA aquele equipamento na criacao, mas
+    // ninguem sai da vila ja de armadura. Ver equipamentoDaClasse() em Criacao.ts.
+    estiloRoupa: "tunica",
     corRoupa: 0x3e9b62,
-    chapeu: "pontudo",
+    chapeu: "nenhum",
     corChapeu: 0x7b5ac4,
-    armaSprite: "cajado",
+    armaSprite: "nenhuma",
     poderEscolhido: "",
   },
   coracoes: 3,

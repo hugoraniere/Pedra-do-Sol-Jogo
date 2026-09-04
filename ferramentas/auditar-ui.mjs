@@ -118,6 +118,42 @@ async function clicarBotao(rotulo) {
   await pagina.waitForTimeout(350);
 }
 
+/** Le o nome curto da opcao que a vitrine de raca/classe mostra agora.
+ *  A vitrine mostra um boneco por vez (ver Criacao.ts), e o rotulo embaixo
+ *  dele vem marcado com esse nome curto -- e assim que a auditoria sabe onde
+ *  parou sem precisar contar cliques. */
+async function opcaoNaVitrine() {
+  return pagina.evaluate(() => {
+    const achatar = (l) => l.flatMap((o) => (Array.isArray(o.list) ? [o, ...achatar(o.list)] : [o]));
+    for (const cena of window.jogo.scene.getScenes(true)) {
+      // o rotulo da vitrine e um nome curto, so letras, uma palavra ("Anao",
+      // "Mago"). O titulo da tela ("Escolha sua raca") tem espaco, e as setas
+      // "<" / ">" da propria vitrine nao sao letra nenhuma: e assim que os
+      // tres se distinguem do rotulo, sem repetir a lista de racas e classes
+      // aqui (ela ja mora em conteudo.ts, fonte da verdade).
+      const t = achatar(cena.children.list).find((o) => {
+        const m = o.getData?.("ui");
+        return m?.tipo === "texto" && m.dono && /^[A-Za-zÀ-ÿ]{2,}$/.test(m.dono);
+      });
+      if (t) return t.getData("ui").dono;
+    }
+    return null;
+  });
+}
+
+/** Clica em ">" ate a vitrine mostrar `curto`. So existe um boneco por vez
+ *  agora (antes eram cinco lado a lado, cada um com seu proprio botao) --
+ *  isto e o que substitui `clicarBotao(nomeDaRaca)` de quando a vitrine
+ *  mostrava todo mundo de uma vez. O limite de tentativas e o tamanho da
+ *  lista mais um: se nao achar nesse tanto de cliques, a opcao nao existe. */
+async function irParaOpcaoDaVitrine(curto, tentativas = 6) {
+  for (let i = 0; i < tentativas; i++) {
+    if ((await opcaoNaVitrine()) === curto) return;
+    await clicarBotao("vitrine-proxima");
+  }
+  throw new Error(`vitrine nao chegou em "${curto}" depois de ${tentativas} cliques em ">"`);
+}
+
 /** O nome do heroi nos testes.
  *
  *  O percurso sorteava o nome, e o sorteio escolhe um de cinco a cada rodada:
@@ -159,12 +195,13 @@ problemas.push(...(await olhar("01-titulo")));
 
 await clicarBotao("NOVO JOGO");
 problemas.push(...(await olhar("02-criacao-raca")));
-// trocar a raca e o que o boneco da vitrine precisa provar: os cinco mudam junto
-await clicarBotao("Anao");
+// trocar a raca e o que o boneco da vitrine precisa provar: ele muda de corpo,
+// nao so de cor, quando a seta passa de raca em raca
+await irParaOpcaoDaVitrine("Anao");
 problemas.push(...(await olhar("03-criacao-raca-anao")));
 await clicarBotao("SEGUIR >");
 problemas.push(...(await olhar("04-criacao-classe")));
-await clicarBotao("Mago");
+await irParaOpcaoDaVitrine("Mago");
 problemas.push(...(await olhar("05-criacao-classe-mago")));
 await clicarBotao("SEGUIR >");
 problemas.push(...(await olhar("06-criacao-poder")));
@@ -172,9 +209,11 @@ await clicarBotao("SEGUIR >");
 problemas.push(...(await olhar("07-criacao-heroi")));
 await digitarNome();
 problemas.push(...(await olhar("08-criacao-heroi-com-nome")));
-await clicarBotao("SEM ARMA");
-problemas.push(...(await olhar("09-criacao-sem-arma")));
+// o heroi comeca de roupa simples e sem arma (o padrao, ja na tela); COM ARMA
+// so espia o equipamento da classe, sem comprometer o que vai ser salvo
 await clicarBotao("COM ARMA");
+problemas.push(...(await olhar("09-criacao-com-arma")));
+await clicarBotao("SEM ARMA");
 
 await clicarBotao("COMECAR A AVENTURA");
 await pagina.waitForTimeout(1500);
@@ -217,12 +256,13 @@ async function criacaoNaVisao(zoom) {
   await pagina.waitForTimeout(2500);
   await clicarBotao("NOVO JOGO");
   problemas.push(...(await olhar(`${zoom}-02-criacao-raca`)));
-  // o Pequenino e o nome mais longo da vitrine: e ele que aperta a coluna
-  await clicarBotao("Pequenino");
+  // o Pequenino e o nome mais longo da vitrine: e ele que aperta a moldura
+  // em 256 px, onde o nome inteiro as vezes nao cabe e cai para o nome curto
+  await irParaOpcaoDaVitrine("Pequenino");
   problemas.push(...(await olhar(`${zoom}-03-criacao-raca-pequenino`)));
   await clicarBotao("SEGUIR >");
   problemas.push(...(await olhar(`${zoom}-04-criacao-classe`)));
-  await clicarBotao("Cavaleiro");
+  await irParaOpcaoDaVitrine("Cavaleiro");
   problemas.push(...(await olhar(`${zoom}-05-criacao-classe-cavaleiro`)));
   await clicarBotao("SEGUIR >");
   problemas.push(...(await olhar(`${zoom}-06-criacao-poder`)));
@@ -230,8 +270,8 @@ async function criacaoNaVisao(zoom) {
   problemas.push(...(await olhar(`${zoom}-07-criacao-heroi`)));
   await digitarNome();
   problemas.push(...(await olhar(`${zoom}-08-criacao-heroi-com-nome`)));
-  await clicarBotao("SEM ARMA");
-  problemas.push(...(await olhar(`${zoom}-09-criacao-sem-arma`)));
+  await clicarBotao("COM ARMA");
+  problemas.push(...(await olhar(`${zoom}-09-criacao-com-arma`)));
 }
 
 await criacaoNaVisao("perto");

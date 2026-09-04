@@ -56,6 +56,11 @@ export const T = {
   // a Floresta dos Sussurros
   mata: 14, folhagem: 15, trilha: 16, aguaRasa: 17, barranco: 18,
   gramaMata: 19,
+  // as beiras: onde a grama avanca sobre o vizinho. Nao sao chao de verdade,
+  // ninguem pisa "num beiraN": elas vivem na segunda camada que bordasDeGrama()
+  // desenha por cima do chao. Ver arte/tiles.py e src/dados/mapas.ts.
+  beiraN: 20, beiraS: 21, beiraL: 22, beiraO: 23,
+  beiraNO: 24, beiraNL: 25, beiraSO: 26, beiraSL: 27,
 } as const;
 
 /** Tiles de chao que o heroi nao atravessa. Objeto tem colisao propria.
