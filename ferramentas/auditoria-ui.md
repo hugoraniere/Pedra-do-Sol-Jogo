@@ -1,6 +1,6 @@
 # Auditoria de UI
 
-Telas visitadas: 33
+Telas visitadas: 36
 Problemas encontrados: 0
 
 | Tela | Objetos | Problemas |
@@ -15,9 +15,12 @@ Problemas encontrados: 0
 | 08-criacao-heroi-com-nome | Criacao:134 Som:0 | 0 |
 | 09-criacao-sem-arma | Criacao:132 Som:0 | 0 |
 | 10-mundo | Mundo:80 Interface:37 Som:0 | 0 |
-| 11-ficha-heroi | Interface:37 Ficha:40 Som:0 | 0 |
-| 11b-ficha-poderes | Interface:37 Ficha:29 Som:0 | 0 |
-| 11c-ficha-sei-fazer | Interface:37 Ficha:26 Som:0 | 0 |
+| 11-janela-eu | Interface:37 Ficha:54 Som:0 | 0 |
+| 11-janela-poderes | Interface:37 Ficha:43 Som:0 | 0 |
+| 11-janela-magias | Interface:37 Ficha:40 Som:0 | 0 |
+| 11-janela-mochila | Interface:37 Ficha:33 Som:0 | 0 |
+| 11-janela-diario | Interface:37 Ficha:33 Som:0 | 0 |
+| 11-janela-menu | Interface:37 Ficha:37 Som:0 | 0 |
 | 12-pausa | Interface:37 Pausa:22 Som:0 | 0 |
 | 13-configuracoes | Interface:37 Pausa:34 Som:0 | 0 |
 | 14-titulo-com-save | Titulo:16 Som:0 | 0 |

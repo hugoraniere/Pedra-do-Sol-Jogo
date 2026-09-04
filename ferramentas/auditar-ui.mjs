@@ -127,7 +127,7 @@ async function clicarBotao(rotulo) {
  *  muda de verdade, e ai o diff quer dizer alguma coisa.
  *
  *  O nome e o do heroi que o Lele criou na mesa. */
-const NOME_DO_HEROI = "Trovao da Floresta";
+const NOME_DO_HEROI = "Trovao Floresta"; // 15 letras: LETRAS_DO_NOME em Criacao.ts e 16, e "Trovao da Floresta" (18) nao cabe
 
 async function digitarNome() {
   await pagina.keyboard.type(NOME_DO_HEROI, { delay: 20 });
@@ -182,13 +182,11 @@ problemas.push(...(await olhar("10-mundo")));
 
 await clicarBotao("FICHA");        // o nome do heroi no topo abre a ficha
 await pagina.waitForTimeout(500);
-problemas.push(...(await olhar("11-ficha-heroi")));
-await clicarBotao("PROXIMA PAGINA");
-problemas.push(...(await olhar("11b-ficha-poderes")));
-await clicarBotao("PROXIMA PAGINA");
-problemas.push(...(await olhar("11c-ficha-sei-fazer")));
-await clicarBotao("PAGINA ANTERIOR");   // e volta, para conferir que da a volta
-await pagina.waitForTimeout(300);
+problemas.push(...(await olhar("11-janela-eu")));
+for (const aba of ["PODERES", "MAGIAS", "MOCHILA", "DIARIO", "MENU"]) {
+  await clicarBotao(aba);
+  problemas.push(...(await olhar(`11-janela-${aba.toLowerCase()}`)));
+}
 await clicarBotao("FECHAR");
 await pagina.waitForTimeout(500);
 
