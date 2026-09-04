@@ -94,7 +94,9 @@ export function janela(
     linhaFechar.altura,
     "FECHAR",
     opcoes.aoFechar,
-    "painel-ouro"
+    "painel-ouro",
+    // fechar e desfazer, e desfazer nao soa como escolher
+    "menu-volta"
   );
 
   if (virar) {

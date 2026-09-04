@@ -1,7 +1,9 @@
 /** Camada de cima da tela: coracoes, moedas, direcional de toque e caixa de fala.
  *  Roda em paralelo com a cena Mundo e nunca se mexe com a camera. */
 import Phaser from "phaser";
-import { LARGURA, ALTURA, COR } from "../dados/config";
+import { LARGURA, ALTURA, COR, VELOCIDADE_FALA } from "../dados/config";
+import { AJUSTES } from "../dados/sons";
+import { letraDaFala, tocar } from "../sistemas/som";
 import { texto } from "../sistemas/texto";
 import { estado } from "../sistemas/estado";
 import { Controles } from "../sistemas/controles";
@@ -10,7 +12,10 @@ import { ICONE } from "../sistemas/icones";
 import { ESPACO } from "../sistemas/design";
 import { botao } from "../sistemas/botao";
 
-type PedidoFala = { quem: string; linhas: string[]; cena: Phaser.Scene };
+/** `quem` e o nome que aparece na chapinha; `chave` e a entrada de DIALOGOS,
+ *  que e o que a tabela VOZ usa para achar a altura da voz. Sem chave a fala
+ *  ainda funciona, so sai na voz neutra. */
+type PedidoFala = { quem: string; linhas: string[]; cena: Phaser.Scene; chave?: string };
 
 export class Interface extends Phaser.Scene {
   private controles!: Controles;
@@ -21,6 +26,10 @@ export class Interface extends Phaser.Scene {
   private linhas: string[] = [];
   private indice = 0;
   private cenaDona?: Phaser.Scene;
+  private escrevendo = false;
+  private linhaCheia = "";
+  private vozAtual = "";
+  private maquina?: Phaser.Time.TimerEvent;
   private coracoes: Phaser.GameObjects.Image[] = [];
   private textoMoedas!: Phaser.GameObjects.BitmapText;
   private textoSelos!: Phaser.GameObjects.BitmapText;
@@ -36,6 +45,8 @@ export class Interface extends Phaser.Scene {
     this.linhas = [];
     this.indice = 0;
     this.cenaDona = undefined;
+    this.escrevendo = false;
+    this.maquina = undefined;
     this.controles = new Controles(this);
     this.montarTopo();
     this.montarDirecional();
@@ -84,6 +95,11 @@ export class Interface extends Phaser.Scene {
       12,
       nome,
       () => {
+        // no meio de uma fala a zona de dialogo ja come o toque, mas a checagem
+        // fica explicita: abrir a ficha por cima de uma conversa deixaria a fala
+        // pendurada esperando um toque que nunca vem
+        if (this.caixa.visible) return;
+        tocar("pausa-abre");
         this.scene.pause("Mundo");
         this.scene.launch("Ficha");
       },
@@ -218,22 +234,61 @@ export class Interface extends Phaser.Scene {
     this.cenaDona = p.cena;
     this.linhas = p.linhas;
     this.indice = 0;
+    this.vozAtual = p.chave ?? "";
     this.textoQuem.setText(p.quem);
-    this.textoFala.setText(this.linhas[0] ?? "");
     this.caixa.setVisible(true);
     this.zona.setVisible(true);
+    tocar("fala-abre");
+    this.escrever(this.linhas[0] ?? "");
+  }
+
+  /** A linha aparece letra por letra, com um bip na voz de quem fala.
+   *
+   *  A altura do bip vem de VOZ em dados/sons.ts e nao muda dentro da conversa:
+   *  e ela que deixa o Lele saber quem esta falando antes de terminar de ler o
+   *  nome na chapinha. Um arquivo de som so, oito personagens. */
+  private escrever(linha: string) {
+    this.maquina?.remove();
+    this.linhaCheia = linha;
+    this.escrevendo = true;
+    this.textoFala.setText("");
+    let i = 0;
+    this.maquina = this.time.addEvent({
+      delay: VELOCIDADE_FALA,
+      repeat: Math.max(linha.length - 1, 0),
+      callback: () => {
+        i += 1;
+        this.textoFala.setText(linha.slice(0, i));
+        if (linha[i - 1] !== " " && i % AJUSTES.letrasPorBip === 0) {
+          letraDaFala(this.vozAtual);
+        }
+        if (i >= linha.length) this.escrevendo = false;
+      },
+    });
   }
 
   private proximaLinha() {
+    // primeiro toque completa a linha, segundo avanca. Quem le devagar nunca
+    // fica esperando a maquina de escrever, e quem le rapido nao perde texto.
+    if (this.escrevendo) {
+      this.maquina?.remove();
+      this.maquina = undefined;
+      this.escrevendo = false;
+      this.textoFala.setText(this.linhaCheia);
+      return;
+    }
     this.indice += 1;
     if (this.indice >= this.linhas.length) {
+      this.maquina?.remove();
+      this.maquina = undefined;
       this.caixa.setVisible(false);
       this.zona.setVisible(false);
       this.atualizarTopo();
+      tocar("fala-fecha");
       this.cenaDona?.events.emit("dialogo-fim");
       return;
     }
-    this.textoFala.setText(this.linhas[this.indice]);
+    this.escrever(this.linhas[this.indice]);
   }
 
   update() {

@@ -1,5 +1,6 @@
 /** Lista dos tres espacos de save. Da para abrir, e da para apagar com confirmacao. */
 import Phaser from "phaser";
+import { musica } from "../sistemas/som";
 import { LARGURA, ALTURA, COR, RACAS, CLASSES } from "../dados/config";
 import { botao } from "../sistemas/botao";
 import { texto } from "../sistemas/texto";
@@ -17,6 +18,7 @@ export class Carregar extends Phaser.Scene {
   }
 
   create() {
+    musica(this, "menu");
     this.add.rectangle(0, 0, LARGURA, ALTURA, COR.grama).setOrigin(0);
     this.add.image(0, -46, "titulo").setOrigin(0).setAlpha(0.5);
     this.add.rectangle(0, 0, LARGURA, ALTURA, 0x2c2440, 0.5).setOrigin(0);
@@ -26,7 +28,7 @@ export class Carregar extends Phaser.Scene {
     this.lista = this.add.container(0, 0);
     this.desenhar();
 
-    botao(this, 40, ALTURA - 12, 64, 16, "< VOLTAR", () => this.scene.start("Titulo"), "painel-creme");
+    botao(this, 40, ALTURA - 12, 64, 16, "< VOLTAR", () => this.scene.start("Titulo"), "painel-creme", "menu-volta");
 
     this.input.keyboard?.removeAllListeners("keydown");
     this.input.keyboard?.on("keydown", (e: KeyboardEvent) => {

@@ -49,6 +49,7 @@ import {
 } from "../sistemas/design";
 import { texto } from "../sistemas/texto";
 import { refazerAoRedimensionar } from "../sistemas/visao";
+import { tocar } from "../sistemas/som";
 
 /** Um pedaco de pagina. Cada um sabe de quanta altura precisa antes de existir,
  *  que e o que deixa a pagina se cortar sozinha quando a tela e baixa. */
@@ -95,6 +96,7 @@ export class Ficha extends Phaser.Scene {
   }
 
   private fechar() {
+    tocar("pausa-fecha");
     this.scene.resume("Mundo");
     this.scene.stop();
   }

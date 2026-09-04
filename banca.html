@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Banca de som . Reino de Aurora</title>
+<!--
+  A banca de audicao.
+
+      npm run dev
+      abrir  http://localhost:5173/banca.html
+
+  Le o catalogo de verdade em src/dados/sons.ts. Nao existe lista duplicada aqui:
+  som novo no catalogo aparece sozinho nesta pagina.
+
+  Serve para tres coisas:
+    . ouvir cada som no volume e na variacao de altura em que ele vai tocar no
+      jogo, que e diferente de ouvir o arquivo cru no Finder
+    . comparar a familia inteira de uma vez (os cinco passos em sequencia)
+    . ver o que FALTA: em vermelho. entao tambem e a lista de compras
+
+  Nao entra no build: o vite so empacota o que o index.html referencia.
+-->
+<style>
+  :root {
+    --papel:#FFF8EA; --tinta:#2C2440; --tinta2:#4A3E64; --linha:#E6D3B4;
+    --roxo:#7B5AC4; --ouro:#F5B62B; --verde:#2F7A4C; --vermelho:#C0392F; --fundo:#FDEFD6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --papel:#1D1830; --tinta:#F2EADC; --tinta2:#BFB3D2; --linha:#3D3455;
+      --roxo:#A88AE6; --ouro:#F5C860; --verde:#6FCB92; --vermelho:#F0857A; --fundo:#262038;
+    }
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; padding:24px 20px 60px; background:var(--papel); color:var(--tinta);
+    font:14px/1.6 ui-monospace, Menlo, monospace;
+  }
+  h1 { font-size:19px; margin:0 0 4px; }
+  .resumo { color:var(--tinta2); margin:0 0 16px; }
+  .resumo b { color:var(--tinta); }
+  .resumo b.falta { color:var(--vermelho); }
+  h2 {
+    font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--tinta2);
+    margin:26px 0 8px; padding-bottom:6px; border-bottom:2px solid var(--linha);
+    display:flex; align-items:center; gap:10px;
+  }
+  h2 button { margin-left:auto; }
+  .grupo {
+    display:flex; flex-direction:column; gap:1px; background:var(--linha);
+    border:1px solid var(--linha); border-radius:6px; overflow:hidden;
+  }
+  .linha { display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:var(--fundo); padding:7px 12px; }
+  .nome { flex:1 1 15rem; }
+  .nome small { color:var(--tinta2); }
+  button {
+    font:inherit; font-size:13px; font-weight:700; border:0; border-radius:5px;
+    padding:6px 13px; cursor:pointer; background:var(--roxo); color:var(--papel);
+  }
+  button:hover:not(:disabled) { filter:brightness(1.12); }
+  button:disabled { opacity:.35; cursor:default; }
+  button:focus-visible { outline:2px solid var(--ouro); outline-offset:2px; }
+  button.some { background:transparent; color:var(--tinta2); border:1px solid var(--linha); font-weight:400; }
+  .marca { font-size:11px; padding:2px 6px; border-radius:3px; border:1px solid currentColor; }
+  .ok { color:var(--verde); } .falta { color:var(--vermelho); }
+  .vol { color:var(--tinta2); font-size:12px; min-width:6.5rem; }
+  .topo { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:6px; }
+</style>
+</head>
+<body>
+
+<h1>Banca de som</h1>
+<p class="resumo" id="resumo">lendo o catálogo…</p>
+
+<div class="topo">
+  <button id="so-faltando" class="some">mostrar só o que falta</button>
+  <button id="copiar" class="some">copiar lista do que falta</button>
+</div>
+
+<div id="lista"></div>
+
+<script type="module">
+import * as C from "/src/dados/sons.ts";
+
+const PASTA = "/assets/som";
+const EXT = C.EXTENSAO ?? ".mp3";
+
+/* ---------------------------------------------------------- montar a lista */
+
+function catalogo() {
+  const vistos = new Set();
+  const itens = [];
+  const por = (grupo, chave, ficha, extra = "") => {
+    if (!ficha || vistos.has(ficha.arquivo)) return;
+    vistos.add(ficha.arquivo);
+    itens.push({ grupo, chave, ...ficha, extra });
+  };
+
+  for (const [k, f] of Object.entries(C.EFEITOS)) {
+    const g = k.startsWith("passo-") ? "passos"
+      : k.startsWith("fala-") ? "fala"
+      : k.startsWith("menu-") || k.startsWith("pausa-") || k === "salvou" ? "interface"
+      : ["porta", "escada", "troca-mapa"].includes(k) ? "travessia"
+      : ["magia", "trovao", "tonto"].includes(k) ? "herói"
+      : ["bebe-pocao", "biscoito", "fechadura", "pena-levanta", "lanterna"].includes(k) ? "itens"
+      : "prêmios";
+    por(g, k, f);
+  }
+
+  for (const [arma, cadeia] of Object.entries(C.ARMAS ?? {})) {
+    for (const [etapa, f] of Object.entries(cadeia)) por("armas", `${arma} · ${etapa}`, f);
+  }
+  for (const [k, f] of Object.entries(C.GOLPES_ESPECIAIS ?? {})) por("armas", k, f);
+  for (const [k, f] of Object.entries(C.IMPACTOS ?? {})) por("impacto por material", k, f);
+  for (const [k, f] of Object.entries(C.DADO ?? {})) por("dado", k, f);
+  for (const [k, f] of Object.entries(C.DESFECHO ?? {})) por("dado", `desfecho ${k}`, f);
+  for (const [k, f] of Object.entries(C.MAGIAS_SOM ?? {})) por("magias", k, f);
+  for (const [fam, momentos] of Object.entries(C.CRIATURAS_SOM ?? {})) {
+    for (const [m, f] of Object.entries(momentos)) por("criaturas", `${fam} · ${m}`, f);
+  }
+  for (const [k, f] of Object.entries(C.FRAQUEZA_SONORA ?? {})) por("criaturas", k, f, "mecânica");
+  for (const [k, f] of Object.entries(C.MUSICAS ?? {})) por("música", k, f);
+  for (const [k, f] of Object.entries(C.COLCHAO ?? {})) por("ambiente", k, f);
+  for (const p of C.PONTOS ?? []) por("ambiente", p.objeto ?? "rio", p.som, `alcance ${p.alcance} tiles`);
+  for (const a of C.PASSAROS?.arquivos ?? []) {
+    por("ambiente", a, { arquivo: a, volume: C.PASSAROS.volume, variacao: C.PASSAROS.variacao });
+  }
+  return itens;
+}
+
+/* ------------------------------------------------------------------ tocar */
+/* toca com o volume e a variacao de altura do catalogo: e assim que o jogador ouve */
+
+const ctx = new (window.AudioContext || window.webkitAudioContext)();
+const cache = new Map();
+
+async function buffer(arquivo) {
+  if (cache.has(arquivo)) return cache.get(arquivo);
+  const r = await fetch(`${PASTA}/${arquivo}${EXT}`);
+  if (!r.ok) throw new Error("nao achou");
+  const b = await ctx.decodeAudioData(await r.arrayBuffer());
+  cache.set(arquivo, b);
+  return b;
+}
+
+async function tocar(item) {
+  await ctx.resume();
+  const fonte = ctx.createBufferSource();
+  fonte.buffer = await buffer(item.arquivo);
+  fonte.detune.value = item.variacao ? (Math.random() * 2 - 1) * item.variacao : 0;
+  const g = ctx.createGain();
+  g.gain.value = item.volume;
+  fonte.connect(g).connect(ctx.destination);
+  fonte.start();
+  return fonte;
+}
+
+const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** Nao basta olhar o status: para arquivo que nao existe o vite devolve 200 com o
+ *  index.html, entao tudo pareceria estar em disco. Quem responde de verdade e o
+ *  tipo de conteudo. */
+async function existe(arquivo) {
+  try {
+    const r = await fetch(`${PASTA}/${arquivo}${EXT}`, { method: "HEAD" });
+    return r.ok && (r.headers.get("content-type") ?? "").startsWith("audio");
+  } catch { return false; }
+}
+
+/* ---------------------------------------------------------------- desenhar */
+
+const itens = catalogo();
+const faltando = [];
+const grupos = {};
+for (const i of itens) (grupos[i.grupo] ??= []).push(i);
+
+const lista = document.getElementById("lista");
+
+for (const [nome, doGrupo] of Object.entries(grupos)) {
+  const h = document.createElement("h2");
+  h.append(`${nome} · ${doGrupo.length}`);
+
+  const tudo = document.createElement("button");
+  tudo.className = "some";
+  tudo.textContent = "tocar o grupo";
+  tudo.onclick = async () => {
+    for (const item of doGrupo) {
+      if (faltando.includes(item.arquivo)) continue;
+      try {
+        const f = await tocar(item);
+        const dur = Math.min(f.buffer.duration, 1.4);
+        await espera(dur * 1000 + 120);
+        if (item.loop) f.stop();
+      } catch { /* segue o baile */ }
+    }
+  };
+  h.append(tudo);
+  lista.append(h);
+
+  const caixa = document.createElement("div");
+  caixa.className = "grupo";
+  lista.append(caixa);
+
+  for (const item of doGrupo) {
+    const linha = document.createElement("div");
+    linha.className = "linha";
+
+    const nomeEl = document.createElement("span");
+    nomeEl.className = "nome";
+    nomeEl.innerHTML = `${item.arquivo} <small>${item.chave}${item.extra ? " · " + item.extra : ""}</small>`;
+
+    const vol = document.createElement("span");
+    vol.className = "vol";
+    vol.textContent = `vol ${item.volume}${item.variacao ? " ±" + item.variacao : ""}${item.loop ? " loop" : ""}`;
+
+    const marca = document.createElement("span");
+    marca.className = "marca";
+    marca.textContent = "…";
+
+    const bt = document.createElement("button");
+    bt.textContent = "tocar";
+    bt.disabled = true;
+    let tocando = null;
+    bt.onclick = async () => {
+      if (tocando) { try { tocando.stop(); } catch {} tocando = null; bt.textContent = "tocar"; return; }
+      try {
+        tocando = await tocar(item);
+        if (item.loop) {
+          tocando.loop = true;
+          bt.textContent = "parar";
+          tocando.onended = () => { tocando = null; bt.textContent = "tocar"; };
+        } else {
+          tocando.onended = () => { tocando = null; };
+        }
+      } catch { marca.textContent = "falhou"; marca.className = "marca falta"; }
+    };
+
+    linha.append(nomeEl, vol, marca, bt);
+    caixa.append(linha);
+
+    existe(item.arquivo).then((tem) => {
+      marca.textContent = tem ? "tem" : "falta";
+      marca.className = `marca ${tem ? "ok" : "falta"}`;
+      bt.disabled = !tem;
+      if (!tem) { faltando.push(item.arquivo); linha.dataset.falta = "1"; }
+      resumo();
+    });
+  }
+}
+
+function resumo() {
+  document.getElementById("resumo").innerHTML =
+    `<b>${itens.length}</b> sons no catálogo · ` +
+    `<b>${itens.length - faltando.length}</b> em disco · ` +
+    `<b class="falta">${faltando.length}</b> faltando · ` +
+    `formato ${EXT} · ${Object.keys(C.VOZ ?? {}).length} vozes`;
+}
+resumo();
+
+let soFalta = false;
+document.getElementById("so-faltando").onclick = (e) => {
+  soFalta = !soFalta;
+  e.target.textContent = soFalta ? "mostrar tudo" : "mostrar só o que falta";
+  document.querySelectorAll(".linha").forEach((l) => {
+    l.style.display = soFalta && !l.dataset.falta ? "none" : "";
+  });
+};
+
+document.getElementById("copiar").onclick = () => {
+  navigator.clipboard?.writeText(faltando.map((f) => f + EXT).join("\n"));
+};
+</script>
+
+</body>
+</html>

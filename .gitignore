@@ -7,3 +7,7 @@ dist
 # cache do python, gerado ao rodar npm run arte
 __pycache__/
 *.pyc
+
+# cada frente de trabalho tem os seus, e eles nao entram no git
+.ambiente
+AMBIENTE.md

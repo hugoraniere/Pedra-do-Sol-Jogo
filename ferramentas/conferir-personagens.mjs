@@ -14,11 +14,12 @@ import { createServer } from "node:http";
 import { existsSync, readFileSync, mkdirSync } from "node:fs";
 import { join, extname, resolve } from "node:path";
 import pw from "playwright";
+import { porta } from "./ambiente-atual.mjs";
 
 const { chromium } = pw;
 const RAIZ = resolve("dist");
 const PASTA = resolve("ferramentas/telas");
-const PORTA = 4191;
+const PORTA = porta(4191);
 const TIPOS = {
   ".html": "text/html", ".js": "text/javascript", ".css": "text/css",
   ".png": "image/png", ".json": "application/json", ".woff": "font/woff",
