@@ -34,6 +34,9 @@ export type Estado = {
   selos: number;
   mochila: string[];
   visitados: string[];
+  /** chave estavel de cada criatura ja vencida (`${cena}:${indice}` no mapa),
+   *  para ela nao voltar a existir quando o jogador reentra no lugar */
+  derrotados: string[];
   cena: string;
   lugar: string;
   minutos: number;
@@ -64,6 +67,7 @@ export const VAZIO: Estado = {
   selos: 0,
   mochila: [],
   visitados: [],
+  derrotados: [],
   cena: "vila",
   lugar: "Vila Semente",
   minutos: 0,
@@ -125,4 +129,14 @@ export function marcarVisitado(chave: string): boolean {
   atual.visitados.push(chave);
   salvar();
   return true;
+}
+
+export function foiDerrotado(chave: string): boolean {
+  return atual.derrotados.includes(chave);
+}
+
+export function marcarDerrotado(chave: string) {
+  if (atual.derrotados.includes(chave)) return;
+  atual.derrotados.push(chave);
+  salvar();
 }

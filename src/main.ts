@@ -12,6 +12,7 @@ import { Pausa } from "./cenas/Pausa";
 import { Ficha } from "./cenas/Ficha";
 import { Som } from "./cenas/Som";
 import { Provador } from "./cenas/Provador";
+import { Combate } from "./cenas/Combate";
 import { instalarAuditor } from "./sistemas/auditoria";
 import { vigiarJanela } from "./sistemas/visao";
 import { instalarBancada } from "./sistemas/bancada";
@@ -40,7 +41,7 @@ function comecar() {
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
   physics: { default: "arcade", arcade: { gravity: { x: 0, y: 0 }, debug: false } },
-    scene: [Boot, Titulo, Carregar, Criacao, Mundo, Interface, Pausa, Ficha, Som, Provador],
+    scene: [Boot, Titulo, Carregar, Criacao, Mundo, Interface, Pausa, Ficha, Som, Combate, Provador],
   });
   // gancho de depuracao: no console do navegador da para fazer
   //   jogo.scene.getScene("Interface").events.emit("falar", {...})
