@@ -26,14 +26,15 @@ import {
   ARMA_DA_CLASSE,
   CHAPEU_DA_CLASSE,
 } from "../dados/config";
-import { acharMagia } from "../dados/conteudo";
+import { ATRIBUTOS, ORDEM_PODERES, acharMagia } from "../dados/conteudo";
+import { poderesDaOrigem, poderEscolhidoDoHeroi } from "../sistemas/poderes";
 import { novoJogo, VAZIO, Heroi as FichaHeroi } from "../sistemas/estado";
 import { botao, Botao } from "../sistemas/botao";
 import { texto } from "../sistemas/texto";
 import { ESPACO, TAMANHO, marcar, meio, pilha } from "../sistemas/design";
 import { camadasDoHeroi, criarAnimacoes, Heroi } from "../sistemas/heroi";
 
-const PASSOS = ["Nome", "Raca", "Classe", "Aparencia", "Pronto"] as const;
+const PASSOS = ["Nome", "Raca", "Classe", "Poder", "Aparencia", "Pronto"] as const;
 
 const SORTEIO = ["Trovao da Floresta", "Vento Ligeiro", "Pedra Valente", "Faisca", "Lua Nova"];
 
@@ -187,7 +188,10 @@ export class Criacao extends Phaser.Scene {
       const y = area.y + lin * passo + passo / 2;
       const b = botao(this, x, y, larg, TAMANHO.botao, rotulo, () => {
         aoEscolher(i);
-        botoes.forEach((o, j) => o.marcar(j === i));
+        // aoEscolher pode ter redesenhado o passo inteiro, e ai estes botoes ja
+        // foram destruidos. Marcar um objeto destruido estoura dentro do Phaser,
+        // porque setTexture procura a cena que ele ja nao tem.
+        botoes.forEach((o, j) => o.scene && o.marcar(j === i));
       });
       b.marcar(i === selecionado);
       botoes.push(b);
@@ -278,6 +282,9 @@ export class Criacao extends Phaser.Scene {
           }
         );
         this.navegacao();
+        break;
+      case "Poder":
+        this.passoPoder();
         break;
       case "Aparencia":
         this.passoAparencia();
@@ -415,6 +422,38 @@ export class Criacao extends Phaser.Scene {
         },
         "painel-creme"
       )
+    );
+    this.navegacao();
+  }
+
+  // ------------------------------------------------------------ poder
+  /** O passo 4 do manual: a raca deu +1, a classe deu +1, e agora ele coloca o
+   *  terceiro onde quiser.
+   *
+   *  O botao mostra o total que o poder VAI ficar, nao o "+1" abstrato: para uma
+   *  crianca de 7 anos, "ESPERTEZA 3" diz mais do que "+1 em esperteza".
+   *
+   *  Sem linha explicando para que serve cada poder: esta tela tem o palco fixo
+   *  entre o titulo e a grade, e o que sobra entre eles muda com a resolucao. O
+   *  "para que serve" mora na ficha, que se mede antes de desenhar.
+   */
+  private passoPoder() {
+    this.titulo("Onde ele e mais forte?");
+    this.palco(LARGURA / 2, 102, 80, 70);
+    this.atualizarBoneco(LARGURA / 2, 96, 2);
+
+    const origem = poderesDaOrigem(this.rascunho.raca, this.rascunho.classe);
+    const escolhido = poderEscolhidoDoHeroi(this.rascunho);
+
+    this.grade(
+      ORDEM_PODERES.map((id) => `${ATRIBUTOS[id].nome} ${origem[id] + (id === escolhido ? 1 : 0)}`),
+      ORDEM_PODERES.indexOf(escolhido),
+      (k) => {
+        this.rascunho.poderEscolhido = ORDEM_PODERES[k];
+        // o numero de todos os botoes muda junto com a escolha, entao a grade
+        // inteira se redesenha em vez de so trocar a marca do selecionado
+        this.desenharPasso();
+      }
     );
     this.navegacao();
   }
