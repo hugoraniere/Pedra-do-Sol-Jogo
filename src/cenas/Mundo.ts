@@ -3,7 +3,7 @@
 import Phaser from "phaser";
 import { TILE, SOLIDOS, COR } from "../dados/config";
 import { MAPAS, VILA, montarChao, plantarMata, Mapa, Saida } from "../dados/mapas";
-import { acharCriatura } from "../dados/conteudo";
+import { acharCriatura, spriteDoGoblin } from "../dados/conteudo";
 import { DIALOGOS } from "../dados/dialogos";
 import { estado, salvar, marcarVisitado, foiDerrotado } from "../sistemas/estado";
 import type { Encontro } from "./Combate";
@@ -64,8 +64,9 @@ export class Mundo extends Phaser.Scene {
     criarAnimacoes(this, [
       ...camadasDoHeroi(st0.heroi).map((c) => c.chave),
       ...mapaAtual.pessoas.map((p) => `npc-${p.sprite}`),
-      // so as criaturas que este mapa realmente tem
-      ...(mapaAtual.criaturas ?? []).map((b) => acharCriatura(b.id)?.sprite ?? b.id),
+      // so as criaturas que este mapa realmente tem; goblin varia o corpo
+      // por posicao (ver spriteDoGoblin em dados/conteudo.ts)
+      ...(mapaAtual.criaturas ?? []).map((b) => b.id === "goblin" ? spriteDoGoblin(b.x, b.y) : acharCriatura(b.id)?.sprite ?? b.id),
     ]);
     this.controles = new Controles(this);
     this.interagiveis = [];
@@ -162,11 +163,12 @@ export class Mundo extends Phaser.Scene {
       if (foiDerrotado(chave)) return;
       const ficha = acharCriatura(bicho.id);
       if (!ficha) return;
+      const spriteChave = bicho.id === "goblin" ? spriteDoGoblin(bicho.x, bicho.y) : ficha.sprite;
       const x = bicho.x * TILE + TILE / 2;
       const y = bicho.y * TILE + TILE;
-      const s = this.add.sprite(x, y, ficha.sprite, 0).setOrigin(0.5, 1);
+      const s = this.add.sprite(x, y, spriteChave, 0).setOrigin(0.5, 1);
       s.setDepth(y);
-      s.play(`${ficha.sprite}-parado-baixo`, true);
+      s.play(`${spriteChave}-parado-baixo`, true);
       const corpo = this.add.rectangle(x, y - 4, 10, 8);
       this.solidos.add(corpo);
       (corpo.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();

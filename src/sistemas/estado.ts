@@ -42,6 +42,10 @@ export type Estado = {
   minutos: number;
   criadoEm: number;
   atualizadoEm: number;
+  /** quantas vezes cada acao de escopo "porAventura" (magia, dom de raca) ja
+   *  foi usada nesta aventura. Chave = id da acao. Zera na troca de aventura
+   *  (ainda nao existe onde isso acontece - ver Fase 9 revista). */
+  usosDeAventura: Record<string, number>;
 };
 
 export const VAZIO: Estado = {
@@ -73,6 +77,7 @@ export const VAZIO: Estado = {
   minutos: 0,
   criadoEm: 0,
   atualizadoEm: 0,
+  usosDeAventura: {},
 };
 
 function copia<Tipo>(v: Tipo): Tipo {
@@ -138,5 +143,17 @@ export function foiDerrotado(chave: string): boolean {
 export function marcarDerrotado(chave: string) {
   if (atual.derrotados.includes(chave)) return;
   atual.derrotados.push(chave);
+  salvar();
+}
+
+/** Quantas vezes uma acao "por aventura" (magia, dom de raca) ja foi usada. */
+export function usosGastos(acaoId: string): number {
+  return atual.usosDeAventura[acaoId] ?? 0;
+}
+
+/** Registra mais um uso de uma acao "por aventura" e salva na hora - perder
+ *  o save no meio nunca pode devolver um uso de graca. */
+export function registrarUso(acaoId: string) {
+  atual.usosDeAventura[acaoId] = usosGastos(acaoId) + 1;
   salvar();
 }

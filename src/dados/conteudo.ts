@@ -7,8 +7,34 @@
  * Este arquivo e SO DADO. Nenhuma logica, nenhum Phaser. Assim da para
  * adicionar uma raca ou uma magia sem abrir nenhuma cena.
  */
+import type { Marca } from "../sistemas/marcas";
 
 export type Atributo = "forca" | "esperteza" | "coracao";
+
+/** Que pedaco do mundo uma acao de combate atinge. */
+export type FormaDeAcao = "casa" | "linha" | "aoRedor";
+
+/** Uma acao de combate pronta pra virar slot na barra: o golpe de trovao do
+ *  Cavaleiro, o sopro quentinho da Cria de Dragao. So existe aqui quando a
+ *  habilidade/dom E uma acao de LUTA — as "fora de luta" (Fala com Bichos,
+ *  Conserta Tudo) ficam so em `habilidadeTexto`/`domTexto`, sem isto.
+ *  Ver `docs/plano-de-implementacao.md`, "Fase 9 revista". */
+export type AcaoDeCombate = {
+  id: string;
+  tipo: "golpe" | "magia" | "habilidade";
+  nome: string;
+  /** quadro de public/assets/icones.png */
+  icone: number;
+  cor: number;
+  forma: FormaDeAcao;
+  /** em casas, contando diagonal como 1 */
+  alcance: number;
+  atributo: Atributo;
+  dica: string;
+  /** chave de som; nem toda acao tem uma ligada ainda (ver Combate.ts) */
+  som: string;
+  marca?: Marca;
+};
 
 export const ATRIBUTOS: Record<Atributo, { nome: string; icone: string; oQueFaz: string }> = {
   forca: { nome: "FORCA", icone: "forca", oQueFaz: "empurrar, subir, lutar, carregar" },
@@ -30,6 +56,9 @@ export type Raca = {
   domTexto: string;
   coracoes: number;
   cor: number;
+  /** so quando o dom da raca e uma acao de LUTA (so a Cria de Dragao tem hoje).
+   *  As outras racas (dom de dado, ou passivo puro) deixam isto `undefined`. */
+  acaoDeCombate?: AcaoDeCombate;
 };
 
 export const RACAS: Raca[] = [
@@ -82,6 +111,11 @@ export const RACAS: Raca[] = [
     domTexto: "Uma vez por aventura voce solta fogo pela boca.",
     coracoes: 3,
     cor: 0xe2483d,
+    acaoDeCombate: {
+      id: "sopro-quentinho", tipo: "habilidade", nome: "SOPRO QUENTINHO",
+      dica: "Solta fogo pela boca. So uma vez por aventura.",
+      icone: 10, cor: 0xf5b62b, forma: "casa", alcance: 2, atributo: "coracao", som: "fogo",
+    },
   },
 ];
 
@@ -96,6 +130,10 @@ export type Classe = {
   habilidade: string;
   habilidadeTexto: string;
   magias: string[];
+  /** so quando a habilidade da classe e uma acao de LUTA (so o Cavaleiro tem
+   *  hoje). Amigo dos Bichos e Ferreiro tem habilidade fora de luta — fica so
+   *  em `habilidadeTexto`, nunca vira slot de combate. */
+  habilidadeDeLuta?: AcaoDeCombate;
 };
 
 export const CLASSES: Classe[] = [
@@ -108,6 +146,11 @@ export const CLASSES: Classe[] = [
     habilidade: "Golpe Trovao",
     habilidadeTexto: "Uma vez por luta voce acerta sem precisar rolar o dado.",
     magias: [],
+    habilidadeDeLuta: {
+      id: "golpe-trovao", tipo: "habilidade", nome: "GOLPE TROVAO",
+      dica: "Acerta sem precisar rolar o dado. So uma vez por luta.",
+      icone: 9, cor: 0x7b5ac4, forma: "casa", alcance: 1, atributo: "forca", som: "golpe-trovao",
+    },
   },
   {
     id: "mago",
@@ -364,3 +407,17 @@ export const acharMagia = (id: string) => MAGIAS.find((m) => m.id === id);
 export const acharArma = (id: string) => ARMAS.find((a) => a.id === id);
 export const acharItem = (id: string) => LOJA.find((i) => i.id === id);
 export const acharCriatura = (id: string) => BESTIARIO.find((c) => c.id === id);
+
+/** O Goblin da Fumaca e UMA criatura no bestiario (mesma vida, mesma
+ *  fraqueza), mas a arte desenhou 3 corpos - magricela, gorducho, moleque -
+ *  pra tres goblins na mesma tela nao parecerem copia colada (retratos ja
+ *  distintos em `arte/icones.py`; `BESTIARIO.goblin.sprite` sozinho nao
+ *  aponta pra nenhum dos tres). A escolha e ESTAVEL pela posicao no mapa,
+ *  nunca sorteada - a mesma logica de "variacao estavel" que decide mata e
+ *  mato no chao - entao o mesmo goblin sempre nasce com o mesmo corpo, e
+ *  Mundo.ts e Combate.ts, chamando com a MESMA casa, sempre concordam. */
+const VARIANTES_GOBLIN = ["magricela", "gorducho", "moleque"] as const;
+export function spriteDoGoblin(tx: number, ty: number): string {
+  const indice = Math.abs(tx * 31 + ty * 17) % VARIANTES_GOBLIN.length;
+  return `goblin-${VARIANTES_GOBLIN[indice]}`;
+}
