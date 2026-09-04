@@ -170,39 +170,131 @@ def casa_vovo():
 
 
 # ---------------------------------------------------------------- arvores
-def arvore(altura=52, largura=40, folha=(FOLHA, FOLHA_C, FOLHA_E)):
-    im = nova(largura, altura)
-    cx = largura / 2
-    base = altura - 4
-    sombra(im, largura / 2 - 4, 4, cx, base)
-    # tronco
-    ret(im, cx - 3, base - 16, 6, 16, MADEIRA)
-    linha_v(im, cx - 3, base - 16, 16, MADEIRA_E)
-    linha_v(im, cx + 2, base - 16, 16, MADEIRA_E)
-    ret(im, cx - 5, base - 3, 10, 3, MADEIRA_E)
-    # copa em tres bolhas, quebra o formato de bola perfeita
-    copa = [(cx, base - 34, 15, 13), (cx - 10, base - 27, 11, 9), (cx + 10, base - 27, 11, 9)]
-    for (bx, by, rx, ry) in copa:
-        for j in range(int(by - ry), int(by + ry + 1)):
-            for i in range(int(bx - rx), int(bx + rx + 1)):
-                if ((i - bx) / rx) ** 2 + ((j - by) / ry) ** 2 <= 1:
-                    px(im, i, j, folha[0])
-    # sombra embaixo da copa e luz em cima
-    for (bx, by, rx, ry) in copa:
-        for j in range(int(by), int(by + ry + 1)):
-            for i in range(int(bx - rx), int(bx + rx + 1)):
-                d = ((i - bx) / rx) ** 2 + ((j - by) / ry) ** 2
-                if 0.45 < d <= 1:
-                    px(im, i, j, folha[2])
-    for (dx, dy) in [(-6, -8), (-3, -11), (2, -10), (7, -6), (-9, -3), (5, -1), (-1, -4)]:
-        px(im, cx + dx, base - 34 + dy, folha[1])
-        px(im, cx + dx + 1, base - 34 + dy, folha[1])
+# ------------------------------------------------------------------ arvores
+# A arvore anterior era tres elipses preenchidas, com uma faixa de sombra dentro
+# de cada uma e uns pixels claros por cima. Isso da um blob: uma bola de
+# brocolis num palito, sem galho, sem aglomerado de folha, em tres tons.
+#
+# Aqui ela e construida por MOITAS, que e o metodo do Pixelblog 44 do Slynyrd:
+# desenha-se UM aglomerado de folha, dele saem tres variantes de tom, e a copa
+# e essas variantes empilhadas segundo a direcao da luz. Nao ha copa desenhada:
+# ha moitas arrumadas. Quatro coisas mudam por causa disso, e nenhuma delas e
+# "desenhar melhor":
+#
+#   BORDA RECORTADA. Cada moita tem bossa de 1 px. E o recorte que faz a
+#   silhueta ler como folhagem; borda de elipse le como bola, e e por isso que
+#   a copa antiga parecia cortada mesmo sem estar.
+#
+#   SOMBRA NA BORDA, NAO NO MEIO. O crescente escuro de cada moita segue a
+#   BORDA dela. Cortando por meio-plano, as sombras de moitas vizinhas se
+#   alinham e a copa inteira vira listra diagonal.
+#
+#   BRILHO SO NAS MOITAS DE CIMA, e tambem junto da borda. Disco claro no meio
+#   le como bolha ou furo. Moita de tras nao recebe brilho: quem esta atras nao
+#   compete com quem esta na frente.
+#
+#   CINCO TONS, NAO TRES. Com tres, uma moita e clara ou escura. Com cinco ela
+#   tem volume, e volume e o que separa folhagem de mancha verde.
+
+#: cinco tons de folha, a partir dos tres que ja existem na paleta
+FOLHA_0 = (30, 72, 46)
+FOLHA_4 = (156, 214, 136)
+#: a luz vem de cima e da esquerda, como em todo o resto do jogo
+_LUZ = (-1, -1)
+
+
+def _moita(im, cx, cy, r, tom, rampa):
+    """Um aglomerado de folha: disco com bossas, sombra na borda do lado escuro
+    e brilho na borda do lado da luz."""
+    f0, f1, f2, f3, f4 = rampa
+    escuro = {f2: f1, f3: f2, f4: f3, f1: f0}.get(tom, f1)
+    claro = {f2: f3, f3: f4, f1: f2, f4: f4}.get(tom, f3)
+    lx, ly = _LUZ
+    for j in range(int(cy - r - 2), int(cy + r + 3)):
+        for i in range(int(cx - r - 2), int(cx + r + 3)):
+            dx, dy = i - cx, j - cy
+            d2 = dx * dx + dy * dy
+            bossa = 1 if ((i * 7 + j * 5) % 5 < 2) else 0
+            rr = r + bossa
+            if d2 > rr * rr:
+                continue
+            na_borda = d2 > (rr - 1.6) ** 2
+            sombreado = (dx * -lx + dy * -ly) > -r * 0.25
+            faixa_clara = (rr - 3.0) ** 2 < d2 <= (rr - 0.9) ** 2
+            iluminado = (dx * lx + dy * ly) > r * 0.30
+            if na_borda and sombreado:
+                px(im, i, j, escuro)
+            elif faixa_clara and iluminado and tom in (f3, f4):
+                px(im, i, j, claro)
+            else:
+                px(im, i, j, tom)
+
+
+def _tronco_arvore(im, cx, base, alt, larg):
+    """Tronco com listra de casca, afinando para cima e alargando em raiz."""
+    for k in range(alt):
+        y = base - k
+        l = larg + (2 if k < 3 else 0) - (1 if k > alt - 4 else 0)
+        ret(im, cx - l // 2, y, l, 1, MADEIRA)
+        px(im, cx - l // 2, y, MADEIRA_E)
+        px(im, cx + l // 2 - (1 if l % 2 == 0 else 0), y, MADEIRA_E)
+        if k % 5 == 2:
+            px(im, cx - 1, y, MADEIRA_E)
+        if k % 7 == 3:
+            px(im, cx + 1, y, MADEIRA_C)
+    ret(im, cx - larg // 2 - 2, base - 1, larg + 4, 2, MADEIRA_E)
+
+
+#: os arranjos de moita. Trocar de arranjo e o que da VARIEDADE sem desenhar
+#: arvore nova: mesmo metodo, mesma rampa, floresta que nao se repete
+_ARRANJOS = [
+    [(-14, 4, 9, 1), (14, 4, 9, 1), (0, 10, 10, 1),
+     (-8, -4, 10, 2), (9, -3, 10, 2), (0, 3, 11, 2),
+     (-3, -11, 9, 3), (7, -10, 7, 3), (-11, -6, 6, 3), (-5, -14, 5, 4)],
+    [(-15, 2, 8, 1), (13, 6, 9, 1), (2, 11, 9, 1),
+     (-6, -2, 11, 2), (10, -5, 9, 2), (0, 5, 10, 2),
+     (-1, -12, 8, 3), (9, -11, 6, 3), (-12, -7, 7, 3),
+     (-3, -15, 4, 4), (10, -14, 3, 4)],
+    [(-13, 6, 8, 1), (15, 3, 8, 1), (-2, 12, 10, 1),
+     (-9, -1, 10, 2), (8, -4, 11, 2), (1, 2, 10, 2),
+     (-5, -12, 8, 3), (6, -12, 7, 3), (-13, -4, 6, 3), (-7, -15, 4, 4)],
+]
+
+
+def arvore(variante=0, rampa=None, larg=56, alt=72):
+    """Arvore de folha larga, por moitas."""
+    rampa = rampa or (FOLHA_0, FOLHA_E, FOLHA, FOLHA_C, FOLHA_4)
+    im = nova(larg, alt)
+    cx = larg // 2
+    chao = alt - 5
+    for j in range(chao - 2, chao + 4):
+        for i in range(cx - 15, cx + 16):
+            dx, dy = (i - cx) / 15.0, (j - (chao + 1)) / 3.0
+            if dx * dx + dy * dy <= 1:
+                px(im, i, j, (36, 30, 52, 60))
+
+    topo = chao - 22
+    _tronco_arvore(im, cx, chao, 24, 9)
+    # o galho ligando tronco e copa: sem ele a copa flutua acima do palito e o
+    # olho procura o corte
+    for k in range(7):
+        px(im, cx - 3 - k, topo - k + 1, MADEIRA_E)
+        px(im, cx - 3 - k, topo - k + 2, MADEIRA)
+    for k in range(5):
+        px(im, cx + 3 + k, topo - k + 2, MADEIRA_E)
+
+    cy = topo - 12
+    for (dx, dy, r, nivel) in _ARRANJOS[variante % len(_ARRANJOS)]:
+        _moita(im, cx + dx, cy + dy, r, rampa[nivel], rampa)
     contorno_alfa(im)
     return im
 
 
-def arvore_escura():
-    return arvore(52, 40, ((52, 104, 66), (76, 138, 84), (34, 74, 48)))
+def arvore_escura(variante=1):
+    """A mesma arvore com a rampa puxada para o escuro. E o que faz uma mata
+    ter fundo: as escuras vao atras, as claras na frente."""
+    return arvore(variante, rampa=((22, 56, 38), (34, 78, 50), (52, 106, 66),
+                                   (78, 146, 88), (116, 180, 110)))
 
 
 def arbusto_obj():
@@ -366,8 +458,11 @@ OBJETOS = [
     ("casa-grande", casa_grande, (0.10, 0.55)),
     ("ferraria", ferraria, (0.10, 0.55)),
     ("casa-vovo", casa_vovo, (0.10, 0.55)),
-    ("arvore", arvore, (0.30, 0.14)),
-    ("arvore-escura", arvore_escura, (0.30, 0.14)),
+    ("arvore", lambda: arvore(0), (0.22, 0.10)),
+    ("arvore-2", lambda: arvore(1), (0.22, 0.10)),
+    ("arvore-3", lambda: arvore(2), (0.22, 0.10)),
+    ("arvore-escura", lambda: arvore_escura(1), (0.22, 0.10)),
+    ("arvore-escura-2", lambda: arvore_escura(2), (0.22, 0.10)),
     ("arbusto", arbusto_obj, (0.40, 0.45)),
     ("poste-sino", lambda: poste_sino(False), (0.25, 0.14)),
     ("poste-com-sino", lambda: poste_sino(True), (0.25, 0.14)),

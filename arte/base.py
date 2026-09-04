@@ -139,11 +139,38 @@ def sombra_chao(im, largura=6, base_y=None):
 
 
 def deslocamento(coluna):
-    """(balanco da perna, sobe e desce do corpo, balanco do braco)."""
+    """(passada da perna, sobe e desce do corpo, balanco do braco).
+
+    Tres decisoes moram nestes numeros, e as tres valem para TODO bicho do jogo,
+    porque heroi, NPC, goblin e aranha leem esta mesma tabela.
+
+    1. A PASSADA E POSICAO, NAO COMPRIMENTO. Antes este primeiro numero era
+       somado a ALTURA da perna: uma perna crescia 1 px e a outra encolhia. Isso
+       nao e um passo, e uma perna esticando. Agora ele desloca a perna no eixo
+       do movimento, e quem le decide em que eixo isso cai: de perfil e X puro,
+       de frente sobra pouco porque a passada vai na direcao da camera.
+
+    2. O SOBE E DESCE FICOU COMO ESTAVA, E ISSO E UMA DIVIDA. Anatomicamente o
+       corpo deveria DESCER quando as pernas se abrem: o triangulo que elas
+       formam fica mais largo e mais baixo. Tentamos, e nao da para fazer aqui.
+       Este numero nao levanta o quadril: ele levanta o personagem INTEIRO, pe
+       e tudo. Empurrar os quadros de passo para baixo afunda o pe no chao e
+       joga a arma para fora do quadro nas racas mais baixas -- a geracao de
+       arte reclama, com razao.
+
+       Consertar de verdade exige separar a pose de PASSAGEM (pernas juntas no
+       meio da passada, corpo no alto) da pose de PARAR, que hoje sao a mesma
+       coluna `parado`. Isso e uma coluna nova na folha, nao um numero nesta
+       tabela. Ate la, os -1 abaixo ficam.
+
+    3. O BRACO VAI AO CONTRARIO DA PERNA. Repare que o terceiro numero tem o
+       sinal trocado em relacao ao primeiro. E o que separa "andar" de "marchar
+       como boneco de corda".
+    """
     if coluna == "passo-a":
-        return 1, -1, 1
+        return 2, -1, -1
     if coluna == "passo-b":
-        return -1, -1, -1
+        return -2, -1, 1
     if coluna == "respira":
         return 0, 1, 0
     return 0, 0, 0
