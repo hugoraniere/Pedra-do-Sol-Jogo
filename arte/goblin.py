@@ -66,13 +66,21 @@ def goblin(direcao, coluna, tipo="magricela"):
     # perna arqueada: sai mais aberta do que o tronco
     px_esq = corpo_x - 1
     px_dir = corpo_x + corpo_l - pe_l + 1
+    perfil = direcao in ("esquerda", "direita")
     for (x, bal) in ((px_esq, perna_bal), (px_dir, -perna_bal)):
-        ret(im, x, perna_topo, pe_l, perna_alt + bal, GOBLIN)
-        ret(im, x + pe_l - 1, perna_topo, 1, perna_alt + bal, GOBLIN_E)
+        # a passada e posicao, nao comprimento. Ver deslocamento() em base.py:
+        # de perfil ela e X puro, de frente sobra 1 px de x e o pe subindo
+        sinal = (1 if bal > 0 else -1) if bal else 0
+        # passada de 1 px, nao a cheia do heroi: a perna do goblin ja nasce
+        # ARQUEADA, saindo mais aberta que o tronco. Somando a passada inteira
+        # nessa base o pe sai pela borda do quadro
+        dx, dh = (sinal, 0) if perfil else (sinal, sinal)
+        ret(im, x + dx, perna_topo, pe_l, perna_alt + dh, GOBLIN)
+        ret(im, x + dx + pe_l - 1, perna_topo, 1, perna_alt + dh, GOBLIN_E)
         # pe grande e chato, sem bota
-        y = perna_topo + perna_alt + bal
+        y = perna_topo + perna_alt + dh
         largura = pe_l + 2
-        bx = x - (2 if x < 8 else 0)
+        bx = x + dx - (2 if x < 8 else 0)
         ret(im, bx, y, largura, pe_alt, GOBLIN_E)
         ret(im, bx, y, largura, 1, GOBLIN)
 

@@ -147,6 +147,20 @@ def corpo(direcao, coluna, tom=0, raca="vale", **mudancas):
     cab_x = _lados(CABECA_L)
     cab_l = CABECA_L
 
+    # De perfil o corpo humano nao e o de frente com um olho a menos: ele e mais
+    # FINO, tem UMA orelha e as pernas ficam uma atras da outra. Fazer as tres
+    # coisas e o que separa "virou a cara" de "virou o corpo".
+    perfil = direcao in ("esquerda", "direita")
+
+    def do_lado_de_tras(ponto):
+        """De perfil so aparece a orelha do lado da NUCA. Olhando para a
+        esquerda a nuca esta a direita, e vice-versa. Desenhar as duas e o que
+        faz o rosto de lado parecer torcido -- o goblin ja acertava isto e o
+        heroi nao."""
+        if not perfil:
+            return True
+        return ponto[0] >= 8 if direcao == "esquerda" else ponto[0] < 8
+
     # ------------------------------------------------------------ cabeca
     for i, larg in enumerate(LINHAS_CABECA):
         ret(im, _lados(larg), topo + i, larg, 1, pele)
@@ -176,19 +190,24 @@ def corpo(direcao, coluna, tom=0, raca="vale", **mudancas):
         oy = topo + CABECA_ALT // 2
         # de tres quartos so a orelha da frente aparece inteira
         if t["orelha"] == "folha":
-            pontos(im, [(cab_x - 1, oy), (cab_x - 1, oy + 1), (cab_x - 2, oy - 1),
+            pontos(im, [p for p in [
+                        (cab_x - 1, oy), (cab_x - 1, oy + 1), (cab_x - 2, oy - 1),
                         (cab_x - 2, oy - 2), (cab_x - 3, oy - 3),
                         (cab_x + cab_l, oy), (cab_x + cab_l, oy + 1),
                         (cab_x + cab_l + 1, oy - 1), (cab_x + cab_l + 1, oy - 2),
-                        (cab_x + cab_l + 2, oy - 3)], pele)
-            pontos(im, [(cab_x - 1, oy + 2), (cab_x + cab_l, oy + 2),
-                        (cab_x - 2, oy - 1), (cab_x + cab_l + 1, oy - 1)], sombra_pele)
+                        (cab_x + cab_l + 2, oy - 3)] if do_lado_de_tras(p)], pele)
+            pontos(im, [p for p in [
+                        (cab_x - 1, oy + 2), (cab_x + cab_l, oy + 2),
+                        (cab_x - 2, oy - 1), (cab_x + cab_l + 1, oy - 1)]
+                        if do_lado_de_tras(p)], sombra_pele)
         elif t["orelha"] == "pontuda":
-            pontos(im, [(cab_x - 1, oy), (cab_x - 1, oy + 1), (cab_x - 2, oy),
+            pontos(im, [p for p in [
+                        (cab_x - 1, oy), (cab_x - 1, oy + 1), (cab_x - 2, oy),
                         (cab_x + cab_l, oy), (cab_x + cab_l, oy + 1),
-                        (cab_x + cab_l + 1, oy)], pele)
+                        (cab_x + cab_l + 1, oy)] if do_lado_de_tras(p)], pele)
         else:
-            pontos(im, [(cab_x - 1, oy + 1), (cab_x + cab_l, oy + 1)], pele)
+            pontos(im, [p for p in [(cab_x - 1, oy + 1), (cab_x + cab_l, oy + 1)]
+                        if do_lado_de_tras(p)], pele)
 
     # ------------------------------------------------------------ chifres
     # dois tocos claros no alto da cabeca, visiveis tambem de costas
@@ -265,7 +284,8 @@ def corpo(direcao, coluna, tom=0, raca="vale", **mudancas):
             ret(im, 7, boca_y, 2, 1, escura)   # a boca aparece no meio da barba
 
     # ------------------------------------------------------------ tronco
-    tr_l = c["tronco"]
+    # de perfil os ombros somem e o peito vira uma faixa fina: 2 px a menos
+    tr_l = c["tronco"] - (2 if perfil else 0)
     tr_x = _lados(tr_l)
     tr_topo = e["tronco_topo"] + sobe
     ret(im, 7, tr_topo - 1, 2, 1, sombra_pele)          # pescoco
@@ -297,17 +317,49 @@ def corpo(direcao, coluna, tom=0, raca="vale", **mudancas):
     vao = 2
     px_esq = 8 - vao // 2 - pe_l
     px_dir = 8 + vao // 2
+    if perfil:
+        # de perfil as duas pernas ocupam quase a mesma faixa de x. Quem diz
+        # qual esta atras e o TOM, nao a posicao: com as duas na mesma cor o
+        # olho le duas pernas irmas lado a lado, que e o defeito que isto
+        # conserta
+        # exatamente o MESMO x para as duas: uma fica atras da outra, nao ao
+        # lado. Com 1 px de diferenca a passada saia torta, porque as duas
+        # partiam de lugares diferentes e abriam o mesmo tanto
+        px_esq = px_dir = 8 - pe_l // 2 - 1
     pe_topo = e["perna_topo"] + sobe
     alt = e["perna"]
-    for (x, bal) in ((px_esq, perna_bal), (px_dir, -perna_bal)):
-        ret(im, x, pe_topo, pe_l, alt + bal, pele)
-        ret(im, x + pe_l - 1, pe_topo, 1, alt + bal, sombra_pele)
+    def passada(bal):
+        """(deslocamento em x, mudanca de altura) desta perna neste quadro.
+
+        De perfil a passada e X puro: a perna avanca e recua, e e assim que se
+        anda. De frente ela vai na direcao da camera, entao quase nada dela
+        cabe: sobra 1 px de x e o pe do lado de tras subindo, que e o sinal
+        possivel nessa vista."""
+        if not bal:
+            return 0, 0
+        sinal = 1 if bal > 0 else -1
+        # 1 px a mais de passada no perfil: com a passada crua os dois pes, que
+        # sao mais largos que a perna, se encostam e viram uma tabua so
+        return (bal + sinal, 0) if perfil else (sinal, sinal)
+
+    for i, (x, bal) in enumerate(((px_esq, perna_bal), (px_dir, -perna_bal))):
+        # a de tras, no perfil, sai chapada em tom de sombra e sem luz propria
+        atras = perfil and i == 0
+        tom_perna = sombra_pele if atras else pele
+        dx, dh = passada(bal)
+        ret(im, x + dx, pe_topo, pe_l, alt + dh, tom_perna)
+        ret(im, x + dx + pe_l - 1, pe_topo, 1, alt + dh, sombra_pele)
 
     # -------------------------------------------------- botas ou pe no chao
-    for (x, bal) in ((px_esq, perna_bal), (px_dir, -perna_bal)):
-        y = pe_topo + alt + bal
-        larg = pe_l + 1
-        bx = x - (1 if x < 8 else 0)
+    for i, (x, bal) in enumerate(((px_esq, perna_bal), (px_dir, -perna_bal))):
+        dx, dh = passada(bal)
+        y = pe_topo + alt + dh
+        # de perfil o pe aponta para onde ele anda, e fica comprido em x
+        larg = pe_l + (2 if perfil else 1)
+        if perfil:
+            bx = x + dx - (1 if direcao == "esquerda" else 0)
+        else:
+            bx = x + dx - (1 if x < 8 else 0)
         if t["descalco"]:
             # o Pequenino do Trigo anda descalco, com pe grande e chato
             ret(im, bx, y, larg + 1, BOTA_ALT - 1, pele)
@@ -351,9 +403,11 @@ def geometria(direcao, coluna, raca="vale", **mudancas):
         forte = (tr_x + tr_l, e["cabeca_topo"] + 3)
         fraco = (tr_x - 2, ombro_y + 1)
     elif direcao == "esquerda":
-        forte, fraco = (tr_x, ombro_y + balanco), None
+        # de perfil o braco vai para a FRENTE e para tras, no eixo do movimento.
+        # O mesmo 1 px em Y que funciona de frente aqui nao le nada
+        forte, fraco = (tr_x - balanco, ombro_y), None
     elif direcao == "direita":
-        forte, fraco = (tr_x + tr_l - 2, ombro_y - balanco), None
+        forte, fraco = (tr_x + tr_l - 2 + balanco, ombro_y), None
     else:
         forte = (tr_x + tr_l, ombro_y - balanco)
         fraco = (tr_x - 2, ombro_y + balanco)
@@ -394,20 +448,38 @@ def bracos(direcao, coluna, tom=0, raca="vale", **mudancas):
     sombra_pele, pele, _ = _tons(raca, tom)
     alt_braco = g["altura_braco"]
 
-    def desenhar(braco):
+    def desenhar(braco, fora):
+        """Braco, pulso e mao.
+
+        A MAO E UM DEGRAU NA SILHUETA. O braco tem 2 px; a mao tem 3, e o pixel
+        a mais aponta para FORA do corpo. Entre os dois vai uma linha de sombra,
+        que e o pulso. Sao esses dois sinais que fazem o olho ver uma mao: sem
+        eles o braco termina cego e o personagem parece ter cotos, que era o
+        estado ate aqui. Nao da para so alargar a ponta -- sem o pulso a mao
+        vira continuacao do braco e ninguem ve corte nenhum."""
         if braco is None:
             return
         x, y = braco
         larg = LARGURA_BRACO
-        ret(im, x, y, larg, alt_braco, pele)
-        ret(im, x + larg - 1, y, 1, alt_braco, sombra_pele)
-        ret(im, x, y + alt_braco - 1, larg, 1, sombra_pele)
+        alt = alt_braco - 3                     # o resto e pulso e mao
+        ret(im, x, y, larg, alt, pele)
+        ret(im, x + larg - 1, y, 1, alt, sombra_pele)
+
+        pulso = y + alt
+        ret(im, x, pulso, larg, 1, sombra_pele)  # o corte que separa a mao
+
+        mx = x - 1 if fora < 0 else x           # o degrau cresce para fora
+        ret(im, mx, pulso + 1, larg + 1, 2, pele)
+        ret(im, mx, pulso + 1, larg + 1, 1, _tons(raca, tom)[2])
+        ret(im, mx, pulso + 2, larg + 1, 1, sombra_pele)
         if t["escama"]:
             # garra clara na ponta da mao da Cria de Dragao
-            ret(im, x, y + alt_braco - 1, larg, 1, CHIFRE_E)
+            ret(im, mx, pulso + 2, larg + 1, 1, CHIFRE_E)
 
-    desenhar(g["braco_forte"])
-    desenhar(g["braco_fraco"])
+    # o degrau da mao aponta para fora do corpo: o braco da esquerda cresce
+    # para a esquerda, o da direita para a direita
+    desenhar(g["braco_forte"], -1 if g["braco_forte"][0] < 8 else 1)
+    desenhar(g["braco_fraco"], -1 if (g["braco_fraco"] or (0,))[0] < 8 else 1)
     luz_de_cima(im, [pele, sombra_pele], _tons(raca, tom)[2])
     contorno_seletivo(im, TINTA, TINTA_2)
     return im
