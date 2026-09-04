@@ -36,6 +36,13 @@ export class Mundo extends Phaser.Scene {
   private saidas: Saida[] = [];
   private trocandoDeMapa = false;
   private criaturas: CriaturaViva[] = [];
+  /** Trava so o ANDAR LIVRE e a deteccao de encontro/saida — nao pausa a
+   *  cena. Se a cena pausasse (scene.pause), o mundo dela de fisica tambem
+   *  parava de avancar, e o heroi que o Combate move deixaria de andar de
+   *  verdade na tela, mesmo com a velocidade sendo escrita no corpo dele.
+   *  Ver docs/plano-do-combate.md, secao 3.6: o combate acontece NESTE
+   *  mundo, nunca troca de cena nem de mapa. */
+  private emCombate = false;
 
   /** De onde o heroi entra. Vazio quer dizer "a entrada de sempre do mapa";
    *  quem chega de outro lugar manda o tile pelo qual apareceu. */
@@ -200,19 +207,6 @@ export class Mundo extends Phaser.Scene {
     this.events.on("dialogo-fim", () => {
       this.conversando = false;
     });
-    // volta do Combate: reacende a Interface e tira do mapa quem perdeu a
-    // luta la dentro. `scene.resume` dispara este evento sozinho, o mesmo
-    // que a Pausa ja usa para devolver o controle ao jogador.
-    this.events.on("resume", () => {
-      this.scene.setVisible(true, "Interface");
-      this.scene.resume("Interface");
-      this.criaturas = this.criaturas.filter((c) => {
-        if (!foiDerrotado(c.chave)) return true;
-        c.sprite.destroy();
-        c.corpo.destroy();
-        return false;
-      });
-    });
     // sair do mundo solta os loops. A musica sobrevive: menu e titulo sao o
     // mesmo lugar do ponto de vista de quem joga, e recomecar a faixa se ouve.
     this.events.once("shutdown", () => calarAmbiente());
@@ -255,6 +249,7 @@ export class Mundo extends Phaser.Scene {
   }
 
   update() {
+    if (this.emCombate) return; // quem manda no heroi agora e o Combate
     if (this.conversando) {
       this.heroi.mover(0, 0);
       return;
@@ -291,10 +286,60 @@ export class Mundo extends Phaser.Scene {
   private iniciarCombate(alvos: CriaturaViva[]) {
     this.heroi.mover(0, 0);
     const encontro: Encontro = alvos.map((a) => ({ id: a.id, chave: a.chave }));
-    this.scene.pause();
+    this.emCombate = true;
+    // some com quem entrou na luta: o Combate poe uma versao propria dele,
+    // no MESMO lugar, com corpo de fisica pra golpe e recuo. O original
+    // decorativo so volta a aparecer se sair derrotado (nunca: e destruido
+    // de vez) ou se o jogador fugir (hoje nao existe fuga, so vitoria).
+    alvos.forEach((a) => this.esconderCriatura(a.chave, false));
     this.scene.pause("Interface");
     this.scene.setVisible(false, "Interface");
     this.scene.launch("Combate", { encontro });
+  }
+
+  /** O que `Combate.ts` pede emprestado para lutar NESTE mundo, nunca no
+   *  proprio: o heroi de verdade e a camada de chao de verdade. Ver
+   *  docs/plano-do-combate.md, secao 3.6. */
+  contexto() {
+    return { heroi: this.heroi, chao: this.chao };
+  }
+
+  /** Onde essa criatura esta parada agora, em casas — pra a luta comecar
+   *  exatamente ali, nunca num posto fixo de arena. */
+  casaDaCriatura(chave: string): { tx: number; ty: number } | undefined {
+    const c = this.criaturas.find((x) => x.chave === chave);
+    if (!c) return undefined;
+    return { tx: Math.floor(c.sprite.x / TILE), ty: Math.floor((c.sprite.y - 1) / TILE) };
+  }
+
+  /** Esconde (ou reexibe) a criatura decorativa enquanto a versao de combate
+   *  dela briga por cima. */
+  esconderCriatura(chave: string, visivel: boolean) {
+    this.criaturas.find((c) => c.chave === chave)?.sprite.setVisible(visivel);
+  }
+
+  /** Ela perdeu a luta de vez: tira do mapa e da lista, pra nao sobrar
+   *  fantasma quando o Combate devolver o controle. */
+  removerCriatura(chave: string) {
+    const c = this.criaturas.find((x) => x.chave === chave);
+    if (!c) return;
+    c.sprite.destroy();
+    c.corpo.destroy();
+    this.criaturas = this.criaturas.filter((x) => x !== c);
+  }
+
+  /** O tamanho do mundo em pixel, pra Combate.ts limitar a propria camera
+   *  ao mesmo mapa (nunca aos limites de uma arena separada). */
+  limites() {
+    return { largura: this.chao.tilemap.widthInPixels, altura: this.chao.tilemap.heightInPixels };
+  }
+
+  /** Chamado pelo Combate quando a luta acaba. Devolve o controle sem
+   *  nenhum scene.resume: o Mundo nunca chegou a pausar de verdade. */
+  sairDeCombate() {
+    this.emCombate = false;
+    this.scene.setVisible(true, "Interface");
+    this.scene.resume("Interface");
   }
 
   /** Encostou numa borda que leva a outro lugar? Entao troca de mapa.
