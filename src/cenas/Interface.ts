@@ -11,6 +11,7 @@ import { refazerAoRedimensionar } from "../sistemas/visao";
 import { ICONE } from "../sistemas/icones";
 import { ESPACO } from "../sistemas/design";
 import { botao } from "../sistemas/botao";
+import { interativo } from "../sistemas/interativo";
 
 /** `quem` e o nome que aparece na chapinha; `chave` e a entrada de DIALOGOS,
  *  que e o que a tabela VOZ usa para achar a altura da voz. Sem chave a fala
@@ -113,15 +114,14 @@ export class Interface extends Phaser.Scene {
   /** engrenagem no canto do topo, o unico jeito de pausar no toque */
   private montarBotaoPausa() {
     const b = this.add.nineslice(LARGURA - 18, 2, "painel-creme", undefined, 16, 12, 8, 8, 8, 8).setOrigin(0);
-    texto(this, LARGURA - 13, 3, "=", { cor: 0x2c2440 });
+    const rotulo = texto(this, LARGURA - 13, 3, "=", { cor: 0x2c2440 });
     const alvo = this.add
       .rectangle(LARGURA - 10, 8, 26, 20, 0x000000, 0)
       .setInteractive({ useHandCursor: true });
-    alvo.on("pointerdown", () => {
-      b.setTexture("painel-ouro");
-      this.events.emit("pausar");
-    });
-    alvo.on("pointerup", () => b.setTexture("painel-creme"));
+    // somClique desligado: pausar() ja toca "pausa-abre" um passo depois, e um
+    // segundo som aqui tocaria os dois juntos
+    interativo(alvo, { pecas: [b, rotulo], somClique: false });
+    alvo.on("pointerdown", () => this.events.emit("pausar"));
   }
 
   atualizarTopo() {

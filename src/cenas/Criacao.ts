@@ -41,6 +41,7 @@ import { ATRIBUTOS, ORDEM_PODERES, acharMagia } from "../dados/conteudo";
 import { poderesDaOrigem, poderEscolhidoDoHeroi } from "../sistemas/poderes";
 import { novoJogo, VAZIO, Heroi as FichaHeroi } from "../sistemas/estado";
 import { botao, Botao } from "../sistemas/botao";
+import { interativo } from "../sistemas/interativo";
 import { texto, medirTexto } from "../sistemas/texto";
 import { ESPACO, TAMANHO, marcar, meio, pilha, colunas, Retangulo } from "../sistemas/design";
 import { camadasDoHeroi, criarAnimacoes, Heroi } from "../sistemas/heroi";
@@ -517,18 +518,19 @@ export class Criacao extends Phaser.Scene {
       ancoraY: 0.5,
     });
     this.grupo.add(campo);
-    this.grupo.add(
-      texto(this, LARGURA / 2, meio(areaDica), "digite no teclado, ou toque aqui para sortear", {
-        cor: 0x4a3e64,
-        ancora: 0.5,
-        ancoraY: 0.5,
-      })
-        .setInteractive()
-        .on("pointerdown", () => {
-          this.rascunho.nome = Phaser.Utils.Array.GetRandom(SORTEIO);
-          campo.setText(this.rascunho.nome);
-        })
-    );
+    const dica = texto(
+      this,
+      LARGURA / 2,
+      meio(areaDica),
+      "digite no teclado, ou toque aqui para sortear",
+      { cor: 0x4a3e64, ancora: 0.5, ancoraY: 0.5 }
+    ).setInteractive({ useHandCursor: true });
+    this.grupo.add(dica);
+    interativo(dica);
+    dica.on("pointerdown", () => {
+      this.rascunho.nome = Phaser.Utils.Array.GetRandom(SORTEIO);
+      campo.setText(this.rascunho.nome);
+    });
 
     this.input.keyboard?.on("keydown", (e: KeyboardEvent) => {
       if (PASSOS[this.passo] !== "Nome") return;
