@@ -2,7 +2,8 @@
  *  e cuida de andar, esbarrar e conversar. */
 import Phaser from "phaser";
 import { TILE, SOLIDOS, COR } from "../dados/config";
-import { VILA, montarChao, Mapa } from "../dados/mapas";
+import { MAPAS, VILA, montarChao, plantarMata, Mapa, Saida } from "../dados/mapas";
+import { acharCriatura } from "../dados/conteudo";
 import { DIALOGOS } from "../dados/dialogos";
 import { estado, salvar, marcarVisitado } from "../sistemas/estado";
 import { Controles } from "../sistemas/controles";
@@ -23,18 +24,31 @@ export class Mundo extends Phaser.Scene {
   private conversando = false;
   private solidos!: Phaser.Physics.Arcade.StaticGroup;
   private chao!: Phaser.Tilemaps.TilemapLayer;
+  private saidas: Saida[] = [];
+  private trocandoDeMapa = false;
+
+  /** De onde o heroi entra. Vazio quer dizer "a entrada de sempre do mapa";
+   *  quem chega de outro lugar manda o tile pelo qual apareceu. */
+  private entradaForcada?: { x: number; y: number };
 
   constructor() {
     super("Mundo");
   }
 
+  init(dados?: { entrada?: { x: number; y: number } }) {
+    this.entradaForcada = dados?.entrada;
+  }
+
   create() {
-    const mapaAtual: Mapa = VILA;
     const st0 = estado();
+    // Qual mapa carregar sai do estado, nao de um import fixo: e o que permite
+    // o jogo ter mais de um lugar e voltar para onde o jogador parou.
+    const mapaAtual: Mapa = MAPAS[st0.cena] ?? VILA;
     criarAnimacoes(this, [
       ...camadasDoHeroi(st0.heroi).map((c) => c.chave),
       ...mapaAtual.pessoas.map((p) => `npc-${p.sprite}`),
-      "goblin",
+      // so as criaturas que este mapa realmente tem
+      ...(mapaAtual.criaturas ?? []).map((b) => acharCriatura(b.id)?.sprite ?? b.id),
     ]);
     this.controles = new Controles(this);
     this.interagiveis = [];
@@ -42,6 +56,8 @@ export class Mundo extends Phaser.Scene {
     this.solidos = this.physics.add.staticGroup();
 
     const mapa: Mapa = mapaAtual;
+    this.saidas = mapa.saidas ?? [];
+    this.trocandoDeMapa = false;
     const fichas = this.cache.json.get("objetos") as Record<string, FichaObjeto>;
 
     // ---------------------------------------------------------- chao
@@ -54,7 +70,11 @@ export class Mundo extends Phaser.Scene {
     this.chao = camada;
 
     // ------------------------------------------------------- objetos
-    mapa.objetos.forEach((peca) => {
+    // Os objetos escritos a mao sao os marcos. A mata e o enfeite de chao vem
+    // de plantarMata(), que le a letra T do desenho: sem isso a floresta teria
+    // umas oitocentas arvores escritas na unha em mapas.ts.
+    const pecas = [...mapa.objetos, ...plantarMata(mapa.chao, mapa.objetos)];
+    pecas.forEach((peca) => {
       const ficha = fichas?.[peca.nome];
       if (!ficha) return;
       // ancorado pelo pe: a base do objeto encosta no tile indicado
@@ -114,11 +134,29 @@ export class Mundo extends Phaser.Scene {
       // a respiracao agora e quadro de animacao, nao tween de escala
     });
 
+    // ------------------------------------------------------ criaturas
+    // Presenca, e so. Elas ficam paradas respirando no lugar; andar, reagir e
+    // brigar sao do sistema de combate, que ainda nao existe. Ate la o mundo ja
+    // tem bicho dentro, que e o que permite ver se a arte e a escala funcionam.
+    (mapa.criaturas ?? []).forEach((bicho) => {
+      const ficha = acharCriatura(bicho.id);
+      if (!ficha) return;
+      const x = bicho.x * TILE + TILE / 2;
+      const y = bicho.y * TILE + TILE;
+      const s = this.add.sprite(x, y, ficha.sprite, 0).setOrigin(0.5, 1);
+      s.setDepth(y);
+      s.play(`${ficha.sprite}-parado-baixo`, true);
+      const corpo = this.add.rectangle(x, y - 4, 10, 8);
+      this.solidos.add(corpo);
+      (corpo.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
+    });
+
     // --------------------------------------------------------- heroi
+    const entrada = this.entradaForcada ?? mapa.entrada;
     this.heroi = new Heroi(
       this,
-      mapa.entrada.x * TILE + TILE / 2,
-      mapa.entrada.y * TILE + TILE,
+      entrada.x * TILE + TILE / 2,
+      entrada.y * TILE + TILE,
       st0.heroi
     );
     this.physics.add.collider(this.heroi, camada);
@@ -135,6 +173,8 @@ export class Mundo extends Phaser.Scene {
     // zoom sempre 1: quem muda a visao e a resolucao do canvas, ver sistemas/visao.ts.
     // com zoom fracionario a grade de pixels sai do lugar e o mapa pisca ao andar.
     this.cameras.main.setZoom(1);
+    // quem chegou de outro mapa entrou com a tela apagada: acende de volta
+    if (this.entradaForcada) this.cameras.main.fadeIn(220, 0, 0, 0);
     this.cameras.main.setRoundPixels(true);
     this.physics.world.setBounds(0, 0, tilemap.widthInPixels, tilemap.heightInPixels);
     this.heroi.body.setCollideWorldBounds(true);
@@ -197,5 +237,34 @@ export class Mundo extends Phaser.Scene {
     this.heroi.mover(d.x, d.y);
     this.heroi.atualizarProfundidade();
     ouvirDe(this.heroi.x, this.heroi.y);
+    this.conferirSaida();
+  }
+
+  /** Encostou numa borda que leva a outro lugar? Entao troca de mapa.
+   *
+   *  A troca acontece com a tela esmaecendo, e nao de um quadro para o outro:
+   *  corte seco em cima de uma tela cheia de arvore faz o jogador perder de
+   *  vista o proprio heroi. */
+  private conferirSaida() {
+    if (this.trocandoDeMapa) return;
+    const tx = Math.floor(this.heroi.x / TILE);
+    const ty = Math.floor(this.heroi.y / TILE);
+    const saida = this.saidas.find(
+      (s) => tx >= s.x && tx < s.x + s.w && ty >= s.y && ty < s.y + s.h
+    );
+    if (!saida) return;
+    const destino = MAPAS[saida.para];
+    if (!destino) return;   // lugar ainda nao construido: a borda simplesmente nao leva a nada
+
+    this.trocandoDeMapa = true;
+    this.heroi.mover(0, 0);
+    const st = estado();
+    st.cena = saida.para;
+    st.lugar = destino.lugar;
+    salvar();
+    this.cameras.main.fadeOut(220, 0, 0, 0);
+    this.cameras.main.once("camerafadeoutcomplete", () => {
+      this.scene.restart({ entrada: saida.entrada });
+    });
   }
 }

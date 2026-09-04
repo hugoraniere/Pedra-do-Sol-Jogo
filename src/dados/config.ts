@@ -53,10 +53,17 @@ export const T = {
   grama: 0, grama2: 1, grama3: 2, gramaAlta: 3, flores: 4,
   terra: 5, caminho: 6, areia: 7, agua: 8, agua2: 9,
   pedra: 10, madeiraChao: 11, chaoCaverna: 12, paredeCaverna: 13,
+  // a Floresta dos Sussurros
+  mata: 14, folhagem: 15, trilha: 16, aguaRasa: 17, barranco: 18,
+  gramaMata: 19,
 } as const;
 
-/** Tiles de chao que o heroi nao atravessa. Objeto tem colisao propria. */
-export const SOLIDOS = [T.agua, T.agua2, T.pedra, T.paredeCaverna];
+/** Tiles de chao que o heroi nao atravessa. Objeto tem colisao propria.
+ *
+ *  `mata` esta aqui e e por isso que a floresta nao precisa de uma caixa de
+ *  colisao por arvore: a parede e o chao, e o pinheiro plantado em cima e so
+ *  desenho. Umas oitocentas caixas de colisao a menos. */
+export const SOLIDOS = [T.agua, T.agua2, T.pedra, T.paredeCaverna, T.mata, T.barranco];
 
 /** Altura do frame do personagem. Mudou de 24 para 32 na virada de arte. */
 export const ALTURA_PERSONAGEM = 32;
@@ -230,6 +237,8 @@ export const OBJETOS = [
   "arvore", "arvore-escura", "arbusto",
   "poste-sino", "poste-com-sino", "poco", "barraca", "cerca",
   "fogueira", "bau", "placa", "varal",
+  "pinheiro", "pinheiro-baixo", "grande-ouvinte", "arvore-raio", "tronco-caido",
+  "toco", "samambaia", "cogumelo", "cogumelo-azul", "pedra-musgo", "teia", "raizes",
 ] as const;
 
 export const CABELOS = [

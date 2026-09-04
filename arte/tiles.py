@@ -153,6 +153,97 @@ def madeira_chao():
     return im
 
 
+# ------------------------------------------- a Floresta dos Sussurros
+# A mata usa uma familia de verde propria, mais escura e mais fria que a grama da
+# vila. Trocar so o brilho nao bastava: a floresta ficava com cara de vila mal
+# iluminada em vez de lugar diferente.
+
+
+def mata():
+    """Chao de mata fechada. Tile SOLIDO: e por cima dele que a arvore e plantada."""
+    im = nova()
+    ret(im, 0, 0, T, T, MATA)
+    ruido(im, MATA_C, 20, 401)
+    ruido(im, MATA_E, 30, 402)
+    r = random.Random(403)
+    for _ in range(4):
+        x, y = r.randrange(1, T - 1), r.randrange(1, T - 2)
+        px(im, x, y, MATA_E); px(im, x, y + 1, MATA_E)
+    return im
+
+
+def grama_mata():
+    """Grama de clareira DENTRO da floresta. Mais fria e menos amarela que a
+    grama da vila: sem ela, a clareira da floresta sai identica ao gramado da
+    Vila Semente e o jogador nao sente que mudou de lugar."""
+    im = nova()
+    ret(im, 0, 0, T, T, MATA_C)
+    ruido(im, (96, 158, 106), 24, 451)
+    ruido(im, MATA, 22, 452)
+    r = random.Random(453)
+    for _ in range(3):
+        x, y = r.randrange(1, T - 1), r.randrange(1, T - 2)
+        px(im, x, y, (96, 158, 106)); px(im, x, y + 1, MATA)
+    return im
+
+
+def folhagem():
+    """Chao de folha seca sobre a mata. E o tapete das clareiras."""
+    im = mata()
+    r = random.Random(411)
+    for _ in range(14):
+        x, y = r.randrange(T), r.randrange(T)
+        cor = (FOLHAGEM, FOLHAGEM_C, FOLHAGEM_E)[(x + y) % 3]
+        px(im, x, y, cor); px(im, x + 1, y, cor)
+        px(im, x, y + 1, FOLHAGEM_E)
+    return im
+
+
+def trilha():
+    """Trilha estreita, terra pisada. Mais escura que o caminho da vila de
+    proposito: e picada de mata, nao rua."""
+    im = nova()
+    ret(im, 0, 0, T, T, (170, 134, 92))
+    ruido(im, (192, 158, 114), 26, 421)
+    ruido(im, (134, 102, 68), 24, 422)
+    r = random.Random(423)
+    for _ in range(3):
+        x, y = r.randrange(1, T - 2), r.randrange(1, T - 2)
+        px(im, x, y, MUSGO); px(im, x + 1, y + 1, MUSGO)
+    return im
+
+
+def agua_rasa():
+    """O riacho no pe do barranco: da para ver a pedra no fundo."""
+    im = nova()
+    ret(im, 0, 0, T, T, AGUA_C)
+    for j in range(T):
+        for i in range(T):
+            if (i * 5 + j * 3) % 13 < 3:
+                px(im, i, j, AGUA)
+    r = random.Random(431)
+    for _ in range(5):
+        x, y = r.randrange(1, T - 3), r.randrange(1, T - 3)
+        ret(im, x, y, 3, 2, PEDRA)
+        ret(im, x, y + 2, 3, 1, PEDRA_E)
+    return im
+
+
+def barranco():
+    """A parede de pedra que corta a floresta em duas alturas. Tile SOLIDO."""
+    im = nova()
+    ret(im, 0, 0, T, T, BARRANCO)
+    ret(im, 0, 0, T, 2, BARRANCO_C)
+    r = random.Random(441)
+    for _ in range(6):
+        x, y = r.randrange(0, T - 4), r.randrange(3, T - 3)
+        ret(im, x, y, 4, 2, BARRANCO_E)
+    for _ in range(4):
+        x = r.randrange(0, T - 2)
+        px(im, x, 2, MUSGO); px(im, x + 1, 2, MUSGO_C)
+    return im
+
+
 TILES = [
     ("grama", grama(0)),
     ("grama2", grama(1)),
@@ -168,6 +259,12 @@ TILES = [
     ("madeira-chao", madeira_chao()),
     ("chao-caverna", chao_caverna()),
     ("parede-caverna", parede_caverna()),
+    ("mata", mata()),
+    ("folhagem", folhagem()),
+    ("trilha", trilha()),
+    ("agua-rasa", agua_rasa()),
+    ("barranco", barranco()),
+    ("grama-mata", grama_mata()),
 ]
 
 
