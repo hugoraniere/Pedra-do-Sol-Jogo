@@ -8,6 +8,7 @@ import {
 import { BESTIARIO, PORTES } from "../dados/conteudo";
 import { prepararArmazenamento } from "../sistemas/armazenamento";
 import { guardarEncaixes, Encaixes } from "../sistemas/encaixes";
+import { guardarFichaDoCursor, FichaDoCursor } from "../sistemas/cursor";
 import { vigiarCarregamento } from "../sistemas/doutor";
 
 export class Boot extends Phaser.Scene {
@@ -75,6 +76,10 @@ export class Boot extends Phaser.Scene {
     this.load.json("objetos", "assets/objetos.json");
     OBJETOS.forEach((n) => this.load.image(`obj-${n}`, `assets/objetos/${n}.png`));
     this.load.spritesheet("ui", "assets/ui.png", { frameWidth: 16, frameHeight: 16 });
+    // o cursor do mouse. A ficha diz onde fica a ponta de cada quadro, e e por
+    // ela que nenhuma coordenada da seta e escrita dentro de um .ts
+    this.load.spritesheet("cursor", "assets/cursor.png", { frameWidth: 16, frameHeight: 16 });
+    this.load.json("cursor-ficha", "assets/cursor.json");
     ["painel", "painel-creme", "painel-ouro", "painel-escuro"].forEach((n) =>
       this.load.image(n, `assets/${n}.png`)
     );
@@ -82,6 +87,10 @@ export class Boot extends Phaser.Scene {
 
   async create() {
     guardarEncaixes(this.cache.json.get("encaixes") as Encaixes);
+    guardarFichaDoCursor(this.cache.json.get("cursor-ficha") as FichaDoCursor);
+    // o cursor sobe junto com o jogo e nunca mais sai. Ele nasce escondido:
+    // so aparece quando um mouse de verdade se mexe.
+    this.scene.launch("Ponteiro");
     // no aplicativo os saves vem do disco, entao esperamos a leitura antes do menu
     await prepararArmazenamento();
     this.scene.start("Titulo");

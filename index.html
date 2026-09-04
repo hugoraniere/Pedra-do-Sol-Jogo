@@ -10,7 +10,11 @@
   html,body{margin:0;padding:0;height:100%;background:#2C2440;overflow:hidden;
     -webkit-tap-highlight-color:transparent;touch-action:none;}
   #jogo{width:100%;height:100%;display:flex;align-items:center;justify-content:center;}
-  canvas{image-rendering:pixelated;image-rendering:crisp-edges;}
+  /* o cursor do sistema nunca aparece sobre o jogo: quem desenha o cursor e
+     src/cenas/Ponteiro.ts. O !important existe porque o Phaser escreve
+     cursor:pointer no estilo do canvas para todo objeto com useHandCursor, e
+     sem isto a mao do navegador voltaria em cima de cada botao. */
+  canvas{image-rendering:pixelated;image-rendering:crisp-edges;cursor:none !important;}
 </style>
 </head>
 <body>

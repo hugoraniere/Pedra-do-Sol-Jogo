@@ -11,10 +11,12 @@ import { Interface } from "./cenas/Interface";
 import { Pausa } from "./cenas/Pausa";
 import { Ficha } from "./cenas/Ficha";
 import { Som } from "./cenas/Som";
+import { Ponteiro } from "./cenas/Ponteiro";
 import { instalarAuditor } from "./sistemas/auditoria";
 import { vigiarJanela } from "./sistemas/visao";
 import { instalarBancada } from "./sistemas/bancada";
 import { ligarDoutor } from "./sistemas/doutor";
+import { instalarPonteiro } from "./sistemas/cursor";
 
 // escuta antes do Phaser subir, senao um erro na propria subida passa batido
 ligarDoutor();
@@ -39,7 +41,9 @@ function comecar() {
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
   physics: { default: "arcade", arcade: { gravity: { x: 0, y: 0 }, debug: false } },
-    scene: [Boot, Titulo, Carregar, Criacao, Mundo, Interface, Pausa, Ficha, Som],
+    // o Ponteiro e o ULTIMO de proposito: o Phaser desenha as cenas nesta ordem,
+    // e o cursor tem que ficar por cima de tudo, inclusive da caixa de fala.
+    scene: [Boot, Titulo, Carregar, Criacao, Mundo, Interface, Pausa, Ficha, Som, Ponteiro],
   });
   // gancho de depuracao: no console do navegador da para fazer
   //   jogo.scene.getScene("Interface").events.emit("falar", {...})
@@ -47,6 +51,7 @@ function comecar() {
   instalarBancada(jogo);
   vigiarJanela(jogo);
   instalarAuditor(jogo);
+  instalarPonteiro(jogo);
 }
 
 // espera a fonte de pixel carregar, senao a primeira tela sai com a fonte do sistema
