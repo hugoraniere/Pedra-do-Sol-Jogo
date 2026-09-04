@@ -118,6 +118,22 @@ async function clicarBotao(rotulo) {
   await pagina.waitForTimeout(350);
 }
 
+/** O nome do heroi nos testes.
+ *
+ *  O percurso sorteava o nome, e o sorteio escolhe um de cinco a cada rodada:
+ *  todo screenshot que mostra o nome mudava sozinho, sem nada ter mudado na tela.
+ *  PNG instavel em pasta versionada vira conflito de imagem no merge, e conflito
+ *  de imagem nao se resolve. Com o nome fixo, um screenshot so muda quando a UI
+ *  muda de verdade, e ai o diff quer dizer alguma coisa.
+ *
+ *  O nome e o do heroi que o Lele criou na mesa. */
+const NOME_DO_HEROI = "Trovao da Floresta";
+
+async function digitarNome() {
+  await pagina.keyboard.type(NOME_DO_HEROI, { delay: 20 });
+  await pagina.waitForTimeout(250);
+}
+
 const telas = [];
 
 async function olhar(nome) {
@@ -143,7 +159,7 @@ problemas.push(...(await olhar("01-titulo")));
 
 await clicarBotao("NOVO JOGO");
 problemas.push(...(await olhar("02-criacao-nome")));
-await clicarTexto("digite no teclado"); // sortear nome
+await digitarNome();
 await clicarBotao("SEGUIR >");
 problemas.push(...(await olhar("03-criacao-raca")));
 await clicarBotao("SEGUIR >");
@@ -201,7 +217,7 @@ async function criacaoNaVisao(zoom) {
   await pagina.waitForTimeout(2500);
   await clicarBotao("NOVO JOGO");
   problemas.push(...(await olhar(`${zoom}-02-criacao-nome`)));
-  await clicarTexto("digite no teclado");
+  await digitarNome();
   await clicarBotao("SEGUIR >");
   problemas.push(...(await olhar(`${zoom}-03-criacao-raca`)));
   await clicarBotao("SEGUIR >");
