@@ -187,3 +187,108 @@ export function textoNaArea(
     conteudo.slice(0, 20)
   );
 }
+
+/**
+ * Divide um retangulo em colunas, do mesmo jeito que a pilha divide em linhas.
+ *
+ * A regra do projeto proibe coordenada Y na mao, e a pilha resolve isso. Mas
+ * assim que uma tela tem boneco de um lado e texto do outro, o X volta a ser
+ * escrito na mao. Aqui os pesos fazem a conta: `colunas(area, [1, 3])` da uma
+ * coluna estreita para o retrato e uma larga para o resto.
+ *
+ * A ultima coluna leva a sobra da divisao, senao um pixel some no arredondamento
+ * e a borda direita nunca bate com a do painel.
+ */
+export function colunas(area: Retangulo, pesos: number[], gap: number = ESPACO.md): Retangulo[] {
+  const total = pesos.reduce((s, p) => s + p, 0);
+  const util = area.largura - gap * (pesos.length - 1);
+  const direita = area.x + area.largura;
+  let x = area.x;
+  return pesos.map((peso, i) => {
+    const ultima = i === pesos.length - 1;
+    const largura = ultima ? direita - x : Math.round((util * peso) / total);
+    const r = { x, y: area.y, largura, altura: area.altura };
+    x += largura + gap;
+    return r;
+  });
+}
+
+/** Altura de um chip, a pilula com uma palavra so. */
+export const ALTURA_CHIP = TAMANHO.botaoPequeno;
+
+/** Largura que um chip precisa para caber o texto dele. */
+export const larguraDoChip = (conteudo: string) => conteudo.length * 8 + ESPACO.md * 2;
+
+/**
+ * Arruma chips em linhas que caibam na largura, sem desenhar nada.
+ *
+ * Existe separado de `chip()` porque a caixa precisa saber a altura ANTES de o
+ * primeiro pixel aparecer. Entao a mesma conta roda duas vezes: uma para medir,
+ * outra para desenhar, e as duas nao podem discordar.
+ */
+export function arrumarChips(textos: string[], largura: number, gap = ESPACO.sm): string[][] {
+  const linhas: string[][] = [];
+  let atual: string[] = [];
+  let usado = 0;
+  for (const conteudo of textos) {
+    const largo = larguraDoChip(conteudo);
+    if (atual.length && usado + gap + largo > largura) {
+      linhas.push(atual);
+      atual = [];
+      usado = 0;
+    }
+    usado += (atual.length ? gap : 0) + largo;
+    atual.push(conteudo);
+  }
+  if (atual.length) linhas.push(atual);
+  return linhas;
+}
+
+/** Altura que um conjunto de chips vai ocupar depois de arrumado. */
+export function alturaDosChips(linhas: string[][], gap = ESPACO.sm): number {
+  return linhas.length * ALTURA_CHIP + Math.max(0, linhas.length - 1) * gap;
+}
+
+/**
+ * A pilula com uma palavra, igual as da ficha de papel do Lele.
+ *
+ * E o jeito de mostrar muita coisa numa tela pequena sem virar paragrafo: o nome
+ * da arma, o dom, cada magia. Ele reconhece a forma antes de ler a palavra.
+ */
+export function chip(
+  cena: Phaser.Scene,
+  x: number,
+  y: number,
+  conteudo: string,
+  painel: "painel-creme" | "painel-ouro" = "painel-creme"
+) {
+  const largura = larguraDoChip(conteudo);
+  marcar(
+    cena.add.nineslice(x, y, painel, undefined, largura, ALTURA_CHIP, 8, 8, 8, 8).setOrigin(0),
+    "fundo"
+  );
+  marcar(
+    texto(cena, x + largura / 2, y + ALTURA_CHIP / 2, conteudo, {
+      cor: 0x2c2440,
+      ancora: 0.5,
+      ancoraY: 0.5,
+    }),
+    "texto",
+    conteudo
+  );
+  return largura;
+}
+
+/** Desenha uma linha de chips a partir da esquerda da area. */
+export function chipsNaLinha(
+  cena: Phaser.Scene,
+  linha: Retangulo,
+  textos: string[],
+  gap = ESPACO.sm,
+  painel: "painel-creme" | "painel-ouro" = "painel-creme"
+) {
+  let x = linha.x;
+  textos.forEach((conteudo) => {
+    x += chip(cena, x, linha.y, conteudo, painel) + gap;
+  });
+}

@@ -6,15 +6,11 @@ import { texto } from "../sistemas/texto";
 import { estado } from "../sistemas/estado";
 import { Controles } from "../sistemas/controles";
 import { refazerAoRedimensionar } from "../sistemas/visao";
+import { ICONE } from "../sistemas/icones";
+import { ESPACO } from "../sistemas/design";
+import { botao } from "../sistemas/botao";
 
 type PedidoFala = { quem: string; linhas: string[]; cena: Phaser.Scene };
-
-/** indices da folha ui.png, na mesma ordem de arte/ui.py */
-const UI = {
-  coracaoCheio: 0, coracaoVazio: 1, moeda: 2, selo: 3,
-  setaCima: 4, setaBaixo: 5, setaEsq: 6, setaDir: 7,
-  botaoA: 8, mochila: 9, livro: 10, lupa: 11, dado: 12,
-} as const;
 
 export class Interface extends Phaser.Scene {
   private controles!: Controles;
@@ -54,16 +50,48 @@ export class Interface extends Phaser.Scene {
     this.add.nineslice(2, 1, "painel-escuro", undefined, LARGURA - 4, 16, 8, 8, 8, 8).setOrigin(0);
     const st = estado();
     for (let i = 0; i < st.coracoesMax; i++) {
-      this.coracoes.push(this.add.image(10 + i * 11, 9, "ui", UI.coracaoCheio));
+      this.coracoes.push(this.add.image(10 + i * 11, 9, "ui", ICONE.coracaoCheio));
     }
     const xMoeda = 14 + st.coracoesMax * 11;
-    this.add.image(xMoeda, 9, "ui", UI.moeda);
+    this.add.image(xMoeda, 9, "ui", ICONE.moeda);
     this.textoMoedas = texto(this, xMoeda + 9, 5, "0", { cor: 0xfff8ea });
-    this.add.image(xMoeda + 32, 9, "ui", UI.selo);
+    this.add.image(xMoeda + 32, 9, "ui", ICONE.selo);
     this.textoSelos = texto(this, xMoeda + 41, 5, "0", { cor: 0xfff8ea });
-    texto(this, LARGURA - 22, 5, st.heroi.nome, { cor: 0xf5b62b, ancora: 1 });
+    this.montarBotaoFicha(xMoeda + 49);
     this.montarBotaoPausa();
     this.atualizarTopo();
+  }
+
+  /** O nome do heroi e o botao da ficha.
+   *
+   *  Nao existe icone de "personagem" na folha, e inventar um simbolo novo seria
+   *  mais uma coisa para a crianca decorar. O nome dele ja estava escrito ali:
+   *  agora ele e tocavel, e toca no proprio nome quem quer se ver. O espaco vai
+   *  do fim dos selos ate a engrenagem, e o nome encolhe para caber, porque na
+   *  visao PERTO a barra e bem mais estreita.
+   */
+  private montarBotaoFicha(xLivre: number) {
+    const direita = LARGURA - 20;
+    const espaco = direita - xLivre;
+    const cabe = Math.max(1, Math.floor((espaco - ESPACO.md) / 8));
+    const nome = (estado().heroi.nome || "Heroi").slice(0, cabe);
+    const largura = Math.min(espaco, nome.length * 8 + ESPACO.md * 2);
+    const b = botao(
+      this,
+      direita - largura / 2,
+      8,
+      largura,
+      12,
+      nome,
+      () => {
+        this.scene.pause("Mundo");
+        this.scene.launch("Ficha");
+      },
+      "painel-creme"
+    );
+    // o rotulo e o nome, que muda a cada jogo. O auditor e a auditoria automatica
+    // precisam de um nome fixo para achar este botao, entao o dono e FICHA.
+    b.setData("ui", { tipo: "botao", dono: "FICHA" });
   }
 
   /** engrenagem no canto do topo, o unico jeito de pausar no toque */
@@ -83,7 +111,7 @@ export class Interface extends Phaser.Scene {
   atualizarTopo() {
     const st = estado();
     this.coracoes.forEach((c, i) =>
-      c.setFrame(i < st.coracoes ? UI.coracaoCheio : UI.coracaoVazio)
+      c.setFrame(i < st.coracoes ? ICONE.coracaoCheio : ICONE.coracaoVazio)
     );
     this.textoMoedas.setText(String(st.moedas));
     this.textoSelos.setText(String(st.selos));
@@ -91,78 +119,42 @@ export class Interface extends Phaser.Scene {
 
   // --------------------------------------------------------- direcional
   private montarDirecional() {
-    // Um disco so, nao quatro botoes.
-    //
-    // Com quatro botoes separados nao existe diagonal no toque: para andar na
-    // diagonal a crianca teria que encostar dois dedos em dois quadradinhos de
-    // 26 px ao mesmo tempo, o que nao acontece. Com um disco, o dedo pousa em
-    // qualquer lugar e o angulo ate o centro escolhe uma das oito direcoes.
-    // De quebra da para arrastar o dedo e mudar de direcao sem levantar.
-    const centro = { x: 34, y: ALTURA - 34 };
-    const RAIO = 30;
-
-    this.add
-      .nineslice(centro.x, centro.y, "painel-escuro", undefined, 52, 52, 8, 8, 8, 8)
-      .setOrigin(0.5)
-      .setAlpha(0.5);
-
-    const setas = [
-      { dx: 0, dy: -16, quadro: UI.setaCima, x: 0, y: -1 },
-      { dx: 0, dy: 16, quadro: UI.setaBaixo, x: 0, y: 1 },
-      { dx: -16, dy: 0, quadro: UI.setaEsq, x: -1, y: 0 },
-      { dx: 16, dy: 0, quadro: UI.setaDir, x: 1, y: 0 },
-    ].map((seta) => ({
-      ...seta,
-      imagem: this.add.image(centro.x + seta.dx, centro.y + seta.dy, "ui", seta.quadro).setAlpha(0.8),
-    }));
-
-    /** acende as setas que compoem a direcao atual, inclusive as duas de uma diagonal */
-    const acender = (x: number, y: number) => {
-      setas.forEach((s) => {
-        const aceso = (s.x !== 0 && s.x === x) || (s.y !== 0 && s.y === y);
-        s.imagem.setAlpha(aceso ? 1 : 0.8).setScale(aceso ? 1.15 : 1);
-      });
-    };
-
-    const disco = this.add
-      .circle(centro.x, centro.y, RAIO, 0x000000, 0)
-      .setInteractive(new Phaser.Geom.Circle(RAIO, RAIO, RAIO), Phaser.Geom.Circle.Contains);
-
-    const apontar = (ponteiro: Phaser.Input.Pointer) => {
-      const dx = ponteiro.worldX - centro.x;
-      const dy = ponteiro.worldY - centro.y;
-      // uma zona morta no meio, senao o menor tremor do dedo faz o personagem
-      // sair andando sozinho
-      if (dx * dx + dy * dy < 36) return soltar();
-      const fatia = Math.round(Math.atan2(dy, dx) / (Math.PI / 4));
-      const passos: Record<string, [number, number]> = {
-        "0": [1, 0], "1": [1, 1], "2": [0, 1], "3": [-1, 1],
-        "4": [-1, 0], "-4": [-1, 0], "-3": [-1, -1], "-2": [0, -1], "-1": [1, -1],
+    const base = { x: 32, y: ALTURA - 34 };
+    const setas: [number, number, number, number, number][] = [
+      [0, -15, 0, -1, ICONE.setaCima],
+      [0, 15, 0, 1, ICONE.setaBaixo],
+      [-16, 0, -1, 0, ICONE.setaEsq],
+      [16, 0, 1, 0, ICONE.setaDir],
+    ];
+    setas.forEach(([dx, dy, vx, vy, quadro]) => {
+      // chapinha escura atras, senao a seta some em cima da grama
+      this.add
+        .nineslice(base.x + dx, base.y + dy, "painel-escuro", undefined, 17, 17, 8, 8, 8, 8)
+        .setOrigin(0.5)
+        .setAlpha(0.55);
+      const s = this.add.image(base.x + dx, base.y + dy, "ui", quadro).setAlpha(0.95);
+      // area de toque bem maior que o desenho, dedo de crianca nao acerta 16 px
+      const alvo = this.add
+        .rectangle(base.x + dx, base.y + dy, 26, 26, 0x000000, 0)
+        .setInteractive({ useHandCursor: true });
+      const liga = () => {
+        if (vx) this.controles.toque.x = vx;
+        if (vy) this.controles.toque.y = vy;
+        s.setAlpha(1).setScale(1.15);
+        this.repassar();
       };
-      const [x, y] = passos[String(fatia)] ?? [0, 0];
-      this.controles.toque.x = x;
-      this.controles.toque.y = y;
-      acender(x, y);
-      this.repassar();
-    };
-
-    const soltar = () => {
-      this.controles.toque.x = 0;
-      this.controles.toque.y = 0;
-      acender(0, 0);
-      this.repassar();
-    };
-
-    disco.on("pointerdown", apontar);
-    disco.on("pointermove", (p: Phaser.Input.Pointer) => {
-      if (p.isDown) apontar(p);
+      const desliga = () => {
+        if (vx) this.controles.toque.x = 0;
+        if (vy) this.controles.toque.y = 0;
+        s.setAlpha(0.85).setScale(1);
+        this.repassar();
+      };
+      alvo.on("pointerdown", liga);
+      alvo.on("pointerup", desliga);
+      alvo.on("pointerout", desliga);
     });
-    disco.on("pointerup", soltar);
-    disco.on("pointerout", soltar);
-    // dedo levantado fora do disco tambem tem que parar o personagem
-    this.input.on("pointerup", soltar);
 
-    const acao = this.add.image(LARGURA - 28, ALTURA - 28, "ui", UI.botaoA).setScale(1.4);
+    const acao = this.add.image(LARGURA - 28, ALTURA - 28, "ui", ICONE.botaoA).setScale(1.4);
     const alvoAcao = this.add
       .rectangle(LARGURA - 28, ALTURA - 28, 34, 34, 0x000000, 0)
       .setInteractive({ useHandCursor: true });
@@ -201,7 +193,7 @@ export class Interface extends Phaser.Scene {
       entrelinha: 4,
     });
     const dica = this.add
-      .image(LARGURA - 14, y + alturaCaixa - 10, "ui", UI.setaBaixo)
+      .image(LARGURA - 14, y + alturaCaixa - 10, "ui", ICONE.setaBaixo)
       .setScale(0.6);
     this.tweens.add({ targets: dica, y: dica.y + 2, duration: 420, yoyo: true, repeat: -1 });
 

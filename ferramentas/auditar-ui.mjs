@@ -137,17 +137,29 @@ await clicarBotao("COMECAR A AVENTURA");
 await pagina.waitForTimeout(1500);
 problemas.push(...(await olhar("08-mundo")));
 
+await clicarBotao("FICHA");        // o nome do heroi no topo abre a ficha
+await pagina.waitForTimeout(500);
+problemas.push(...(await olhar("09-ficha-heroi")));
+await clicarBotao("PROXIMA PAGINA");
+problemas.push(...(await olhar("09b-ficha-poderes")));
+await clicarBotao("PROXIMA PAGINA");
+problemas.push(...(await olhar("09c-ficha-sei-fazer")));
+await clicarBotao("PAGINA ANTERIOR");   // e volta, para conferir que da a volta
+await pagina.waitForTimeout(300);
+await clicarBotao("FECHAR");
+await pagina.waitForTimeout(500);
+
 await clicarRelativo(0.97, 0.042); // engrenagem de pausa no topo
 await pagina.waitForTimeout(500);
-problemas.push(...(await olhar("09-pausa")));
+problemas.push(...(await olhar("10-pausa")));
 await clicarBotao("CONFIGURACOES");
-problemas.push(...(await olhar("10-configuracoes")));
+problemas.push(...(await olhar("11-configuracoes")));
 await clicarBotao("< VOLTAR");            // volta de config para o menu de pausa
 await clicarBotao("SAIR PARA O MENU");
 await pagina.waitForTimeout(1400);
-problemas.push(...(await olhar("11-titulo-com-save")));
+problemas.push(...(await olhar("12-titulo-com-save")));
 await clicarBotao("CARREGAR JOGO");
-problemas.push(...(await olhar("12-carregar")));
+problemas.push(...(await olhar("13-carregar")));
 
 await navegador.close();
 http.close();

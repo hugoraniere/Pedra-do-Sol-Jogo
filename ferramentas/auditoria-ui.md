@@ -1,6 +1,6 @@
 # Auditoria de UI
 
-Telas visitadas: 12
+Telas visitadas: 15
 Problemas encontrados: 0
 
 | Tela | Objetos | Problemas |
@@ -12,10 +12,13 @@ Problemas encontrados: 0
 | 05-criacao-aparencia | Criacao:92 | 0 |
 | 06-criacao-sem-equipamento | Criacao:90 | 0 |
 | 07-criacao-pronto | Criacao:24 | 0 |
-| 08-mundo | Mundo:80 Interface:28 | 0 |
-| 09-pausa | Interface:28 Pausa:22 | 0 |
-| 10-configuracoes | Interface:28 Pausa:27 | 0 |
-| 11-titulo-com-save | Titulo:16 | 0 |
-| 12-carregar | Carregar:30 | 0 |
+| 08-mundo | Mundo:80 Interface:37 | 0 |
+| 09-ficha-heroi | Interface:37 Ficha:40 | 0 |
+| 09b-ficha-poderes | Interface:37 Ficha:31 | 0 |
+| 09c-ficha-sei-fazer | Interface:37 Ficha:27 | 0 |
+| 10-pausa | Interface:37 Pausa:22 | 0 |
+| 11-configuracoes | Interface:37 Pausa:27 | 0 |
+| 12-titulo-com-save | Titulo:16 | 0 |
+| 13-carregar | Carregar:30 | 0 |
 
 Nenhum problema de sobreposicao ou transbordo encontrado.

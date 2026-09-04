@@ -10,11 +10,14 @@
 
 export type Atributo = "forca" | "esperteza" | "coracao";
 
-export const ATRIBUTOS: Record<Atributo, { nome: string; icone: string }> = {
-  forca: { nome: "FORCA", icone: "forca" },
-  esperteza: { nome: "ESPERTEZA", icone: "esperteza" },
-  coracao: { nome: "CORACAO", icone: "coracao_cheio" },
+export const ATRIBUTOS: Record<Atributo, { nome: string; icone: string; oQueFaz: string }> = {
+  forca: { nome: "FORCA", icone: "forca", oQueFaz: "empurrar, subir, lutar, carregar" },
+  esperteza: { nome: "ESPERTEZA", icone: "esperteza", oQueFaz: "procurar, lembrar, consertar, magia" },
+  coracao: { nome: "CORACAO", icone: "coracao_cheio", oQueFaz: "coragem, fazer amigo, sorte, animais" },
 };
+
+/** A ordem em que os tres poderes aparecem na ficha de papel, de cima para baixo. */
+export const ORDEM_PODERES: Atributo[] = ["forca", "esperteza", "coracao"];
 
 // ------------------------------------------------------------------ racas
 export type Raca = {
