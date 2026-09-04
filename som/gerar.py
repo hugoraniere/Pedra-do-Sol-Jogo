@@ -164,10 +164,28 @@ def deslize(f0, f1):
 
 # ------------------------------------------------------------------ receitas
 
-def passo(corte, grave, dur=0.085):
+def passo(corte, grave, dur=0.11):
+    """O passo.
+
+    O CORPO MORA NO MEDIO, e isso e de proposito. O alto-falante do iPad nao
+    entrega quase nada abaixo de uns 300 Hz: passo que se apoia no grave soa
+    cheio no fone e some no aparelho em que o Lele joga. Entao o peso vem de
+    uma faixa media que o aparelho consegue reproduzir, e o grave entra so como
+    reforco para quem estiver de fone.
+
+    A cauda tambem e mais longa que o normal. Depois de normalizar o pico, som
+    curto e magro fica mais baixo que som cheio no mesmo pico: quem manda no
+    quanto se ouve nao e o pico, e quanta energia tem embaixo dele."""
     r = passa_baixa(onda("ruido", 0, dur), corte)
-    corpo = onda("sen", deslize(grave, grave * 0.6), dur)
-    return envelope(somar(ganho(r, 0.9), ganho(corpo, 0.35)), 0.002, dur * 0.7)
+    medio = envelope(
+        passa_alta(passa_baixa(onda("ruido", 0, dur), corte * 2.2), 480),
+        0.001, dur * 0.5
+    )
+    corpo = onda("sen", deslize(grave * 2.4, grave), dur)
+    return envelope(
+        somar(ganho(r, 0.7), ganho(medio, 0.6), ganho(corpo, 0.45)),
+        0.002, dur * 0.9
+    )
 
 
 def blip(freq, dur=0.05, tipo="quadrada"):
@@ -221,6 +239,181 @@ def canto(f0, f1, voltas=3, dur=0.06):
         f0 *= 1.04
         f1 *= 1.03
     return emendar(*partes)
+
+
+# -------------------------------------------------------------------- musica
+#
+# A TRILHA E O UNICO SOM DO JOGO QUE E ESCRITO, nao sintetizado no escuro. O
+# resto daqui e ruido filtrado e bipe: ninguem "compoe" um passo na grama. Ja
+# uma musiquinha ou tem melodia ou nao e musiquinha, entao a melodia esta escrita
+# nota por nota mais abaixo, em numero de nota MIDI, e da pra mexer nela sem
+# entender nada de sintese.
+#
+# Continua sendo rascunho. Trilha gravada por gente entra por som/prontos/ e
+# ganha desta, igual todo o resto.
+
+def hz(nota):
+    """Nota MIDI em hertz. 69 e o la 440.
+
+    Escrever a melodia em numero de nota em vez de frequencia deixa ela legivel
+    (69, 71, 74 e um trecho subindo) e transpor a musica inteira vira uma soma."""
+    return 440.0 * (2 ** ((nota - 69) / 12.0))
+
+
+def queda_exp(sinal, meia_vida):
+    """Perde metade da forca a cada meia_vida.
+
+    Corda e sino caem assim. O envelope reto que serve pros efeitos soa, numa
+    nota longa, como alguem baixando o volume na mao."""
+    k = math.log(0.5) / max(1.0, quadros(meia_vida))
+    return [v * math.exp(k * i) for i, v in enumerate(sinal)]
+
+
+def pontas(sinal, sobe=0.006, desce=0.03):
+    """Zera as duas pontas. Nota que comeca ou acaba longe do zero estala, e numa
+    trilha em loop esse estalo toca de novo a cada volta."""
+    n = len(sinal)
+    a, r = min(quadros(sobe), n), min(quadros(desce), n)
+    for i in range(a):
+        sinal[i] *= i / a
+    for i in range(r):
+        sinal[n - 1 - i] *= i / r
+    return sinal
+
+
+def nota_tocada(freq, dur, tipo="sen", meia=0.4, sobra=1.7):
+    """Uma nota que soa e some sozinha.
+
+    Dura mais que o tempo dela de proposito: e a cauda passando por cima da nota
+    seguinte que faz a frase soar tocada em vez de digitada."""
+    return pontas(queda_exp(onda(tipo, freq, dur * sobra), meia * dur))
+
+
+def sino(freq, dur):
+    """Caixinha de musica: os harmonicos brilham e somem antes do fundamental.
+
+    Timbre escolhido pra aguentar loop. Ataque duro cansa em tres voltas, e esta
+    faixa vai ficar tocando enquanto o Lele monta o personagem pela decima vez."""
+    return somar(
+        nota_tocada(freq, dur, "sen", 0.45),
+        ganho(nota_tocada(freq * 2, dur, "sen", 0.22), 0.30),
+        ganho(nota_tocada(freq * 3.01, dur, "sen", 0.13), 0.14),
+        ganho(nota_tocada(freq * 4.72, dur, "sen", 0.07), 0.07),
+    )
+
+
+def corda(freq, dur):
+    """Dedilhado: mais madeira que vidro. Acompanha sem disputar com a melodia."""
+    return somar(
+        nota_tocada(freq, dur, "triangulo", 0.3),
+        ganho(nota_tocada(freq * 2, dur, "sen", 0.15), 0.2),
+    )
+
+
+def sopro(freq, dur):
+    """A almofada do acorde: entra e sai devagar, nunca chama atencao. E ela que
+    da chao pra trilha sem colocar mais uma melodia disputando espaco."""
+    s = onda("sen", freq, dur)
+    n = len(s)
+    a = min(quadros(min(0.9, dur * 0.45)), n // 2)
+    for i in range(a):
+        s[i] *= i / a
+        s[n - 1 - i] *= i / a
+    return s
+
+
+def sequenciar(volta, eventos):
+    """Escreve as notas num trecho do tamanho exato de uma volta.
+
+    O QUE PASSAR DO FIM VOLTA PRO COMECO em vez de ser cortado. E isso que faz a
+    trilha emendar sem costura e ainda assim cair no tempo certo: quando a
+    primeira nota volta, a cauda do ultimo sino ja esta tocando por cima dela.
+    Fazer isso com fade cruzado, como nos ambientes, encurtaria o trecho e
+    desalinharia o compasso."""
+    n = quadros(volta)
+    fora = [0.0] * n
+    for inicio, sinal, vol in eventos:
+        i0 = quadros(inicio) % n
+        for k, v in enumerate(sinal):
+            fora[(i0 + k) % n] += v * vol
+    return fora
+
+
+def frase(notas, batida, timbre, vol):
+    """notas: (em que batida entra, nota MIDI, quantas batidas dura)."""
+    return [(t * batida, timbre(hz(m), d * batida), vol) for t, m, d in notas]
+
+
+def acompanhar(acordes, batida, compasso, vol_sopro, vol_baixo):
+    """De cada acorde saem duas coisas: a almofada que segura o compasso inteiro
+    e a nota grave que marca onde ele comeca."""
+    ev = []
+    for inicio, almofada, baixo in acordes:
+        for m in almofada:
+            ev.append((inicio * batida, sopro(hz(m), compasso * batida), vol_sopro))
+        for k in (0, compasso / 2):
+            ev.append(((inicio + k) * batida,
+                       nota_tocada(hz(baixo), 1.4 * batida, "triangulo", 0.45),
+                       vol_baixo))
+    return ev
+
+
+# --- menu: fora do mundo -----------------------------------------------------
+# Vale pro Titulo, pro Carregar e pra Criacao: pro jogador os tres sao o mesmo
+# lugar. Re maior, 66 por minuto, caixinha de musica. Devagar de proposito: e a
+# tela onde alguem fica parado mais tempo, e musica animada em tela parada irrita.
+# (batida em que entra, notas da almofada, nota do baixo)
+MENU_ACORDES = [
+    (0,  [57, 62, 66], 50),   # Re
+    (8,  [54, 59, 66], 47),   # Si menor
+    (16, [55, 59, 62], 43),   # Sol
+    (24, [57, 61, 64], 45),   # La
+]
+MENU_MELODIA = [
+    (0, 69, 1.5), (1.5, 66, 0.5), (2, 62, 2), (4, 64, 1), (5, 66, 3),
+    (8, 74, 1.5), (9.5, 71, 0.5), (10, 69, 2), (12, 66, 1), (13, 69, 3),
+    (16, 71, 1), (17, 69, 1), (18, 67, 2), (20, 62, 1), (21, 67, 3),
+    (24, 69, 1), (25, 71, 1), (26, 73, 2), (28, 69, 4),
+]
+
+
+def musica_menu():
+    b = 60.0 / 66
+    ev = frase(MENU_MELODIA, b, sino, 0.5)
+    ev += acompanhar(MENU_ACORDES, b, 8, 0.13, 0.20)
+    return sequenciar(32 * b, ev)
+
+
+# --- vila: manha na Vila Semente ---------------------------------------------
+# Sol maior, 100 por minuto, um acorde por compasso. Mais andante que a do menu
+# porque aqui o jogador anda, e a trilha tem que combinar com o pe.
+VILA_ACORDES = [
+    (0,  [55, 59, 62], 43), (4,  [52, 55, 59], 40),   # Sol, Mi menor
+    (8,  [52, 55, 60], 48), (12, [50, 54, 57], 38),   # Do, Re
+    (16, [55, 59, 62], 43), (20, [52, 55, 59], 40),
+    (24, [52, 55, 60], 48), (28, [50, 54, 57], 38),
+]
+VILA_MELODIA = [
+    (0, 74, .5), (0.5, 71, .5), (1, 67, 1), (2, 71, .5), (2.5, 74, .5), (3, 76, 1),
+    (4, 74, 1), (5, 71, .5), (5.5, 69, .5), (6, 67, 2),
+    (8, 76, .5), (8.5, 74, .5), (9, 72, 1), (10, 76, 1), (11, 79, 1),
+    (12, 78, .5), (12.5, 76, .5), (13, 74, 1), (14, 69, 2),
+    (16, 67, 1), (17, 71, 1), (18, 74, 1), (19, 76, 1),
+    (20, 79, 1.5), (21.5, 76, .5), (22, 74, 2),
+    (24, 72, .5), (24.5, 74, .5), (25, 76, 1), (26, 72, 1), (27, 71, 1),
+    (28, 69, 1), (29, 71, 1), (30, 74, 2),
+]
+
+
+def musica_vila():
+    b = 60.0 / 100
+    ev = frase(VILA_MELODIA, b, sino, 0.45)
+    ev += acompanhar(VILA_ACORDES, b, 4, 0.11, 0.22)
+    # dedilhado no contratempo: e o que da passo a vila em vez de deixar ela pairando
+    for inicio, almofada, _ in VILA_ACORDES:
+        for k in (1.5, 3.5):
+            ev.append(((inicio + k) * b, corda(hz(almofada[1]), 0.9 * b), 0.16))
+    return sequenciar(32 * b, ev)
 
 
 RECEITAS = {
@@ -341,6 +534,11 @@ RECEITAS = {
     "passaro-2": lambda: canto(1800, 2600, 4),
     "passaro-3": lambda: canto(2600, 3400, 2),
     "passaro-4": lambda: canto(1500, 2200, 5),
+
+    # ---------------------------------------------------------------- musica
+    # as unicas faixas longas. ver a secao "musica" la em cima
+    "musica-menu": musica_menu,
+    "musica-vila": musica_vila,
 
     # ------------------------------------------------------------ travessia
     "porta": lambda: envelope(passa_baixa(onda("ruido", 0, 0.3), 500), 0.05, 0.3),

@@ -1,6 +1,6 @@
 {
   "gerado_por": "npm run som",
-  "total": 87,
+  "total": 89,
   "formato": ".mp3",
   "sons": {
     "adaga-estoca": {
@@ -146,7 +146,7 @@
     "escada": {
       "origem": "rascunho",
       "arquivo": "escada.mp3",
-      "segundos": 0.255
+      "segundos": 0.33
     },
     "escudo-bloqueia": {
       "origem": "rascunho",
@@ -313,6 +313,16 @@
       "arquivo": "moeda.mp3",
       "segundos": 0.12
     },
+    "musica-menu": {
+      "origem": "rascunho",
+      "arquivo": "musica-menu.mp3",
+      "segundos": 29.091
+    },
+    "musica-vila": {
+      "origem": "rascunho",
+      "arquivo": "musica-vila.mp3",
+      "segundos": 19.2
+    },
     "nome-verdadeiro": {
       "origem": "rascunho",
       "arquivo": "nome-verdadeiro.mp3",
@@ -341,27 +351,27 @@
     "passo-areia": {
       "origem": "rascunho",
       "arquivo": "passo-areia.mp3",
-      "segundos": 0.085
+      "segundos": 0.11
     },
     "passo-grama": {
       "origem": "rascunho",
       "arquivo": "passo-grama.mp3",
-      "segundos": 0.085
+      "segundos": 0.11
     },
     "passo-madeira": {
       "origem": "rascunho",
       "arquivo": "passo-madeira.mp3",
-      "segundos": 0.085
+      "segundos": 0.11
     },
     "passo-pedra": {
       "origem": "rascunho",
       "arquivo": "passo-pedra.mp3",
-      "segundos": 0.085
+      "segundos": 0.11
     },
     "passo-terra": {
       "origem": "rascunho",
       "arquivo": "passo-terra.mp3",
-      "segundos": 0.085
+      "segundos": 0.11
     },
     "pausa-abre": {
       "origem": "rascunho",

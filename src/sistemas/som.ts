@@ -252,7 +252,10 @@ export function musica(cena: Phaser.Scene, nome?: ChaveMusica) {
   }
   if (!nome) return;
 
-  const ficha = MUSICAS[nome];
+  // anotado como FichaSom, e nao inferido: hoje nenhuma faixa esta pendente, e o
+  // tipo inferido nao teria mais o campo pra consultar. A guarda abaixo tem que
+  // continuar valendo pra faixa nova que entre encomendada.
+  const ficha: FichaSom = MUSICAS[nome];
   // encomenda ainda nao entregue: nem pede o arquivo. Um 404 por faixa que a
   // gente ja sabe que falta so suja o console e reprova a conferencia.
   if (ficha.pendente) return;
