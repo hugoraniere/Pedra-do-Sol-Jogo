@@ -5,6 +5,7 @@ import { LARGURA, ALTURA, COR } from "../dados/config";
 import { texto } from "../sistemas/texto";
 import { estado } from "../sistemas/estado";
 import { Controles } from "../sistemas/controles";
+import { refazerAoRedimensionar } from "../sistemas/visao";
 
 type PedidoFala = { quem: string; linhas: string[]; cena: Phaser.Scene };
 
@@ -33,11 +34,19 @@ export class Interface extends Phaser.Scene {
   }
 
   create() {
+    // create roda de novo em cada restart, e a instancia da cena e a mesma:
+    // sem zerar, os coracoes velhos ficariam na lista apontando para o nada
+    this.coracoes = [];
+    this.linhas = [];
+    this.indice = 0;
+    this.cenaDona = undefined;
     this.controles = new Controles(this);
     this.montarTopo();
     this.montarDirecional();
     this.montarCaixa();
     this.events.on("falar", (p: PedidoFala) => this.falar(p));
+    // a resolucao muda quando o jogador troca a visao no menu de pausa
+    refazerAoRedimensionar(this, () => this.scene.restart());
   }
 
   // ---------------------------------------------------------------- topo

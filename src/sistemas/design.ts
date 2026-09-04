@@ -86,7 +86,12 @@ export function caixa(
   const alturaPainel = alturaConteudo + TAMANHO.paddingPainel * 2;
   const alturaTotal = alturaPainel + (titulo ? TAMANHO.chapa + ESPACO.sm : 0);
   const centro = opcoes.centroY ?? ALTURA / 2;
-  const topoTotal = Math.round(centro - alturaTotal / 2);
+  // em resolucao baixa a caixa pode nao caber centrada: entao ela encosta na
+  // margem de cima em vez de vazar pelas duas pontas
+  const limite = Math.max(TAMANHO.paddingTela, ALTURA - alturaTotal - TAMANHO.paddingTela);
+  const topoTotal = Math.round(
+    Math.min(Math.max(centro - alturaTotal / 2, TAMANHO.paddingTela), limite)
+  );
   const topoPainel = topoTotal + (titulo ? TAMANHO.chapa + ESPACO.sm : 0);
   const x = Math.round((LARGURA - largura) / 2);
 

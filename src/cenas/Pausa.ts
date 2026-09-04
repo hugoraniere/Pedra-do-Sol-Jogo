@@ -20,8 +20,10 @@ import {
 import { salvar } from "../sistemas/estado";
 import { noAplicativo, sairDoJogo } from "../sistemas/armazenamento";
 import { ORDEM_ZOOM, ZOOM, definirPreferencia, preferencias } from "../sistemas/preferencias";
+import { aplicarVisao, refazerAoRedimensionar } from "../sistemas/visao";
 
-const LARGURA_CAIXA = 208;
+/** funcao, nao constante: LARGURA muda com a visao escolhida */
+const larguraCaixa = () => Math.min(208, LARGURA - ESPACO.xl * 2);
 const EXPLICACAO = "LONGE mostra mais do mapa. PERTO deixa tudo maior e mais facil de ver.";
 
 export class Pausa extends Phaser.Scene {
@@ -34,13 +36,16 @@ export class Pausa extends Phaser.Scene {
 
   create() {
     this.aba = "menu";
-    marcar(
-      this.add.rectangle(0, 0, LARGURA, ALTURA, 0x2c2440, 0.66).setOrigin(0).setInteractive(),
-      "fundo"
-    );
+    this.montarFundo();
     // o conteudo tem que ficar acima dos paineis que a caixa() desenha depois
     this.painel = this.add.container(0, 0).setDepth(10);
     this.desenhar();
+    // trocar a visao troca a resolucao: o menu se remonta no tamanho novo,
+    // continuando na mesma aba em que o jogador estava
+    refazerAoRedimensionar(this, () => {
+      this.montarFundo();
+      this.desenhar();
+    });
 
     this.input.keyboard?.removeAllListeners("keydown");
     this.input.keyboard?.on("keydown", (e: KeyboardEvent) => {
@@ -54,6 +59,16 @@ export class Pausa extends Phaser.Scene {
     });
   }
 
+  private montarFundo() {
+    this.fundo?.destroy();
+    this.fundo = marcar(
+      this.add.rectangle(0, 0, LARGURA, ALTURA, 0x2c2440, 0.66).setOrigin(0).setInteractive(),
+      "fundo"
+    ) as Phaser.GameObjects.Rectangle;
+  }
+
+  private fundo?: Phaser.GameObjects.Rectangle;
+
   private voltarAoJogo() {
     this.scene.resume("Mundo");
     this.scene.stop();
@@ -62,7 +77,7 @@ export class Pausa extends Phaser.Scene {
   private desenhar() {
     this.painel.removeAll(true);
     this.children.list
-      .filter((o) => o !== this.painel && (o.getData("ui") as { tipo?: string })?.tipo !== "fundo")
+      .filter((o) => o !== this.painel && o !== this.fundo)
       .forEach((o) => o.destroy());
     if (this.aba === "menu") this.desenharMenu();
     else this.desenharConfig();
@@ -104,7 +119,7 @@ export class Pausa extends Phaser.Scene {
     // a altura sai da conta, nao de um numero chutado
     const alturaConteudo =
       itens.length * TAMANHO.botao + (itens.length - 1) * ESPACO.md + ESPACO.lg + TAMANHO.linhaTexto;
-    const area = caixa(this, { largura: LARGURA_CAIXA, alturaConteudo, titulo: "PAUSA" });
+    const area = caixa(this, { largura: larguraCaixa(), alturaConteudo, titulo: "PAUSA" });
     const p = pilha(area, ESPACO.md);
 
     itens.forEach((item) => {
@@ -139,7 +154,7 @@ export class Pausa extends Phaser.Scene {
 
   // ----------------------------------------------------- configuracoes
   private desenharConfig() {
-    const larguraUtil = LARGURA_CAIXA - TAMANHO.paddingPainel * 2;
+    const larguraUtil = larguraCaixa() - TAMANHO.paddingPainel * 2;
     const linhas = quebrar(EXPLICACAO, larguraUtil);
     const alturaConteudo =
       TAMANHO.linhaTexto +
@@ -150,7 +165,7 @@ export class Pausa extends Phaser.Scene {
       ESPACO.lg +
       TAMANHO.botao;
 
-    const area = caixa(this, { largura: LARGURA_CAIXA, alturaConteudo, titulo: "CONFIGURACOES" });
+    const area = caixa(this, { largura: larguraCaixa(), alturaConteudo, titulo: "CONFIGURACOES" });
     const p = pilha(area, ESPACO.md);
 
     textoNaArea(this, p.reservar(TAMANHO.linhaTexto), "DE ONDE VOCE VE O JOGO", { cor: 0x5a4e74 });
@@ -168,9 +183,11 @@ export class Pausa extends Phaser.Scene {
         linhaBotoes.altura,
         ZOOM[nivel].nome,
         () => {
+          if (nivel === preferencias().zoom) return;
           definirPreferencia("zoom", nivel);
-          this.scene.get("Mundo")?.events.emit("zoom-mudou");
-          this.desenhar();
+          // aplicarVisao redimensiona o jogo, e o resize manda este menu se
+          // remontar. Nao chame desenhar aqui: seriam dois desenhos e um piscar.
+          aplicarVisao(this.game);
         },
         "painel-creme"
       );

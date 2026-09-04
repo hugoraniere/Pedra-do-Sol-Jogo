@@ -7,7 +7,6 @@ import { DIALOGOS } from "../dados/dialogos";
 import { estado, salvar, marcarVisitado } from "../sistemas/estado";
 import { Controles } from "../sistemas/controles";
 import { camadasDoHeroi, criarAnimacoes, Heroi } from "../sistemas/heroi";
-import { valorDoZoom } from "../sistemas/preferencias";
 
 type FichaObjeto = { w: number; h: number; cw: number; ch: number };
 type Interagivel = { x: number; y: number; chave: string };
@@ -91,8 +90,10 @@ export class Mundo extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, tilemap.widthInPixels, tilemap.heightInPixels);
     this.cameras.main.startFollow(this.heroi, true, 0.14, 0.14);
     this.cameras.main.setBackgroundColor(COR.tinta);
-    this.cameras.main.setZoom(valorDoZoom());
-    this.events.on("zoom-mudou", () => this.cameras.main.setZoom(valorDoZoom()));
+    // zoom sempre 1: quem muda a visao e a resolucao do canvas, ver sistemas/visao.ts.
+    // com zoom fracionario a grade de pixels sai do lugar e o mapa pisca ao andar.
+    this.cameras.main.setZoom(1);
+    this.cameras.main.setRoundPixels(true);
     this.physics.world.setBounds(0, 0, tilemap.widthInPixels, tilemap.heightInPixels);
     this.heroi.body.setCollideWorldBounds(true);
 

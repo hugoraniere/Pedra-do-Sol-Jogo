@@ -1,9 +1,21 @@
 /** Numeros e cores que o jogo inteiro usa. Mexer aqui muda o jogo todo. */
 
 export const TILE = 16;
-/** Resolucao logica. O canvas e escalado por numero inteiro ate caber na tela. */
-export const LARGURA = 320;
-export const ALTURA = 192;
+/** Resolucao logica. O canvas e escalado por numero inteiro ate caber na tela.
+ *
+ *  Nao e constante de proposito: a preferencia de visao (perto, normal, longe)
+ *  troca a resolucao em vez de mexer no zoom da camera. Zoom fracionario com
+ *  pixel art faz a grade de pixels cair fora da grade da tela, e ai tudo pisca.
+ *  Com zoom sempre 1 e resolucao multipla de 16, cada pixel do jogo vira um
+ *  bloco inteiro de pixels da tela. Como sao exports com let, quem importa
+ *  LARGURA e ALTURA enxerga o valor novo sem precisar reimportar. */
+export let LARGURA = 320;
+export let ALTURA = 192;
+
+export function definirTamanhoLogico(largura: number, altura: number) {
+  LARGURA = largura;
+  ALTURA = altura;
+}
 
 export const VELOCIDADE = 62;
 

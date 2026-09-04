@@ -14,7 +14,7 @@ Problemas encontrados: 0
 | 07-criacao-pronto | Criacao:22 | 0 |
 | 08-mundo | Mundo:79 Interface:34 | 0 |
 | 09-pausa | Interface:34 Pausa:22 | 0 |
-| 10-configuracoes | Interface:34 Pausa:29 | 0 |
+| 10-configuracoes | Interface:34 Pausa:27 | 0 |
 | 11-titulo-com-save | Titulo:16 | 0 |
 | 12-carregar | Carregar:30 | 0 |
 
