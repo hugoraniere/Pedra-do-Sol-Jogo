@@ -132,3 +132,8 @@ nenhuma instrucao de fora.
 - a Ponte dos Trolls como cena propria
 - mais racas e classes na criacao
 - um segundo jogador na mesma tela
+
+## Resolucao, contraste e UI
+
+Plano escrito e ainda nao executado, em `docs/09-plano-de-resolucao-e-contraste.md`.
+Tres fases, e a primeira (contraste) nao depende das outras duas.
