@@ -1,0 +1,21 @@
+{
+  "name": "reino-de-aurora",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Jogo de aventura do Reino de Aurora, feito para o Lele jogar",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "arte": "python3 arte/gerar.py"
+  },
+  "dependencies": {
+    "@fontsource/silkscreen": "^5.3.0",
+    "phaser": "^3.90.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vite": "^6.1.0"
+  }
+}

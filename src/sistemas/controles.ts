@@ -1,0 +1,48 @@
+/** Le teclado, e num toque le o direcional na tela.
+ *  Uma fonte so de entrada para todas as cenas. */
+import Phaser from "phaser";
+
+export type Direcao = { x: number; y: number };
+
+export class Controles {
+  private teclas!: Record<string, Phaser.Input.Keyboard.Key>;
+  /** preenchido pela cena de HUD quando o jogador usa o direcional na tela */
+  toque: Direcao = { x: 0, y: 0 };
+  acaoTocada = false;
+
+  constructor(cena: Phaser.Scene) {
+    const kb = cena.input.keyboard;
+    if (kb) {
+      this.teclas = kb.addKeys(
+        "W,A,S,D,UP,LEFT,DOWN,RIGHT,SPACE,ENTER"
+      ) as Record<string, Phaser.Input.Keyboard.Key>;
+    }
+  }
+
+  direcao(): Direcao {
+    let x = this.toque.x;
+    let y = this.toque.y;
+    const t = this.teclas;
+    if (t) {
+      if (t.A.isDown || t.LEFT.isDown) x = -1;
+      else if (t.D.isDown || t.RIGHT.isDown) x = 1;
+      if (t.W.isDown || t.UP.isDown) y = -1;
+      else if (t.S.isDown || t.DOWN.isDown) y = 1;
+    }
+    return { x, y };
+  }
+
+  /** true uma unica vez por aperto */
+  acaoApertada(): boolean {
+    if (this.acaoTocada) {
+      this.acaoTocada = false;
+      return true;
+    }
+    const t = this.teclas;
+    if (!t) return false;
+    return (
+      Phaser.Input.Keyboard.JustDown(t.SPACE) ||
+      Phaser.Input.Keyboard.JustDown(t.ENTER)
+    );
+  }
+}
