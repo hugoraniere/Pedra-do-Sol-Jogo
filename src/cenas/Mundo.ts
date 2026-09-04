@@ -7,6 +7,7 @@ import { DIALOGOS } from "../dados/dialogos";
 import { estado, salvar, marcarVisitado } from "../sistemas/estado";
 import { Controles } from "../sistemas/controles";
 import { criarAnimacoes, Heroi } from "../sistemas/heroi";
+import { valorDoZoom } from "../sistemas/preferencias";
 
 const NPC_FRAME: Record<string, number> = {
   vovo: 0, ferreiro: 1, menina: 2, pescador: 3,
@@ -97,14 +98,24 @@ export class Mundo extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, tilemap.widthInPixels, tilemap.heightInPixels);
     this.cameras.main.startFollow(this.heroi, true, 0.14, 0.14);
     this.cameras.main.setBackgroundColor(COR.tinta);
+    this.cameras.main.setZoom(valorDoZoom());
+    this.events.on("zoom-mudou", () => this.cameras.main.setZoom(valorDoZoom()));
     this.physics.world.setBounds(0, 0, tilemap.widthInPixels, tilemap.heightInPixels);
     this.heroi.body.setCollideWorldBounds(true);
 
     this.scene.launch("Interface");
     this.scene.get("Interface").events.on("acao", () => this.tentarInteragir());
+    this.scene.get("Interface").events.on("pausar", () => this.pausar());
     this.events.on("dialogo-fim", () => {
       this.conversando = false;
     });
+  }
+
+  pausar() {
+    if (this.conversando) return;
+    this.heroi.mover(0, 0);
+    this.scene.pause();
+    this.scene.launch("Pausa");
   }
 
   private tentarInteragir() {
@@ -135,6 +146,7 @@ export class Mundo extends Phaser.Scene {
       return;
     }
     if (this.controles.acaoApertada()) this.tentarInteragir();
+    if (this.controles.pausaApertada()) this.pausar();
     const d = this.controles.direcao();
     this.heroi.mover(d.x, d.y);
     this.heroi.atualizarProfundidade();

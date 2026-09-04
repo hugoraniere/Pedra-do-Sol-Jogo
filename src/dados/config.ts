@@ -66,14 +66,6 @@ export const ROUPAS = [
   { nome: "Rosa", cor: 0xee7ba6 },
 ];
 
-export const RACAS = [
-  { id: "elfo", nome: "Elfo da Folha", dom: "Olhos de Coruja" },
-  { id: "vale", nome: "Gente do Vale", dom: "Coracao Grande" },
-  { id: "pedra", nome: "Povo da Pedra", dom: "Pele Dura" },
-];
-
-export const CLASSES = [
-  { id: "mago", nome: "Mago", magias: ["Bola de Fogo", "Bafo Gelado", "Cheiro de Bolo"] },
-  { id: "cacador", nome: "Cacador", magias: ["Flecha Certeira", "Passo Silencioso", "Chamar Bicho"] },
-  { id: "guardiao", nome: "Guardiao", magias: ["Escudo de Folha", "Grito de Guerra", "Bracos Fortes"] },
-];
+/** Racas, classes, magias, armas, loja e bestiario vivem em conteudo.ts.
+ *  Reexportados aqui so para nao quebrar quem ja importava de config. */
+export { RACAS, CLASSES, MAGIAS, ARMAS, LOJA, BESTIARIO } from "./conteudo";

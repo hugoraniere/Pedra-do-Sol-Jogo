@@ -1,7 +1,7 @@
 /** Carrega a arte e manda pra criacao de personagem ou direto pro mundo. */
 import Phaser from "phaser";
 import { LARGURA, ALTURA, COR, ALTURA_PERSONAGEM, OBJETOS } from "../dados/config";
-import { carregar } from "../sistemas/estado";
+import { prepararArmazenamento } from "../sistemas/armazenamento";
 
 export class Boot extends Phaser.Scene {
   constructor() {
@@ -23,6 +23,8 @@ export class Boot extends Phaser.Scene {
     this.load.spritesheet("heroi-cabelo", "assets/heroi-cabelo.png", P);
     this.load.spritesheet("goblin", "assets/goblin.png", P);
     this.load.spritesheet("npcs", "assets/npcs.png", P);
+    this.load.image("titulo", "assets/titulo.png");
+    this.load.bitmapFont("aurora", "assets/fonte.png", "assets/fonte.xml");
     this.load.json("objetos", "assets/objetos.json");
     OBJETOS.forEach((n) => this.load.image(`obj-${n}`, `assets/objetos/${n}.png`));
     this.load.spritesheet("ui", "assets/ui.png", { frameWidth: 16, frameHeight: 16 });
@@ -31,7 +33,9 @@ export class Boot extends Phaser.Scene {
     );
   }
 
-  create() {
-    this.scene.start(carregar() ? "Mundo" : "Criacao");
+  async create() {
+    // no aplicativo os saves vem do disco, entao esperamos a leitura antes do menu
+    await prepararArmazenamento();
+    this.scene.start("Titulo");
   }
 }

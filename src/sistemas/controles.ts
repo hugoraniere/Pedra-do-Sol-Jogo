@@ -14,7 +14,7 @@ export class Controles {
     const kb = cena.input.keyboard;
     if (kb) {
       this.teclas = kb.addKeys(
-        "W,A,S,D,UP,LEFT,DOWN,RIGHT,SPACE,ENTER"
+        "W,A,S,D,UP,LEFT,DOWN,RIGHT,SPACE,ENTER,ESC,P"
       ) as Record<string, Phaser.Input.Keyboard.Key>;
     }
   }
@@ -30,6 +30,15 @@ export class Controles {
       else if (t.S.isDown || t.DOWN.isDown) y = 1;
     }
     return { x, y };
+  }
+
+  /** true uma unica vez por aperto de ESC ou P */
+  pausaApertada(): boolean {
+    const t = this.teclas;
+    if (!t) return false;
+    return (
+      Phaser.Input.Keyboard.JustDown(t.ESC) || Phaser.Input.Keyboard.JustDown(t.P)
+    );
   }
 
   /** true uma unica vez por aperto */

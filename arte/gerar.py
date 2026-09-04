@@ -10,6 +10,8 @@ Como esta organizado:
   arte/mundo.py    objetos inteiros: casa, arvore, poco, barraca, cerca
   arte/gente.py    heroi em tres camadas, npcs e goblins, 16x32
   arte/ui.py       painel de 9 fatias e icones de interface
+  arte/titulo.py   o cenario da tela inicial
+  arte/fonte.py    a fonte de bitmap, gerada a partir da Silkscreen
   arte/sprites/    PNG desenhado a mao, ganha do gerado se o nome bater
 
 Regras de arte:
@@ -26,9 +28,11 @@ from PIL import Image
 RAIZ = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, RAIZ)
 
+import fonte as fonte_arte
 import gente
 import mundo
 import tiles
+import titulo as titulo_arte
 import ui as ui_arte
 
 SAIDA = os.path.join(RAIZ, "..", "public", "assets")
@@ -50,6 +54,8 @@ def main():
     ficha_objetos = mundo.gerar(SAIDA, a_mao)
     indice_npcs = gente.gerar(SAIDA, a_mao)
     indice_ui = ui_arte.gerar(SAIDA)
+    titulo_arte.gerar(SAIDA, a_mao)
+    ficha_fonte = fonte_arte.gerar(SAIDA, a_mao)
 
     # o jogo le este arquivo para saber o tamanho e a colisao de cada objeto,
     # entao adicionar um objeto novo nao exige mexer em nenhum .ts
@@ -60,6 +66,7 @@ def main():
     print("npcs:  ", indice_npcs)
     print("ui:    ", indice_ui)
     print("objetos:", ", ".join(ficha_objetos))
+    print("fonte: ", ficha_fonte)
     print("arte gerada em", os.path.normpath(SAIDA))
 
 

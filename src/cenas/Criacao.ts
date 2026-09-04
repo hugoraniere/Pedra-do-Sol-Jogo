@@ -1,8 +1,10 @@
 /** Criacao do personagem em passos curtos, um por tela.
  *  A aventura e a mesma para todo mundo, so o heroi muda. */
 import Phaser from "phaser";
-import { LARGURA, ALTURA, COR, CABELOS, ROUPAS, RACAS, CLASSES, FONTE} from "../dados/config";
-import { estado, definir, VAZIO } from "../sistemas/estado";
+import { LARGURA, ALTURA, COR, CABELOS, ROUPAS, RACAS, CLASSES } from "../dados/config";
+import { texto } from "../sistemas/texto";
+import { novoJogo, VAZIO } from "../sistemas/estado";
+import { acharMagia } from "../dados/conteudo";
 import { botao, Botao } from "../sistemas/botao";
 import { criarAnimacoes, Heroi } from "../sistemas/heroi";
 
@@ -14,23 +16,22 @@ export class Criacao extends Phaser.Scene {
   private boneco!: Heroi;
   private rascunho = JSON.parse(JSON.stringify(VAZIO.heroi)) as typeof VAZIO.heroi;
 
+  private espaco = 0;
+
   constructor() {
     super("Criacao");
+  }
+
+  init(dados: { espaco?: number }) {
+    this.espaco = dados?.espaco ?? 0;
   }
 
   create() {
     criarAnimacoes(this);
     this.add.rectangle(0, 0, LARGURA, ALTURA, COR.papel).setOrigin(0);
-    this.add
-      .text(LARGURA / 2, 10, "REINO DE AURORA", {
-        fontFamily: FONTE,
-        fontSize: "8px",
-        color: "#2C2440",
-      })
-      .setOrigin(0.5)
-      .setResolution(1);
+    texto(this, LARGURA / 2, 6, "REINO DE AURORA", { cor: 0x5a4e74, ancora: 0.5 });
 
-    this.boneco = new Heroi(this, LARGURA / 2, 76, this.rascunho.corRoupa, this.rascunho.corCabelo);
+    this.boneco = new Heroi(this, LARGURA / 2, 94, this.rascunho.corRoupa, this.rascunho.corCabelo);
     this.boneco.body.setAllowGravity(false);
     this.boneco.body.moves = false;
     this.boneco.setScale(2);
@@ -43,12 +44,8 @@ export class Criacao extends Phaser.Scene {
     this.grupo.removeAll(true);
   }
 
-  private titulo(texto: string) {
-    const t = this.add
-      .text(LARGURA / 2, 24, texto, { fontFamily: FONTE, fontSize: "8px", color: "#5A4E74" })
-      .setOrigin(0.5)
-      .setResolution(1);
-    this.grupo.add(t);
+  private titulo(pergunta: string) {
+    this.grupo.add(texto(this, LARGURA / 2, 18, pergunta, { tamanho: 16, cor: 0x2c2440, ancora: 0.5 }));
   }
 
   /** grade de botoes centrada, ate 3 por linha */
@@ -99,26 +96,20 @@ export class Criacao extends Phaser.Scene {
     switch (PASSOS[this.passo]) {
       case "Nome": {
         this.titulo("Qual e o nome do seu heroi?");
-        const campo = this.add
-          .text(LARGURA / 2, 122, this.rascunho.nome || "_", {
-            fontFamily: FONTE,
-            fontSize: "8px",
-            color: "#2C2440",
-            backgroundColor: "#FDEFD6",
-            padding: { x: 6, y: 4 },
-          })
-          .setOrigin(0.5)
-          .setResolution(1);
+        this.grupo.add(
+          this.add.nineslice(LARGURA / 2, 124, "painel-creme", undefined, 200, 22, 8, 8, 8, 8).setOrigin(0.5)
+        );
+        const campo = texto(this, LARGURA / 2, 117, this.rascunho.nome || "_", {
+          tamanho: 16,
+          cor: 0x2c2440,
+          ancora: 0.5,
+        });
         this.grupo.add(campo);
         this.grupo.add(
-          this.add
-            .text(LARGURA / 2, 142, "digite no teclado, ou toque para sortear", {
-              fontFamily: FONTE,
-              fontSize: "8px",
-              color: "#5A4E74",
-            })
-            .setOrigin(0.5)
-            .setResolution(1)
+          texto(this, LARGURA / 2, 142, "digite no teclado, ou toque aqui para sortear", {
+            cor: 0x5a4e74,
+            ancora: 0.5,
+          })
             .setInteractive()
             .on("pointerdown", () => {
               const sorteio = ["Trovao da Floresta", "Vento Ligeiro", "Pedra Valente", "Faisca"];
@@ -185,29 +176,28 @@ export class Criacao extends Phaser.Scene {
         const classe = CLASSES.find((c) => c.id === this.rascunho.classe)!;
         const raca = RACAS.find((r) => r.id === this.rascunho.raca)!;
         this.grupo.add(
-          this.add
-            .text(
-              LARGURA / 2,
-              118,
-              [`${raca.nome} . ${classe.nome}`, `Dom: ${raca.dom}`, `Magias: ${classe.magias.join(", ")}`].join(
-                "\n"
-              ),
-              { fontFamily: FONTE, fontSize: "8px", color: "#2C2440", align: "center", lineSpacing: 4 }
-            )
-            .setOrigin(0.5)
-            .setResolution(1)
+          texto(
+            this,
+            LARGURA / 2,
+            116,
+              [
+                `${raca.nome} . ${classe.nome}`,
+                `Dom: ${raca.dom}`,
+                classe.magias.length
+                  ? `Magias: ${classe.magias.map((m) => acharMagia(m)?.nome ?? m).join(", ")}`
+                  : `Habilidade: ${classe.habilidade}`,
+            ].join("\n"),
+            { cor: 0x2c2440, ancora: 0.5, alinhamento: 1, entrelinha: 4 }
+          )
         );
         this.grupo.add(
           botao(this, LARGURA / 2, ALTURA - 16, 120, 20, "COMECAR A AVENTURA", () => {
-            const novo = JSON.parse(JSON.stringify(VAZIO));
-            novo.heroi = this.rascunho;
-            definir(novo);
+            novoJogo(this.espaco, this.rascunho);
             this.scene.start("Mundo");
           }, "painel-ouro")
         );
         break;
       }
     }
-    void estado();
   }
 }

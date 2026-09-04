@@ -1,7 +1,8 @@
 /** Botao grande, com painel de 9 fatias e sombra solida, igual ao material impresso.
  *  Alvo de toque generoso, porque quem joga tem 7 anos. */
 import Phaser from "phaser";
-import { COR, FONTE, CORPO } from "../dados/config";
+import { COR } from "../dados/config";
+import { texto } from "./texto";
 
 export type Botao = Phaser.GameObjects.Container & { marcar(ligado: boolean): void };
 
@@ -11,7 +12,7 @@ export function botao(
   y: number,
   largura: number,
   altura: number,
-  texto: string,
+  rotuloTexto: string,
   aoTocar: () => void,
   painel: "painel" | "painel-creme" | "painel-ouro" = "painel"
 ): Botao {
@@ -22,10 +23,7 @@ export function botao(
   const fundo = cena.add
     .nineslice(0, 0, painel, undefined, largura, altura, 8, 8, 8, 8)
     .setOrigin(0.5);
-  const rotulo = cena.add
-    .text(0, 0, texto, { fontFamily: FONTE, fontSize: CORPO, color: "#2C2440" })
-    .setOrigin(0.5)
-    .setResolution(1);
+  const rotulo = texto(cena, 0, 0, rotuloTexto, { ancora: 0.5, ancoraY: 0.5, cor: 0x2c2440 });
   c.add([sombra, fundo, rotulo]);
   c.setSize(largura, altura + 3);
   c.setInteractive({ useHandCursor: true });
@@ -43,7 +41,7 @@ export function botao(
 
   c.marcar = (ligado: boolean) => {
     fundo.setTexture(ligado ? "painel-ouro" : painel);
-    rotulo.setColor(ligado ? "#2C2440" : "#5A4E74");
+    rotulo.setTint(ligado ? 0x2c2440 : 0x5a4e74);
   };
   c.marcar(false);
   void COR;

@@ -1,4 +1,6 @@
-/** Estado do jogo, salvo no navegador. Uma unica fonte da verdade. */
+/** Estado do jogo. Uma unica fonte da verdade sobre o progresso.
+ *  Quem grava e le no disco e sistemas/armazenamento.ts. */
+import { gravarEspaco, lerEspaco } from "./armazenamento";
 
 export type Heroi = {
   nome: string;
@@ -10,6 +12,7 @@ export type Heroi = {
 };
 
 export type Estado = {
+  espaco: number;
   heroi: Heroi;
   coracoes: number;
   coracoesMax: number;
@@ -18,11 +21,14 @@ export type Estado = {
   mochila: string[];
   visitados: string[];
   cena: string;
+  lugar: string;
+  minutos: number;
+  criadoEm: number;
+  atualizadoEm: number;
 };
 
-const CHAVE = "reino-de-aurora-v1";
-
 export const VAZIO: Estado = {
+  espaco: 0,
   heroi: {
     nome: "",
     raca: "elfo",
@@ -38,51 +44,50 @@ export const VAZIO: Estado = {
   mochila: [],
   visitados: [],
   cena: "vila",
+  lugar: "Vila Semente",
+  minutos: 0,
+  criadoEm: 0,
+  atualizadoEm: 0,
 };
 
-let atual: Estado = estruturado(VAZIO);
-
-function estruturado<Tipo>(v: Tipo): Tipo {
+function copia<Tipo>(v: Tipo): Tipo {
   return JSON.parse(JSON.stringify(v));
 }
+
+let atual: Estado = copia(VAZIO);
+let inicioDaSessao = Date.now();
 
 export function estado(): Estado {
   return atual;
 }
 
-export function definir(novo: Estado) {
-  atual = novo;
+/** Comeca um jogo novo naquele espaco. */
+export function novoJogo(espaco: number, heroi: Heroi) {
+  atual = copia(VAZIO);
+  atual.espaco = espaco;
+  atual.heroi = heroi;
+  atual.criadoEm = Date.now();
+  inicioDaSessao = Date.now();
   salvar();
 }
 
+/** Retoma um jogo ja salvo. Devolve false se o espaco estiver vazio. */
+export function abrirEspaco(espaco: number): boolean {
+  const lido = lerEspaco(espaco);
+  if (!lido) return false;
+  atual = { ...copia(VAZIO), ...lido, espaco };
+  inicioDaSessao = Date.now();
+  return true;
+}
+
 export function salvar() {
-  try {
-    localStorage.setItem(CHAVE, JSON.stringify(atual));
-  } catch {
-    /* navegador sem storage, o jogo continua so nao lembra */
+  const decorrido = Math.floor((Date.now() - inicioDaSessao) / 60000);
+  if (decorrido > 0) {
+    atual.minutos += decorrido;
+    inicioDaSessao = Date.now();
   }
-}
-
-export function carregar(): boolean {
-  try {
-    const cru = localStorage.getItem(CHAVE);
-    if (!cru) return false;
-    const lido = JSON.parse(cru) as Estado;
-    if (!lido?.heroi?.nome) return false;
-    atual = { ...estruturado(VAZIO), ...lido };
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export function limpar() {
-  atual = estruturado(VAZIO);
-  try {
-    localStorage.removeItem(CHAVE);
-  } catch {
-    /* ignora */
-  }
+  atual.atualizadoEm = Date.now();
+  gravarEspaco(atual.espaco, atual);
 }
 
 export function guardar(item: string) {

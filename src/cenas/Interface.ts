@@ -1,7 +1,8 @@
 /** Camada de cima da tela: coracoes, moedas, direcional de toque e caixa de fala.
  *  Roda em paralelo com a cena Mundo e nunca se mexe com a camera. */
 import Phaser from "phaser";
-import { LARGURA, ALTURA, COR, FONTE, CORPO } from "../dados/config";
+import { LARGURA, ALTURA, COR } from "../dados/config";
+import { texto } from "../sistemas/texto";
 import { estado } from "../sistemas/estado";
 import { Controles } from "../sistemas/controles";
 
@@ -18,14 +19,14 @@ export class Interface extends Phaser.Scene {
   private controles!: Controles;
   private caixa!: Phaser.GameObjects.Container;
   private zona!: Phaser.GameObjects.Rectangle;
-  private textoFala!: Phaser.GameObjects.Text;
-  private textoQuem!: Phaser.GameObjects.Text;
+  private textoFala!: Phaser.GameObjects.BitmapText;
+  private textoQuem!: Phaser.GameObjects.BitmapText;
   private linhas: string[] = [];
   private indice = 0;
   private cenaDona?: Phaser.Scene;
   private coracoes: Phaser.GameObjects.Image[] = [];
-  private textoMoedas!: Phaser.GameObjects.Text;
-  private textoSelos!: Phaser.GameObjects.Text;
+  private textoMoedas!: Phaser.GameObjects.BitmapText;
+  private textoSelos!: Phaser.GameObjects.BitmapText;
 
   constructor() {
     super("Interface");
@@ -48,22 +49,26 @@ export class Interface extends Phaser.Scene {
     }
     const xMoeda = 14 + st.coracoesMax * 11;
     this.add.image(xMoeda, 9, "ui", UI.moeda);
-    this.textoMoedas = this.add
-      .text(xMoeda + 9, 5, "0", { fontFamily: FONTE, fontSize: CORPO, color: "#FFF8EA" })
-      .setResolution(1);
+    this.textoMoedas = texto(this, xMoeda + 9, 5, "0", { cor: 0xfff8ea });
     this.add.image(xMoeda + 32, 9, "ui", UI.selo);
-    this.textoSelos = this.add
-      .text(xMoeda + 41, 5, "0", { fontFamily: FONTE, fontSize: CORPO, color: "#FFF8EA" })
-      .setResolution(1);
-    this.add
-      .text(LARGURA - 6, 5, st.heroi.nome, {
-        fontFamily: FONTE,
-        fontSize: CORPO,
-        color: "#F5B62B",
-      })
-      .setOrigin(1, 0)
-      .setResolution(1);
+    this.textoSelos = texto(this, xMoeda + 41, 5, "0", { cor: 0xfff8ea });
+    texto(this, LARGURA - 22, 5, st.heroi.nome, { cor: 0xf5b62b, ancora: 1 });
+    this.montarBotaoPausa();
     this.atualizarTopo();
+  }
+
+  /** engrenagem no canto do topo, o unico jeito de pausar no toque */
+  private montarBotaoPausa() {
+    const b = this.add.nineslice(LARGURA - 18, 2, "painel-creme", undefined, 16, 12, 8, 8, 8, 8).setOrigin(0);
+    texto(this, LARGURA - 13, 3, "=", { cor: 0x2c2440 });
+    const alvo = this.add
+      .rectangle(LARGURA - 10, 8, 26, 20, 0x000000, 0)
+      .setInteractive({ useHandCursor: true });
+    alvo.on("pointerdown", () => {
+      b.setTexture("painel-ouro");
+      this.events.emit("pausar");
+    });
+    alvo.on("pointerup", () => b.setTexture("painel-creme"));
   }
 
   atualizarTopo() {
@@ -144,18 +149,12 @@ export class Interface extends Phaser.Scene {
     const chapa = this.add
       .nineslice(10, y - 6, "painel-ouro", undefined, 96, 14, 8, 8, 8, 8)
       .setOrigin(0);
-    this.textoQuem = this.add
-      .text(16, y - 2, "", { fontFamily: FONTE, fontSize: CORPO, color: "#2C2440" })
-      .setResolution(1);
-    this.textoFala = this.add
-      .text(12, y + 16, "", {
-        fontFamily: FONTE,
-        fontSize: CORPO,
-        color: "#2C2440",
-        wordWrap: { width: LARGURA - 32 },
-        lineSpacing: 5,
-      })
-      .setResolution(1);
+    this.textoQuem = texto(this, 16, y - 3, "", { cor: 0x2c2440 });
+    this.textoFala = texto(this, 12, y + 14, "", {
+      cor: 0x2c2440,
+      larguraMax: LARGURA - 32,
+      entrelinha: 4,
+    });
     const dica = this.add
       .image(LARGURA - 14, y + alturaCaixa - 10, "ui", UI.setaBaixo)
       .setScale(0.6);
