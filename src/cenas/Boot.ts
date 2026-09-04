@@ -1,6 +1,6 @@
 /** Carrega a arte e manda pra criacao de personagem ou direto pro mundo. */
 import Phaser from "phaser";
-import { TILE, LARGURA, ALTURA, COR } from "../dados/config";
+import { LARGURA, ALTURA, COR, ALTURA_PERSONAGEM, OBJETOS } from "../dados/config";
 import { carregar } from "../sistemas/estado";
 
 export class Boot extends Phaser.Scene {
@@ -17,13 +17,15 @@ export class Boot extends Phaser.Scene {
     });
 
     this.load.image("tileset", "assets/tileset.png");
-    this.load.spritesheet("heroi-base", "assets/heroi-base.png", { frameWidth: 16, frameHeight: 24 });
-    this.load.spritesheet("heroi-roupa", "assets/heroi-roupa.png", { frameWidth: 16, frameHeight: 24 });
-    this.load.spritesheet("heroi-cabelo", "assets/heroi-cabelo.png", { frameWidth: 16, frameHeight: 24 });
-    this.load.spritesheet("goblin", "assets/goblin.png", { frameWidth: 16, frameHeight: 24 });
-    this.load.spritesheet("npcs", "assets/npcs.png", { frameWidth: 16, frameHeight: 24 });
-    this.load.spritesheet("objetos", "assets/objetos.png", { frameWidth: TILE, frameHeight: TILE });
-    this.load.spritesheet("ui", "assets/ui.png", { frameWidth: TILE, frameHeight: TILE });
+    const P = { frameWidth: 16, frameHeight: ALTURA_PERSONAGEM };
+    this.load.spritesheet("heroi-base", "assets/heroi-base.png", P);
+    this.load.spritesheet("heroi-roupa", "assets/heroi-roupa.png", P);
+    this.load.spritesheet("heroi-cabelo", "assets/heroi-cabelo.png", P);
+    this.load.spritesheet("goblin", "assets/goblin.png", P);
+    this.load.spritesheet("npcs", "assets/npcs.png", P);
+    this.load.json("objetos", "assets/objetos.json");
+    OBJETOS.forEach((n) => this.load.image(`obj-${n}`, `assets/objetos/${n}.png`));
+    this.load.spritesheet("ui", "assets/ui.png", { frameWidth: 16, frameHeight: 16 });
     ["painel", "painel-creme", "painel-ouro", "painel-escuro"].forEach((n) =>
       this.load.image(n, `assets/${n}.png`)
     );

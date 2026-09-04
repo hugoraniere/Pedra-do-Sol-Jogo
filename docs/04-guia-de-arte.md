@@ -2,8 +2,19 @@
 
 ## De onde vem a arte
 
-Toda a pixel art e **gerada por codigo**, em `arte/gerar.py`. Rodar `npm run arte`
-apaga e reescreve `public/assets`. Nunca coloque um PNG na mao ali.
+Toda a pixel art e **gerada por codigo**. Rodar `npm run arte` apaga e reescreve
+`public/assets`. Nunca coloque um PNG na mao ali.
+
+Os geradores estao separados por assunto:
+
+| Arquivo | O que gera |
+|---|---|
+| `arte/paleta.py` | as cores, unica fonte de cor do projeto |
+| `arte/tiles.py` | so chao: grama, terra, caminho, agua, areia, caverna |
+| `arte/mundo.py` | objetos inteiros: casa, arvore, poco, barraca, cerca, varal |
+| `arte/gente.py` | heroi em tres camadas, oito NPCs e o goblin, 16x32 |
+| `arte/ui.py` | painel de 9 fatias e icones de interface |
+| `arte/sprites/` | PNG desenhado a mao, ganha do gerado se o nome bater |
 
 Isso parece esquisito no comeco e compensa rapido: mudar a cor da grama do jogo
 inteiro e mudar uma linha em `arte/paleta.py`. E o gerador e um arquivo de texto,
@@ -13,10 +24,18 @@ entao o git mostra o que mudou na arte, coisa que binario nao mostra.
 
 | Coisa | Tamanho |
 |---|---|
-| tile | 16 x 16 px |
-| personagem | 16 x 24 px |
-| objeto de cenario | 16 x 16 px |
+| tile de chao | 16 x 16 px |
+| personagem | 16 x 32 px |
+| casa | 48 a 64 px de largura, 60 a 68 de altura |
+| arvore | 40 x 52 px |
+| icone de interface | 16 x 16 px |
 | tela logica | 320 x 192 px |
+
+**Objeto nao e tile.** Casa, arvore e poco sao PNG proprio, do tamanho que precisarem,
+posicionados por cima do chao e ancorados pelo pe. Foi essa mudanca que tirou o jogo
+da cara de quadradinho repetido. O tamanho e a caixa de colisao de cada objeto saem
+em `public/assets/objetos.json`, que o jogo le em runtime, entao adicionar um objeto
+novo nao exige mexer em nenhum arquivo `.ts` alem da lista `OBJETOS` no config.
 
 Frames do personagem: 4 colunas (parado, passo 1, parado, passo 2) por 4 linhas
 (baixo, esquerda, direita, cima). Sempre nessa ordem, o codigo de animacao depende disso.
@@ -41,20 +60,36 @@ portugues, e so depois e usada.
 
 Nunca escreva um valor de cor no meio do codigo.
 
-## Tiles que ficam por cima da grama
+## Duas coisas que fazem toda a diferenca
 
-Copa, tronco e arbusto sao desenhados **em cima de um tile de grama**, nao em fundo
-transparente. Se voce criar um tile novo com fundo vazio, o fundo da camera aparece
-por baixo e fica um buraco escuro na tela. Foi exatamente esse o primeiro bug de arte
-do projeto.
+**Contorno.** `contorno_alfa()` em `arte/mundo.py` e `contorno()` em `arte/gente.py`
+poem 1 px de TINTA em volta de tudo que ja foi desenhado. Sem isso o objeto some no
+fundo. Chame sempre no fim da funcao, nunca no meio.
 
-## Adicionar um sprite novo
+**Sombra de chao.** `sombra()` desenha uma elipse escura translucida embaixo do
+objeto. E o que faz a casa parecer apoiada no chao em vez de flutuando. Todo objeto e
+todo personagem tem a dele.
 
-1. Escreva a funcao que desenha, em `arte/gerar.py`, usando so cores da paleta.
-2. Coloque a funcao na lista certa (`TILES`, `NPCS`, ou a folha de objetos).
+Tile de chao nunca tem transparencia. Se um tile sair com fundo vazio, o fundo da
+camera aparece por baixo e fica um buraco escuro na tela.
+
+## Adicionar um tile de chao
+
+1. Escreva a funcao em `arte/tiles.py`, usando so cores da paleta.
+2. Coloque na lista `TILES`, no fim do arquivo.
 3. Rode `npm run arte`.
-4. Se for tile, adicione o indice em `T` no `config.ts`, na mesma ordem da lista.
-5. Se for solido, adicione o indice em `SOLIDOS`.
+4. Adicione o indice em `T` no `config.ts`, na mesma ordem da lista.
+5. Se for solido, adicione em `SOLIDOS`.
+6. Se quiser desenhar com ele no mapa, adicione a letra em `LETRA_TILE` em `mapas.ts`.
+
+## Adicionar um objeto
+
+1. Escreva a funcao em `arte/mundo.py`. Termine com `contorno_alfa(im)` e comece com
+   `sombra(...)`.
+2. Coloque na lista `OBJETOS`, com a proporcao da caixa de colisao
+   `(largura, altura)` em fracao do tamanho da imagem.
+3. Adicione o nome em `OBJETOS` no `config.ts`.
+4. Rode `npm run arte` e use no mapa: `{ nome: "seu-objeto", x, y }`.
 
 Sempre olhe o resultado ampliado antes de usar. Um jeito rapido: abrir o PNG num
 visualizador com zoom sem suavizacao.

@@ -1,23 +1,27 @@
-/** O mundo jogavel. Monta o mapa, o heroi, os NPCs e os objetos,
+/** O mundo jogavel. Monta o chao, os objetos, as pessoas e o heroi,
  *  e cuida de andar, esbarrar e conversar. */
 import Phaser from "phaser";
 import { TILE, SOLIDOS, COR } from "../dados/config";
-import { VILA, montar } from "../dados/mapas";
+import { VILA, montarChao, Mapa } from "../dados/mapas";
 import { DIALOGOS } from "../dados/dialogos";
 import { estado, salvar, marcarVisitado } from "../sistemas/estado";
 import { Controles } from "../sistemas/controles";
 import { criarAnimacoes, Heroi } from "../sistemas/heroi";
 
-const NPC_FRAME: Record<string, number> = { vovo: 0, ferreiro: 1, menina: 2, pescador: 3 };
-const OBJ_FRAME: Record<string, number> = { sino: 0, fogueira: 1, bau: 2, placa: 3, cristal: 4 };
+const NPC_FRAME: Record<string, number> = {
+  vovo: 0, ferreiro: 1, menina: 2, pescador: 3,
+  mercador: 4, menino: 5, guarda: 6, padeira: 7,
+};
 
-type Interagivel = { objeto: Phaser.GameObjects.Sprite; chave: string };
+type FichaObjeto = { w: number; h: number; cw: number; ch: number };
+type Interagivel = { x: number; y: number; chave: string };
 
 export class Mundo extends Phaser.Scene {
   private heroi!: Heroi;
   private controles!: Controles;
   private interagiveis: Interagivel[] = [];
   private conversando = false;
+  private solidos!: Phaser.Physics.Arcade.StaticGroup;
 
   constructor() {
     super("Mundo");
@@ -28,38 +32,70 @@ export class Mundo extends Phaser.Scene {
     this.controles = new Controles(this);
     this.interagiveis = [];
     this.conversando = false;
+    this.solidos = this.physics.add.staticGroup();
 
-    const mapa = montar(VILA);
-    const tilemap = this.make.tilemap({ data: mapa.tiles, tileWidth: TILE, tileHeight: TILE });
+    const mapa: Mapa = VILA;
+    const fichas = this.cache.json.get("objetos") as Record<string, FichaObjeto>;
+
+    // ---------------------------------------------------------- chao
+    const chao = montarChao(mapa.chao);
+    const tilemap = this.make.tilemap({ data: chao, tileWidth: TILE, tileHeight: TILE });
     const tiles = tilemap.addTilesetImage("tileset")!;
     const camada = tilemap.createLayer(0, tiles, 0, 0)!;
     camada.setCollision(SOLIDOS);
+    camada.setDepth(-1000);
 
-    // objetos e npcs
-    mapa.marcadores.forEach((m) => {
-      const x = m.x * TILE + TILE / 2;
-      const y = m.y * TILE + TILE / 2;
-      if (m.tipo === "npc") {
-        const s = this.add.sprite(x, y + 4, "npcs", NPC_FRAME[m.dado] ?? 0).setOrigin(0.5, 1);
-        s.setDepth(s.y);
-        this.interagiveis.push({ objeto: s, chave: m.dado });
-      } else if (m.tipo === "objeto") {
-        const s = this.add.sprite(x, y + 8, "objetos", OBJ_FRAME[m.dado] ?? 0).setOrigin(0.5, 1);
-        s.setDepth(s.y);
-        this.interagiveis.push({ objeto: s, chave: m.dado });
-      } else if (m.tipo === "saida") {
-        const s = this.add.sprite(x, y + 8, "objetos", OBJ_FRAME.placa).setOrigin(0.5, 1);
-        s.setDepth(s.y);
-        this.interagiveis.push({ objeto: s, chave: "saida-floresta" });
+    // ------------------------------------------------------- objetos
+    mapa.objetos.forEach((peca) => {
+      const ficha = fichas?.[peca.nome];
+      if (!ficha) return;
+      // ancorado pelo pe: a base do objeto encosta no tile indicado
+      const x = peca.x * TILE + TILE / 2;
+      const y = peca.y * TILE + TILE;
+      const s = this.add.image(x, y, `obj-${peca.nome}`).setOrigin(0.5, 1);
+      s.setDepth(y);
+      if (peca.solido !== false && ficha.cw > 0) {
+        const corpo = this.add.rectangle(x, y - ficha.ch / 2, ficha.cw, ficha.ch);
+        this.solidos.add(corpo);
+        (corpo.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
       }
+      if (DIALOGOS[peca.nome]) this.interagiveis.push({ x, y: y - 8, chave: peca.nome });
     });
 
+    // ------------------------------------------------------- pessoas
+    mapa.pessoas.forEach((pessoa) => {
+      const x = pessoa.x * TILE + TILE / 2;
+      const y = pessoa.y * TILE + TILE;
+      const s = this.add.sprite(x, y, "npcs", NPC_FRAME[pessoa.sprite] ?? 0).setOrigin(0.5, 1);
+      s.setDepth(y);
+      const corpo = this.add.rectangle(x, y - 4, 10, 8);
+      this.solidos.add(corpo);
+      (corpo.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
+      this.interagiveis.push({ x, y: y - 10, chave: pessoa.quem });
+      // respiracao, so pra ninguem parecer estatua
+      this.tweens.add({
+        targets: s,
+        scaleY: 1.03,
+        duration: 1400 + Math.random() * 600,
+        yoyo: true,
+        repeat: -1,
+      });
+    });
+
+    // --------------------------------------------------------- heroi
     const st = estado();
-    this.heroi = new Heroi(this, 15 * TILE, 9 * TILE, st.heroi.corRoupa, st.heroi.corCabelo);
+    this.heroi = new Heroi(
+      this,
+      mapa.entrada.x * TILE + TILE / 2,
+      mapa.entrada.y * TILE + TILE,
+      st.heroi.corRoupa,
+      st.heroi.corCabelo
+    );
     this.physics.add.collider(this.heroi, camada);
+    this.physics.add.collider(this.heroi, this.solidos);
 
     this.cameras.main.setBounds(0, 0, tilemap.widthInPixels, tilemap.heightInPixels);
-    this.cameras.main.startFollow(this.heroi, true, 0.15, 0.15);
+    this.cameras.main.startFollow(this.heroi, true, 0.14, 0.14);
     this.cameras.main.setBackgroundColor(COR.tinta);
     this.physics.world.setBounds(0, 0, tilemap.widthInPixels, tilemap.heightInPixels);
     this.heroi.body.setCollideWorldBounds(true);
@@ -75,14 +111,9 @@ export class Mundo extends Phaser.Scene {
     if (this.conversando) return;
     const frente = this.heroi.frente();
     const alvo = this.interagiveis.find(
-      (i) => Phaser.Math.Distance.Between(frente.x, frente.y, i.objeto.x, i.objeto.y - 6) < 14
+      (i) => Phaser.Math.Distance.Between(frente.x, frente.y, i.x, i.y) < 18
     );
     if (!alvo) return;
-
-    if (alvo.chave === "saida-floresta") {
-      this.abrirFala("Trilha da floresta", ["A Floresta dos Sussurros comeca aqui.", "(em construcao, volte logo)"]);
-      return;
-    }
     const fala = DIALOGOS[alvo.chave];
     if (!fala) return;
     if (alvo.chave === "bau" && marcarVisitado("bau-vila")) {
@@ -106,5 +137,6 @@ export class Mundo extends Phaser.Scene {
     if (this.controles.acaoApertada()) this.tentarInteragir();
     const d = this.controles.direcao();
     this.heroi.mover(d.x, d.y);
+    this.heroi.atualizarProfundidade();
   }
 }

@@ -26,19 +26,27 @@ export const COR = {
   rosa: 0xee7ba6,
 } as const;
 
-/** Indices do tileset.png, na mesma ordem de arte/gerar.py */
+/** Indices do tileset.png, na mesma ordem de arte/tiles.py */
 export const T = {
-  grama: 0, grama2: 1, grama3: 2, flores: 3,
-  terra: 4, caminho: 5, agua: 6, agua2: 7,
-  pedra: 8, madeira: 9, telhado: 10, copa: 11,
-  tronco: 12, arbusto: 13, chaoCaverna: 14, paredeCaverna: 15,
+  grama: 0, grama2: 1, grama3: 2, gramaAlta: 3, flores: 4,
+  terra: 5, caminho: 6, areia: 7, agua: 8, agua2: 9,
+  pedra: 10, madeiraChao: 11, chaoCaverna: 12, paredeCaverna: 13,
 } as const;
 
-/** Tiles que o heroi nao atravessa. */
-export const SOLIDOS = [
-  T.agua, T.agua2, T.pedra, T.madeira, T.telhado,
-  T.copa, T.tronco, T.arbusto, T.paredeCaverna,
-];
+/** Tiles de chao que o heroi nao atravessa. Objeto tem colisao propria. */
+export const SOLIDOS = [T.agua, T.agua2, T.pedra, T.paredeCaverna];
+
+/** Altura do frame do personagem. Mudou de 24 para 32 na virada de arte. */
+export const ALTURA_PERSONAGEM = 32;
+
+/** Objetos do mundo, um PNG cada em public/assets/objetos/.
+ *  A lista tem que bater com OBJETOS em arte/mundo.py. */
+export const OBJETOS = [
+  "casa-pequena", "casa-grande", "ferraria", "casa-vovo",
+  "arvore", "arvore-escura", "arbusto",
+  "poste-sino", "poste-com-sino", "poco", "barraca", "cerca",
+  "fogueira", "bau", "placa", "varal",
+] as const;
 
 export const CABELOS = [
   { nome: "Verde folha", cor: 0x3e9b62 },

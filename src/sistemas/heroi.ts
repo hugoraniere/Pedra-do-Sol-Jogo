@@ -50,8 +50,8 @@ export class Heroi extends Phaser.GameObjects.Container {
     cena.add.existing(this);
     cena.physics.add.existing(this);
     // corpo colide so com os pes, o resto do sprite passa por cima do cenario
-    this.body.setSize(10, 7);
-    this.body.setOffset(-5, -7);
+    this.body.setSize(10, 6);
+    this.body.setOffset(-5, -6);
     this.parar();
   }
 
@@ -72,6 +72,9 @@ export class Heroi extends Phaser.GameObjects.Container {
       this.andando = true;
       this.camadas.forEach((s, i) => s.play(`${CAMADAS[i]}-anda-${dir}`));
     }
+  }
+
+  atualizarProfundidade() {
     this.setDepth(this.y);
   }
 
@@ -83,7 +86,7 @@ export class Heroi extends Phaser.GameObjects.Container {
 
   /** ponto logo a frente do heroi, usado para saber com o que ele quer falar */
   frente(): Phaser.Math.Vector2 {
-    const d = { baixo: [0, 12], cima: [0, -14], esquerda: [-12, -2], direita: [12, -2] }[
+    const d = { baixo: [0, 12], cima: [0, -18], esquerda: [-13, -6], direita: [13, -6] }[
       this.olhando
     ];
     return new Phaser.Math.Vector2(this.x + d[0], this.y + d[1]);

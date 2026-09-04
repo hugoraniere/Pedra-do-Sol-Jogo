@@ -18,6 +18,8 @@ Jogo top-down estilo Stardew Valley, feito em **Phaser 3 + Vite + TypeScript**, 
 
 Ja funciona:
 - criacao de personagem em passos (nome, raca, classe, cor de cabelo, cor de roupa)
+- casas, arvores e moveis desenhados como pecas inteiras, nao como tiles colados,
+  com sombra de chao e contorno, cada um com sua caixa de colisao em `objetos.json`
 - heroi montado em 3 camadas de sprite, com as cores escolhidas aplicadas por tint
 - mapa da Vila Semente com colisao, camera que segue o heroi
 - NPCs e objetos com caixa de fala
@@ -53,12 +55,15 @@ npm run arte     # regera toda a pixel art em public/assets (precisa de python3 
 ## Estrutura
 
 ```
-arte/gerar.py          gera toda a pixel art  ->  public/assets/*.png
+arte/gerar.py          orquestra a geracao  ->  public/assets/
 arte/paleta.py         a paleta, unica fonte de cor
+arte/tiles.py          chao: grama, terra, caminho, agua, caverna
+arte/mundo.py          objetos inteiros: casa, arvore, poco, barraca
 src/main.ts            configuracao do Phaser
 src/dados/             config, mapas, dialogos. conteudo, nao codigo
 src/sistemas/          estado, controles, heroi, botao. pecas reutilizaveis
 src/cenas/             Boot, Criacao, Mundo, Interface
+arte/gente.py          heroi, npcs e goblin, 16x32
 arte/ui.py             painel de 9 fatias e icones da interface
 arte/sprites/          desenhos a mao que substituem os gerados
 docs/                  conceito, roteiro, arquitetura, arte, roadmap, fluxo de sprites
