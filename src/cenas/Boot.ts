@@ -67,6 +67,9 @@ export class Boot extends Phaser.Scene {
     this.load.json("objetos", "assets/objetos.json");
     OBJETOS.forEach((n) => this.load.image(`obj-${n}`, `assets/objetos/${n}.png`));
     this.load.spritesheet("ui", "assets/ui.png", { frameWidth: 16, frameHeight: 16 });
+    // folha propria do combate: retratos, acoes e as seis faces do dado.
+    // Separada de ui.png para nao disputar arte/ui.py com o ambiente `sprites`.
+    this.load.spritesheet("icones", "assets/icones.png", { frameWidth: 16, frameHeight: 16 });
     ["painel", "painel-creme", "painel-ouro", "painel-escuro"].forEach((n) =>
       this.load.image(n, `assets/${n}.png`)
     );
@@ -76,6 +79,9 @@ export class Boot extends Phaser.Scene {
     guardarEncaixes(this.cache.json.get("encaixes") as Encaixes);
     // no aplicativo os saves vem do disco, entao esperamos a leitura antes do menu
     await prepararArmazenamento();
-    this.scene.start("Titulo");
+    // ?provador abre a bancada de combate em vez do jogo. Cena descartavel, so
+    // para provar o gesto de escolher e tocar no alvo. Ver cenas/Provador.ts.
+    const provador = new URLSearchParams(window.location.search).has("provador");
+    this.scene.start(provador ? "Provador" : "Titulo");
   }
 }
