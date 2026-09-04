@@ -26,7 +26,10 @@
 import Phaser from "phaser";
 import {
   ALTURA_PERSONAGEM,
+  DIRECOES,
   RACAS_SPRITE,
+  direcaoDe,
+  type NomeDirecao,
   VELOCIDADE,
   QUADRO,
   LINHA_DIRECAO,
@@ -37,8 +40,7 @@ import {
 import type { Heroi as FichaHeroi } from "./estado";
 import { encaixes, quadroDaRoupa, FichaArma } from "./encaixes";
 
-const DIRECOES = ["baixo", "esquerda", "direita", "cima"] as const;
-export type NomeDirecao = (typeof DIRECOES)[number];
+export type { NomeDirecao };
 
 /** Uma camada animada: a textura, a cor com que ela e pintada, e quantos pixels
  *  ela desce. O deslocamento existe porque raca baixa tem perna curta: o corpo
@@ -254,8 +256,7 @@ export class Heroi extends Phaser.GameObjects.Container {
       if (this.estado !== "parado") this.tocar("parado");
       return;
     }
-    const dir: NomeDirecao =
-      Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "esquerda" : "direita") : dy < 0 ? "cima" : "baixo";
+    const dir = direcaoDe(dx, dy) ?? this.olhando;
     if (this.estado !== "anda" || dir !== this.olhando) {
       this.olhando = dir;
       this.tocar("anda");
@@ -289,10 +290,20 @@ export class Heroi extends Phaser.GameObjects.Container {
 
   /** ponto logo a frente do heroi, usado para saber com o que ele quer falar */
   frente(): Phaser.Math.Vector2 {
-    const d = { baixo: [0, 12], cima: [0, -18], esquerda: [-13, -6], direita: [13, -6] }[
-      this.olhando
-    ];
-    return new Phaser.Math.Vector2(this.x + d[0], this.y + d[1]);
+    // ponto logo a frente, na direcao em que ele olha. as diagonais usam a
+    // media das duas retas que as compoem
+    const d: Record<NomeDirecao, [number, number]> = {
+      baixo: [0, 12],
+      cima: [0, -18],
+      esquerda: [-13, -6],
+      direita: [13, -6],
+      "baixo-esquerda": [-10, 6],
+      "baixo-direita": [10, 6],
+      "cima-esquerda": [-10, -14],
+      "cima-direita": [10, -14],
+    };
+    const p = d[this.olhando];
+    return new Phaser.Math.Vector2(this.x + p[0], this.y + p[1]);
   }
 
   /** Troca a aparencia inteira sem recriar o objeto. Usado na tela de criacao. */

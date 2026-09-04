@@ -31,6 +31,7 @@ TIPOS = {
 
 
 def goblin(direcao, coluna, tipo="magricela"):
+    direcao, giro = normalizar(direcao)
     im = nova()
     t = TIPOS[tipo]
     perna_bal, sobe, braco_bal = deslocamento(coluna)
@@ -178,6 +179,7 @@ def goblin(direcao, coluna, tipo="magricela"):
         ret(im, bx + 1, tronco_topo + 1 + bal, 1, braco_alt, GOBLIN_E)
         ret(im, bx, tronco_topo + 1 + bal + braco_alt - 1, 2, 1, GOBLIN_C)
 
+    luz_de_cima(im, [GOBLIN, GOBLIN_E], GOBLIN_C)
     contorno_seletivo(im, TINTA, TINTA_2)
     sombra_chao(im, 5, base + 1)
     return im

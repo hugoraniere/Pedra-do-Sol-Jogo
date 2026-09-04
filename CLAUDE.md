@@ -24,6 +24,7 @@ Ja funciona:
 - mapa da Vila Semente com colisao, camera que segue o heroi
 - NPCs e objetos com caixa de fala
 - direcional na tela e botao de acao, mais teclado (setas ou WASD, espaco)
+- oito direcoes de caminhada, com as diagonais, e direcional de disco no toque
 - 5 racas por 5 classes: o corpo vem da raca, a roupa e a arma vem da classe
 - roupa e arma penduradas por ponto de encaixe, nao desenhadas dentro do corpo
 - tres niveis de visao (perto, normal, longe), que trocam a resolucao logica
@@ -37,6 +38,7 @@ npm run dev      # abre em http://localhost:5173
 npm run build    # checa os tipos e gera dist/
 npm run arte     # regera toda a pixel art em public/assets (precisa de python3 e Pillow)
 npm run verificar# confere os contratos invisiveis: paleta, listas, falas, PNG solto
+npm run contraste# mede a razao de contraste de cada par de cores que se encosta
 npm run auditar  # percorre as telas procurando sobreposicao e transbordo de UI
 npm run conferir # confere as 25 combinacoes de raca e classe, peca por peca
 npm run folha    # monta a folha com as 25 combinacoes, para olhar
@@ -63,7 +65,7 @@ npm run app:build# empacota o aplicativo para instalar
 
 **Nenhuma coordenada Y na mao.** Toda UI usa `caixa()` e `pilha()` de `src/sistemas/design.ts`. Se voce somou dois numeros para achar onde vai um botao, esta errado. Ver `docs/07-design-system.md`.
 
-**Verifique antes de dizer que terminou.** `npm run build` tem que passar limpo, `npm run verificar`, `npm run auditar` e `npm run conferir` tem que sair com zero problemas, e o jogo tem que abrir sem erro no console. A auditoria salva um screenshot de cada tela em `ferramentas/telas/`, e `npm run folha` monta as 25 combinacoes de raca e classe em `ferramentas/telas/personagens.png`. Olhe as duas coisas.
+**Verifique antes de dizer que terminou.** `npm run build` tem que passar limpo, `npm run verificar`, `npm run contraste`, `npm run auditar` e `npm run conferir` tem que sair com zero problemas, e o jogo tem que abrir sem erro no console. A auditoria salva um screenshot de cada tela em `ferramentas/telas/`, e `npm run folha` monta as 25 combinacoes de raca e classe em `ferramentas/telas/personagens.png`. Olhe as duas coisas.
 
 ## Estrutura
 

@@ -91,40 +91,76 @@ export class Interface extends Phaser.Scene {
 
   // --------------------------------------------------------- direcional
   private montarDirecional() {
-    const base = { x: 32, y: ALTURA - 34 };
-    const setas: [number, number, number, number, number][] = [
-      [0, -15, 0, -1, UI.setaCima],
-      [0, 15, 0, 1, UI.setaBaixo],
-      [-16, 0, -1, 0, UI.setaEsq],
-      [16, 0, 1, 0, UI.setaDir],
-    ];
-    setas.forEach(([dx, dy, vx, vy, quadro]) => {
-      // chapinha escura atras, senao a seta some em cima da grama
-      this.add
-        .nineslice(base.x + dx, base.y + dy, "painel-escuro", undefined, 17, 17, 8, 8, 8, 8)
-        .setOrigin(0.5)
-        .setAlpha(0.55);
-      const s = this.add.image(base.x + dx, base.y + dy, "ui", quadro).setAlpha(0.95);
-      // area de toque bem maior que o desenho, dedo de crianca nao acerta 16 px
-      const alvo = this.add
-        .rectangle(base.x + dx, base.y + dy, 26, 26, 0x000000, 0)
-        .setInteractive({ useHandCursor: true });
-      const liga = () => {
-        if (vx) this.controles.toque.x = vx;
-        if (vy) this.controles.toque.y = vy;
-        s.setAlpha(1).setScale(1.15);
-        this.repassar();
+    // Um disco so, nao quatro botoes.
+    //
+    // Com quatro botoes separados nao existe diagonal no toque: para andar na
+    // diagonal a crianca teria que encostar dois dedos em dois quadradinhos de
+    // 26 px ao mesmo tempo, o que nao acontece. Com um disco, o dedo pousa em
+    // qualquer lugar e o angulo ate o centro escolhe uma das oito direcoes.
+    // De quebra da para arrastar o dedo e mudar de direcao sem levantar.
+    const centro = { x: 34, y: ALTURA - 34 };
+    const RAIO = 30;
+
+    this.add
+      .nineslice(centro.x, centro.y, "painel-escuro", undefined, 52, 52, 8, 8, 8, 8)
+      .setOrigin(0.5)
+      .setAlpha(0.5);
+
+    const setas = [
+      { dx: 0, dy: -16, quadro: UI.setaCima, x: 0, y: -1 },
+      { dx: 0, dy: 16, quadro: UI.setaBaixo, x: 0, y: 1 },
+      { dx: -16, dy: 0, quadro: UI.setaEsq, x: -1, y: 0 },
+      { dx: 16, dy: 0, quadro: UI.setaDir, x: 1, y: 0 },
+    ].map((seta) => ({
+      ...seta,
+      imagem: this.add.image(centro.x + seta.dx, centro.y + seta.dy, "ui", seta.quadro).setAlpha(0.8),
+    }));
+
+    /** acende as setas que compoem a direcao atual, inclusive as duas de uma diagonal */
+    const acender = (x: number, y: number) => {
+      setas.forEach((s) => {
+        const aceso = (s.x !== 0 && s.x === x) || (s.y !== 0 && s.y === y);
+        s.imagem.setAlpha(aceso ? 1 : 0.8).setScale(aceso ? 1.15 : 1);
+      });
+    };
+
+    const disco = this.add
+      .circle(centro.x, centro.y, RAIO, 0x000000, 0)
+      .setInteractive(new Phaser.Geom.Circle(RAIO, RAIO, RAIO), Phaser.Geom.Circle.Contains);
+
+    const apontar = (ponteiro: Phaser.Input.Pointer) => {
+      const dx = ponteiro.worldX - centro.x;
+      const dy = ponteiro.worldY - centro.y;
+      // uma zona morta no meio, senao o menor tremor do dedo faz o personagem
+      // sair andando sozinho
+      if (dx * dx + dy * dy < 36) return soltar();
+      const fatia = Math.round(Math.atan2(dy, dx) / (Math.PI / 4));
+      const passos: Record<string, [number, number]> = {
+        "0": [1, 0], "1": [1, 1], "2": [0, 1], "3": [-1, 1],
+        "4": [-1, 0], "-4": [-1, 0], "-3": [-1, -1], "-2": [0, -1], "-1": [1, -1],
       };
-      const desliga = () => {
-        if (vx) this.controles.toque.x = 0;
-        if (vy) this.controles.toque.y = 0;
-        s.setAlpha(0.85).setScale(1);
-        this.repassar();
-      };
-      alvo.on("pointerdown", liga);
-      alvo.on("pointerup", desliga);
-      alvo.on("pointerout", desliga);
+      const [x, y] = passos[String(fatia)] ?? [0, 0];
+      this.controles.toque.x = x;
+      this.controles.toque.y = y;
+      acender(x, y);
+      this.repassar();
+    };
+
+    const soltar = () => {
+      this.controles.toque.x = 0;
+      this.controles.toque.y = 0;
+      acender(0, 0);
+      this.repassar();
+    };
+
+    disco.on("pointerdown", apontar);
+    disco.on("pointermove", (p: Phaser.Input.Pointer) => {
+      if (p.isDown) apontar(p);
     });
+    disco.on("pointerup", soltar);
+    disco.on("pointerout", soltar);
+    // dedo levantado fora do disco tambem tem que parar o personagem
+    this.input.on("pointerup", soltar);
 
     const acao = this.add.image(LARGURA - 28, ALTURA - 28, "ui", UI.botaoA).setScale(1.4);
     const alvoAcao = this.add

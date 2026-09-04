@@ -9,7 +9,37 @@ from paleta import *  # noqa
 
 PW, PH = 16, 32
 COLUNAS = ["parado", "passo-a", "passo-b", "respira", "conjura", "tonto"]
-LINHAS = ["baixo", "esquerda", "direita", "cima"]
+
+# Oito direcoes. As quatro primeiras sao as antigas e ficaram nas mesmas linhas
+# de proposito, para nao invalidar nenhum indice que ja existia. As diagonais
+# vieram depois porque andar na diagonal e o que a crianca mais faz com o
+# direcional: sem elas o personagem anda de lado enquanto se move na diagonal,
+# e o passo nao bate com o movimento.
+LINHAS = [
+    "baixo", "esquerda", "direita", "cima",
+    "baixo-esquerda", "baixo-direita", "cima-esquerda", "cima-direita",
+]
+
+
+def normalizar(direcao):
+    """Transforma uma das oito direcoes em (vista, giro).
+
+    A vista e sempre uma das quatro de sempre: baixo, esquerda, direita, cima.
+    O giro e -1, 0 ou 1, e diz para que lado a cabeca esta virada.
+
+    Uma diagonal nao e uma vista nova: e a de frente ou a de costas com o rosto
+    virado. Desenhar oito vistas independentes a 16 px daria oito desenhos
+    parecidos e oito chances de um sair torto. Assim toda funcao de desenho
+    continua conhecendo quatro vistas, e ganha as diagonais escrevendo pouco.
+
+    Uso, na primeira linha de quem desenha:
+
+        direcao, giro = normalizar(direcao)
+    """
+    if "-" not in direcao:
+        return direcao, 0
+    vertical, lado = direcao.split("-")
+    return vertical, (-1 if lado == "esquerda" else 1)
 
 B = (255, 255, 255)
 BS = (196, 196, 196)
@@ -66,6 +96,34 @@ def contorno_seletivo(im, escuro=TINTA, medio=None):
                 continue
             so_por_cima = all(dy == 1 for (_, dy) in vizinhos)
             px(im, i, j, medio if (so_por_cima and medio) else escuro)
+    return im
+
+
+def luz_de_cima(im, familia, cor_luz):
+    """Acende 1 px na borda de cima e na borda da esquerda da silhueta.
+
+    Isto nao e enfeite, e o que salva o personagem de tom escuro. Num sprite de
+    16 px o que separa o personagem do chao e a linha em volta dele; o contorno
+    escuro resolve em fundo claro, e esta linha clara resolve em fundo escuro.
+    Sem ela, a pele escura em cima da grama tem razao de contraste 1,1, ou seja,
+    o personagem e o chao tem o mesmo peso para o olho.
+
+    So mexe nos pixels de `familia`, entao bota e cabelo nao sao repintados."""
+    base = im.copy()
+    p = base.load()
+    familia = {tuple(c[:3]) for c in familia}
+
+    def opaco(x, y):
+        return 0 <= x < im.width and 0 <= y < im.height and p[x, y][3] > 200
+
+    for y in range(im.height):
+        for x in range(im.width):
+            if not opaco(x, y):
+                continue
+            if tuple(p[x, y][:3]) not in familia:
+                continue
+            if not opaco(x, y - 1) or not opaco(x - 1, y):
+                px(im, x, y, cor_luz)
     return im
 
 

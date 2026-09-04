@@ -84,7 +84,9 @@ const relatorio = await pagina.evaluate(async () => {
   return linhas;
 });
 
-const semPontos = relatorio.filter((l) => !l.pontos || l.pontos.mao !== 24 || l.pontos.tronco !== 24);
+const semPontos = relatorio.filter(
+  (l) => !l.pontos || l.pontos.mao !== l.pontos.esperado || l.pontos.tronco !== l.pontos.esperado
+);
 const quebradas = relatorio.filter((l) => l.semTextura.length || l.quadrosErrados.length).concat(semPontos);
 console.log(`combinacoes conferidas: ${relatorio.length}`);
 console.log(`camadas por personagem:  ${relatorio[0]?.camadas.length ?? 0}`);
@@ -103,7 +105,9 @@ if (quebradas.length) {
     )
   );
 } else {
-  console.log("todas as pecas existem, com os quadros certos, e os 24 pontos de encaixe");
+  console.log(
+    `todas as pecas existem, com os quadros certos, e os ${relatorio[0]?.pontos?.esperado} pontos de encaixe`
+  );
 }
 
 await navegador.close();

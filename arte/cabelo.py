@@ -13,6 +13,7 @@ ESTILOS = ["curto", "comprido", "cacheado", "rabo", "moicano", "coque", "chanel"
 
 
 def cabelo(direcao, coluna, estilo="curto"):
+    direcao, giro = normalizar(direcao)
     im = nova()
     if estilo == "careca":
         return im
@@ -140,6 +141,7 @@ def chapeu(direcao, coluna, tipo="pontudo"):
     Terceira: a aba passa no maximo 1 px de cada lado da cabeca, fora o chapeu
     de palha, onde a aba larga E o desenho. Numa cabeca de 10 px, uma aba de 14
     vira um bloco com pernas."""
+    direcao, giro = normalizar(direcao)
     im = nova()
     if tipo == "nenhum":
         return im

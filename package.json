@@ -17,7 +17,8 @@
     "auditar": "npm run build && node ferramentas/auditar-ui.mjs",
     "conferir": "node ferramentas/conferir-personagens.mjs",
     "folha": "python3 ferramentas/folha-de-personagens.py",
-    "verificar": "node ferramentas/verificar.mjs"
+    "verificar": "node ferramentas/verificar.mjs",
+    "contraste": "python3 ferramentas/contraste.py"
   },
   "dependencies": {
     "@fontsource/silkscreen": "^5.3.0",

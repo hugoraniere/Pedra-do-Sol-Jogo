@@ -171,6 +171,7 @@ const PARES = {
   papel: "PAPEL", papel2: "PAPEL_2", tinta: "TINTA", tintaSuave: "TINTA_2",
   ouro: "OURO", vermelho: "VERMELHO", azul: "AZUL", verde: "VERDE",
   roxo: "ROXO", brasa: "BRASA", rosa: "ROSA",
+  grama: "GRAMA", gramaClara: "GRAMA_C",
 };
 
 const corTs = {};

@@ -50,6 +50,7 @@ def _perna(im, ombro, joelho, pe, lado, cor, meia, fase):
 
 
 def aranha(direcao, coluna, tipo="media"):
+    direcao, giro = normalizar(direcao)
     im = nova()
     t = TIPOS[tipo]
     _, sobe, _ = deslocamento(coluna)

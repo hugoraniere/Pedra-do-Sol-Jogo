@@ -1,6 +1,6 @@
 /** Lista dos tres espacos de save. Da para abrir, e da para apagar com confirmacao. */
 import Phaser from "phaser";
-import { LARGURA, ALTURA, RACAS, CLASSES } from "../dados/config";
+import { LARGURA, ALTURA, COR, RACAS, CLASSES } from "../dados/config";
 import { botao } from "../sistemas/botao";
 import { texto } from "../sistemas/texto";
 import { abrirEspaco } from "../sistemas/estado";
@@ -17,7 +17,7 @@ export class Carregar extends Phaser.Scene {
   }
 
   create() {
-    this.add.rectangle(0, 0, LARGURA, ALTURA, 0x5eaa64).setOrigin(0);
+    this.add.rectangle(0, 0, LARGURA, ALTURA, COR.grama).setOrigin(0);
     this.add.image(0, -46, "titulo").setOrigin(0).setAlpha(0.5);
     this.add.rectangle(0, 0, LARGURA, ALTURA, 0x2c2440, 0.5).setOrigin(0);
 

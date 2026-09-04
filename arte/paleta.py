@@ -7,21 +7,21 @@ TINTA_2    = (74, 62, 100)     # contorno suave, sombra de interior
 PAPEL      = (255, 248, 234)
 PAPEL_2    = (253, 239, 214)
 
-GRAMA_C    = (124, 196, 122)   # grama clara
-GRAMA      = (94, 170, 100)
-GRAMA_E    = (62, 128, 76)     # grama escura, sombra
+GRAMA_C    = (104, 176, 108)   # grama clara
+GRAMA      = (66, 128, 78)
+GRAMA_E    = (44, 96, 58)     # grama escura, sombra
 
-TERRA_C    = (206, 168, 116)
-TERRA      = (176, 134, 88)
-TERRA_E    = (128, 94, 62)
+TERRA_C    = (222, 190, 142)
+TERRA      = (198, 160, 108)
+TERRA_E    = (158, 118, 76)
 
-AGUA_C     = (126, 196, 242)
-AGUA       = (79, 150, 214)
-AGUA_E     = (47, 111, 181)
+AGUA_C     = (166, 220, 250)
+AGUA       = (112, 190, 240)
+AGUA_E     = (64, 148, 210)
 
-PEDRA_C    = (176, 186, 200)
-PEDRA      = (134, 146, 166)
-PEDRA_E    = (92, 102, 124)
+PEDRA_C    = (192, 202, 216)
+PEDRA      = (150, 162, 184)
+PEDRA_E    = (116, 128, 152)
 
 MADEIRA_C  = (168, 122, 78)
 MADEIRA    = (128, 88, 56)
@@ -49,9 +49,9 @@ PELE_C     = (250, 218, 186)
 PELE       = (228, 186, 148)
 PELE_E     = (188, 142, 108)
 
-GOBLIN_C   = (150, 208, 120)
-GOBLIN     = (108, 172, 84)
-GOBLIN_E   = (72, 128, 58)
+GOBLIN_C   = (176, 224, 140)
+GOBLIN     = (140, 196, 104)
+GOBLIN_E   = (96, 152, 70)
 
 BRANCO     = (255, 255, 255)
 VAZIO      = (0, 0, 0, 0)
@@ -85,18 +85,36 @@ def _limita(v):
     return max(0, min(255, int(v)))
 
 
-def rampa(base, forca=42):
-    """Devolve (sombra, base, luz) com deslocamento de matiz."""
-    r, g, b = base[:3]
-    sombra = (_limita(r - forca * 1.15), _limita(g - forca * 1.25), _limita(b - forca * 0.55))
-    luz = (_limita(r + forca * 0.95), _limita(g + forca * 0.85), _limita(b + forca * 0.45))
-    return sombra, (r, g, b), luz
+#: para onde a luz e a sombra puxam. Nao e branco nem preto puros de proposito:
+#: sombra fria e luz quente e o que faz a cor parecer iluminada em vez de so
+#: mais clara ou mais escura.
+LUZ_ALVO = (255, 246, 222)
+SOMBRA_ALVO = (42, 32, 72)
 
 
+def _misturar(a, b, k):
+    return tuple(_limita(a[i] + (b[i] - a[i]) * k) for i in range(3))
+
+
+def rampa(base, forca=54):
+    """Devolve (sombra, base, luz) de um material.
+
+    A conta e mistura, nao soma. Somar um valor fixo em cada canal estourava o
+    canal mais alto e mudava a cor: a pele clara, que e (248, 216, 182), virava
+    (255, 255, 204) na luz, ou seja, deixava de ser pele e virava amarelo. Com
+    mistura, a cor caminha ate um branco quente e ate um roxo escuro sem nunca
+    trocar de matiz."""
+    k = forca / 160
+    return _misturar(base, SOMBRA_ALVO, k), tuple(base[:3]), _misturar(base, LUZ_ALVO, k)
+
+
+# Os tres tons de pele subiram em relacao a primeira versao, e o chao desceu.
+# E o par de mudancas que faz o personagem sair de dentro do fundo: as duas
+# familias de cor estavam na mesma faixa media e o heroi sumia na grama.
 PELE_TONS = [
-    rampa((246, 214, 180)),   # claro
-    rampa((214, 168, 126)),   # medio
-    rampa((162, 112, 78)),    # escuro
+    rampa((248, 216, 182)),   # claro
+    rampa((218, 174, 134)),   # medio
+    rampa((188, 134, 98)),    # escuro
 ]
 
 CABELO_TONS = {
@@ -117,9 +135,9 @@ CABELO_TONS = {
 # Cria de Dragao e cor de escama. Assim o mesmo campo da ficha serve para todos.
 
 ESCAMA_TONS = [
-    rampa((122, 196, 128)),   # verde folha
-    rampa((214, 106, 92)),    # vermelho brasa
-    rampa((112, 158, 220)),   # azul ceu
+    rampa((152, 218, 152)),   # verde folha
+    rampa((236, 132, 116)),   # vermelho brasa
+    rampa((138, 184, 238)),   # azul ceu
 ]
 
 TONS_POR_RACA = {

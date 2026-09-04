@@ -194,3 +194,56 @@ onde cabe a copa de um chapeu. E por isso que o chapeu de mago e tombado para o
 lado em vez de reto para cima: reto ele nao cabe, e a copa sai pela borda de
 cima do quadro. Foi o primeiro erro da reforma de sprites, e demorou a aparecer
 porque so acontecia com o elfo.
+
+
+## Oito direcoes
+
+A folha passou de 4 para 8 linhas: as quatro retas mais as quatro diagonais. O
+motivo e de jogo, nao de arte: no direcional a crianca anda na diagonal o tempo
+todo, e sem quadro proprio o personagem andava de lado enquanto se movia na
+diagonal. O passo nao batia com o movimento.
+
+Uma diagonal nao e uma vista nova. E a vista de frente ou de costas com o rosto
+virado, e a funcao `base.normalizar()` faz essa traducao: toda funcao de desenho
+continua conhecendo quatro vistas e ganha as diagonais escrevendo pouco.
+
+O que muda numa diagonal, e so isso:
+
+- os dois olhos e a boca escorregam 1 px para o lado do giro
+- um narizinho aparece fora da silhueta daquele lado
+- de costas, a ponta do queixo aparece do lado do giro
+
+Sao os unicos sinais que cabem em 16 px. Sem eles a diagonal fica identica a
+frente; com eles, o rosto vira.
+
+No toque, o direcional deixou de ser quatro botoes e virou um disco. Com quatro
+botoes separados a diagonal era impossivel: exigia dois dedos em dois quadrados
+de 26 px ao mesmo tempo. Com um disco, o dedo pousa em qualquer lugar e o angulo
+ate o centro escolhe uma das oito direcoes, e da para arrastar sem levantar.
+
+## Contraste: a linha de luz
+
+`npm run contraste` mede a razao de contraste de cada par de cores que se
+encostam no jogo e reprova quem fica abaixo do minimo. Foi ele que mostrou o
+tamanho do problema: o goblin verde em cima da grama verde dava razao 1,03, ou
+seja, o olho nao separava um do outro. Nove pares reprovavam.
+
+A primeira tentativa foi escurecer a grama e clarear a pele, e ajudou, mas
+esbarrou num limite: **nao existe cor de pele escura que contraste com a grama
+sem deixar de ser escura**. Quando a pele escura passava no teste, ela ja tinha
+virado pele media.
+
+A resposta certa nao e a cor de dentro do personagem, e a borda dele:
+
+- **contorno escuro** em volta de tudo, que resolve contra fundo claro. Ja
+  existia.
+- **linha de luz** de 1 px na borda de cima e da esquerda, que resolve contra
+  fundo escuro. E a funcao `base.luz_de_cima()`, e foi a que faltava.
+
+Por isso a ferramenta mede a linha de luz do personagem, e nao a cor de dentro
+dele: e a linha que faz o trabalho.
+
+A `rampa()` tambem mudou de conta. Antes ela somava um valor fixo em cada canal,
+o que estourava o canal mais alto e trocava a cor: a pele clara virava amarelo na
+luz. Agora ela mistura a cor com um branco quente e com um roxo escuro, entao a
+cor caminha sem nunca mudar de matiz.

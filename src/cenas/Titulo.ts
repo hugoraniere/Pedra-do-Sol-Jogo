@@ -29,7 +29,7 @@ export class Titulo extends Phaser.Scene {
     this.foco = 0;
 
     // fundo: o banner ocupa o topo, o resto e o mesmo verde do campo
-    this.add.rectangle(0, 0, LARGURA, ALTURA, 0x5eaa64).setOrigin(0);
+    this.add.rectangle(0, 0, LARGURA, ALTURA, COR.grama).setOrigin(0);
     this.add.image(0, 0, "titulo").setOrigin(0);
 
     this.escreverTitulo();

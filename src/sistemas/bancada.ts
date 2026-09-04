@@ -6,7 +6,10 @@
  * regras: uma copia das regras dentro do teste passa a errar junto com o
  * codigo, e ai o teste para de servir. */
 import Phaser from "phaser";
-import { RACAS, CLASSES, ROUPA_DA_CLASSE, ARMA_DA_CLASSE, CHAPEU_DA_CLASSE } from "../dados/config";
+import {
+  RACAS, CLASSES, DIRECOES, COLUNAS_FOLHA,
+  ROUPA_DA_CLASSE, ARMA_DA_CLASSE, CHAPEU_DA_CLASSE,
+} from "../dados/config";
 import { VAZIO, Heroi as FichaHeroi } from "./estado";
 import { camadasDoHeroi, pecasDoHeroi } from "./heroi";
 import { encaixes } from "./encaixes";
@@ -36,7 +39,10 @@ export function instalarBancada(_jogo: Phaser.Game) {
     texturasDe(ficha: FichaHeroi) {
       const p = pecasDoHeroi(ficha);
       return [
-        ...camadasDoHeroi(ficha).map((c) => ({ chave: c.chave, quadros: 24 })),
+        ...camadasDoHeroi(ficha).map((c) => ({
+          chave: c.chave,
+          quadros: DIRECOES.length * COLUNAS_FOLHA,
+        })),
         { chave: p.roupa.chave, quadros: 12 },
         ...(p.arma ? [{ chave: p.arma.chave, quadros: 0 }] : []),
       ];
@@ -45,7 +51,8 @@ export function instalarBancada(_jogo: Phaser.Game) {
     pontosDe(ficha: FichaHeroi) {
       const t = encaixes();
       const p = t?.pontos[pecasDoHeroi(ficha).raca];
-      return p ? { mao: p.mao.length, tronco: p.tronco.length } : null;
+      const esperado = DIRECOES.length * COLUNAS_FOLHA;
+      return p ? { mao: p.mao.length, tronco: p.tronco.length, esperado } : null;
     },
   };
 }

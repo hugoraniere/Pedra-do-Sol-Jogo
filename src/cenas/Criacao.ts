@@ -40,6 +40,7 @@ export class Criacao extends Phaser.Scene {
   private passo = 0;
   private espaco = 0;
   private grupo!: Phaser.GameObjects.Container;
+  private fundo!: Phaser.GameObjects.Container;
   private boneco!: Heroi;
   private rascunho: FichaHeroi = JSON.parse(JSON.stringify(VAZIO.heroi));
   private comEquipamento = true;
@@ -59,10 +60,17 @@ export class Criacao extends Phaser.Scene {
     // todas as combinacoes possiveis de camada precisam de animacao pronta
     criarAnimacoes(this, this.todasAsChaves());
     this.add.rectangle(0, 0, LARGURA, ALTURA, 0xfff8ea).setOrigin(0);
-    marcar(this.add.image(0, 0, "titulo").setOrigin(0).setAlpha(0.25), "fundo");
+    // o cenario da tela inicial fica so como textura de fundo, bem apagado.
+    // a 25 por cento ele competia com os botoes e lavava o texto
+    marcar(this.add.image(0, 0, "titulo").setOrigin(0).setAlpha(0.14), "fundo");
 
+    // tres camadas de profundidade, nesta ordem: o palco atras, o boneco em
+    // cima dele, e os botoes por cima de tudo. Sem separar, o palco desenhado
+    // depois do boneco simplesmente o tapava
+    this.fundo = this.add.container(0, 0).setDepth(1);
     this.boneco = new Heroi(this, 0, 0, this.rascunho);
     this.boneco.body.moves = false;
+    this.boneco.setDepth(2);
     this.grupo = this.add.container(0, 0).setDepth(10);
     this.desenharPasso();
   }
@@ -94,6 +102,30 @@ export class Criacao extends Phaser.Scene {
     return { ...this.rascunho, chapeu: "nenhum", armaSprite: "nenhuma" };
   }
 
+  /** Palco do boneco: um retangulo escuro atras dele, com o chao mais claro.
+   *
+   *  Existe por um motivo de leitura, nao de enfeite. O personagem pode estar
+   *  de qualquer cor, inclusive creme claro em cima de um fundo creme claro, e
+   *  ai ele some. Com o palco, o fundo dele e sempre o mesmo e sempre escuro,
+   *  entao toda combinacao de raca, roupa e chapeu aparece igual de bem. */
+  private palco(x: number, y: number, largura: number, altura: number) {
+    const topo = y - altura;
+    this.fundo.add(
+      marcar(
+        this.add.nineslice(x, topo, "painel-escuro", undefined, largura, altura, 8, 8, 8, 8)
+          .setOrigin(0.5, 0),
+        "fundo"
+      )
+    );
+    // uma faixa clara no pe do palco, que le como chao e apoia o personagem
+    this.fundo.add(
+      marcar(
+        this.add.rectangle(x, y - 6, largura - 10, 6, 0x4a3e64).setOrigin(0.5, 0),
+        "fundo"
+      )
+    );
+  }
+
   private atualizarBoneco(x: number, y: number, escala: number) {
     this.boneco.setPosition(x, y).setScale(escala);
     this.boneco.trocarAparencia(this.fichaDoPreview());
@@ -102,6 +134,7 @@ export class Criacao extends Phaser.Scene {
 
   private limpar() {
     this.grupo.removeAll(true);
+    this.fundo.removeAll(true);
     this.input.keyboard?.removeAllListeners("keydown");
   }
 
@@ -209,7 +242,8 @@ export class Criacao extends Phaser.Scene {
         break;
       case "Raca":
         this.titulo("De que povo ele e?");
-        this.atualizarBoneco(LARGURA / 2, 96, 1.75);
+        this.palco(LARGURA / 2, 102, 80, 70);
+        this.atualizarBoneco(LARGURA / 2, 96, 2);
         this.grade(
           RACAS.map((r) => r.nome),
           Math.max(0, RACAS.findIndex((r) => r.id === this.rascunho.raca)),
@@ -225,7 +259,8 @@ export class Criacao extends Phaser.Scene {
         break;
       case "Classe":
         this.titulo("O que ele sabe fazer?");
-        this.atualizarBoneco(LARGURA / 2, 96, 1.75);
+        this.palco(LARGURA / 2, 102, 80, 70);
+        this.atualizarBoneco(LARGURA / 2, 96, 2);
         this.grade(
           CLASSES.map((c) => c.nome),
           Math.max(0, CLASSES.findIndex((c) => c.id === this.rascunho.classe)),
@@ -254,7 +289,8 @@ export class Criacao extends Phaser.Scene {
   // ------------------------------------------------------------- nome
   private passoNome() {
     this.titulo("Qual e o nome do seu heroi?");
-    this.atualizarBoneco(LARGURA / 2, 96, 1.75);
+    this.palco(LARGURA / 2, 102, 80, 70);
+    this.atualizarBoneco(LARGURA / 2, 96, 2);
 
     this.grupo.add(
       this.add.nineslice(LARGURA / 2, 124, "painel-creme", undefined, 210, 22, 8, 8, 8, 8).setOrigin(0.5)
@@ -295,6 +331,7 @@ export class Criacao extends Phaser.Scene {
   // -------------------------------------------------------- aparencia
   private passoAparencia() {
     this.titulo("Como ele e?");
+    this.palco(48, 148, 84, 116);
     this.atualizarBoneco(48, 140, 3);
 
     const x = 96;

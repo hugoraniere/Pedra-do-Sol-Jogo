@@ -55,8 +55,14 @@ TIPOS_CORPO = ["magro", "normal", "gordinho"]
 #: coluna da folha do corpo -> linha da folha de roupa
 LINHA_DA_ROUPA = {"parado": 0, "passo-a": 1, "passo-b": 2,
                   "respira": 0, "conjura": 0, "tonto": 0}
-#: direcao -> coluna da folha de roupa
-VISTA_DA_DIRECAO = {"baixo": 0, "esquerda": 1, "direita": 2, "cima": 3}
+#: direcao -> coluna da folha de roupa. As diagonais caem na vista vertical
+#: porque a silhueta de uma roupa de 16 px nao muda entre a frente e os tres
+#: quartos: quem muda de verdade e o rosto, e o rosto mora no corpo
+VISTA_DA_DIRECAO = {
+    "baixo": 0, "esquerda": 1, "direita": 2, "cima": 3,
+    "baixo-esquerda": 0, "baixo-direita": 0,
+    "cima-esquerda": 3, "cima-direita": 3,
+}
 
 
 # ------------------------------------------------------------------- npcs

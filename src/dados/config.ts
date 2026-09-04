@@ -36,6 +36,9 @@ export const COR = {
   roxo: 0x7b5ac4,
   brasa: 0xf2802b,
   rosa: 0xee7ba6,
+  /** o verde do chao, para as telas que precisam continuar o mundo */
+  grama: 0x42804e,
+  gramaClara: 0x68b06c,
 } as const;
 
 /** Indices do tileset.png, na mesma ordem de arte/tiles.py */
@@ -54,7 +57,51 @@ export const ALTURA_PERSONAGEM = 32;
 /** Grade da folha de personagem, igual a de arte/gente.py.
  *  6 colunas por 4 linhas, quadro = linha * 6 + coluna. */
 export const QUADRO = { parado: 0, passoA: 1, passoB: 2, respira: 3, conjura: 4, tonto: 5 } as const;
-export const LINHA_DIRECAO = { baixo: 0, esquerda: 1, direita: 2, cima: 3 } as const;
+/** Linha da folha de sprite para cada uma das oito direcoes.
+ *
+ *  As quatro primeiras ficaram nos indices de sempre de proposito: nada que ja
+ *  apontava para elas precisou mudar. As diagonais vieram depois porque andar
+ *  na diagonal e o que a crianca mais faz com o direcional, e sem elas o
+ *  personagem andava de lado enquanto se movia na diagonal. */
+export const LINHA_DIRECAO = {
+  baixo: 0,
+  esquerda: 1,
+  direita: 2,
+  cima: 3,
+  "baixo-esquerda": 4,
+  "baixo-direita": 5,
+  "cima-esquerda": 6,
+  "cima-direita": 7,
+} as const;
+
+export const DIRECOES = [
+  "baixo", "esquerda", "direita", "cima",
+  "baixo-esquerda", "baixo-direita", "cima-esquerda", "cima-direita",
+] as const;
+
+export type NomeDirecao = (typeof DIRECOES)[number];
+
+/** A direcao que corresponde a um empurrao do direcional.
+ *
+ *  Oito fatias de 45 graus. A conta com atan2 e mais curta que uma cadeia de
+ *  ifs e nao tem canto morto: qualquer combinacao de x e y cai numa fatia. */
+export function direcaoDe(x: number, y: number): NomeDirecao | undefined {
+  if (x === 0 && y === 0) return undefined;
+  const fatia = Math.round(Math.atan2(y, x) / (Math.PI / 4));
+  return (
+    {
+      0: "direita",
+      1: "baixo-direita",
+      2: "baixo",
+      3: "baixo-esquerda",
+      4: "esquerda",
+      "-1": "cima-direita",
+      "-2": "cima",
+      "-3": "cima-esquerda",
+      "-4": "esquerda",
+    } as Record<string, NomeDirecao>
+  )[String(fatia)];
+}
 export const COLUNAS_FOLHA = 6;
 
 /** Ciclo de caminhada no padrao do Stardew: contato, passo, contato, outro passo,

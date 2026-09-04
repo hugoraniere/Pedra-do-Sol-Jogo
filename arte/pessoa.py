@@ -134,6 +134,7 @@ def _tons(raca, tom):
 
 # ------------------------------------------------------------------ corpo
 def corpo(direcao, coluna, tom=0, raca="vale", **mudancas):
+    direcao, giro = normalizar(direcao)
     t = tracos(raca, **mudancas)
     im = nova()
     c = CORPOS[t["tipo"]]
@@ -160,15 +161,20 @@ def corpo(direcao, coluna, tom=0, raca="vale", **mudancas):
     # de costas nao ha rosto, entao o que da forma e a nuca: uma sombra na base
     # do craneo e o vinco do pescoco. sem isso a cabeca vira um tijolo flutuando
     if direcao == "cima":
-        ret(im, cab_x + 1, topo + CABECA_ALT - 3, cab_l - 2, 1, sombra_pele)
+        ret(im, cab_x + 1 + giro, topo + CABECA_ALT - 3, cab_l - 2, 1, sombra_pele)
         pontos(im, [(cab_x - 1, topo + CABECA_ALT // 2 + 1),
                     (cab_x + cab_l, topo + CABECA_ALT // 2 + 1)], pele)
+        if giro:
+            # de costas virando, aparece a ponta do queixo do lado do giro
+            qx = cab_x - 1 if giro < 0 else cab_x + cab_l
+            px(im, qx, topo + CABECA_ALT - 4, sombra_pele)
 
     # ----------------------------------------------------------- orelhas
     # tres formatos. a orelha e o traco que aparece na silhueta, entao e ela
     # que diz a raca antes mesmo de a cor entrar
     if direcao != "cima":
         oy = topo + CABECA_ALT // 2
+        # de tres quartos so a orelha da frente aparece inteira
         if t["orelha"] == "folha":
             pontos(im, [(cab_x - 1, oy), (cab_x - 1, oy + 1), (cab_x - 2, oy - 1),
                         (cab_x - 2, oy - 2), (cab_x - 3, oy - 3),
@@ -200,17 +206,25 @@ def corpo(direcao, coluna, tom=0, raca="vale", **mudancas):
             pontos(im, [(bx, olho_y), (bx + 1, olho_y + 1), (bx, olho_y + 2),
                         (bx + 1, olho_y)], TINTA)
     elif direcao == "baixo":
-        e1 = cab_x + 1
-        e2 = cab_x + cab_l - 3
+        # nas diagonais os dois olhos e a boca escorregam um pixel para o lado
+        # do giro, e um narizinho aparece fora da silhueta daquele lado. Sao os
+        # dois unicos sinais que cabem: sem eles a diagonal fica identica a
+        # frente, e o jogador ve o personagem andar de lado sem virar a cara
+        e1 = cab_x + 1 + giro
+        e2 = cab_x + cab_l - 3 + giro
         for ex in (e1, e2):
             ret(im, ex, olho_y, 2, 1, TINTA)          # cilio
             ret(im, ex, olho_y + 1, 2, 2, BRANCO)     # branco do olho
             ret(im, ex + 1, olho_y + 1, 1, 2, TINTA)  # pupila
         pontos(im, [(e1, olho_y - 2), (e1 + 1, olho_y - 2),
                     (e2, olho_y - 2), (e2 + 1, olho_y - 2)], TINTA_2)
-        ret(im, 7, boca_y, 2, 1, sombra_pele)
+        ret(im, 7 + giro, boca_y, 2, 1, sombra_pele)
         pontos(im, [(cab_x, boca_y - 1), (cab_x + cab_l - 1, boca_y - 1)], (216, 148, 138))
-        px(im, 7, boca_y + 1, sombra_pele)
+        px(im, 7 + giro, boca_y + 1, sombra_pele)
+        if giro:
+            nx = cab_x - 1 if giro < 0 else cab_x + cab_l
+            px(im, nx, olho_y + 1, pele)
+            px(im, nx, olho_y + 2, sombra_pele)
     elif direcao in ("esquerda", "direita"):
         # de perfil aparece UM olho so, e menor que os de frente. dois olhos ou
         # um olho do mesmo tamanho fazem a cabeca parecer torcida
@@ -303,6 +317,9 @@ def corpo(direcao, coluna, tom=0, raca="vale", **mudancas):
             ret(im, bx, y, larg, 1, MADEIRA)
             ret(im, bx, y + BOTA_ALT - 1, larg, 1, TINTA_2)
 
+    # a luz de cima antes do contorno: ela mexe em pixel que ja existe, o
+    # contorno cria pixel novo fora da silhueta
+    luz_de_cima(im, [pele, sombra_pele], luz_pele)
     contorno_seletivo(im, TINTA, TINTA_2)
     sombra_chao(im, 5 if t["tipo"] == "magro" else 6, CHAO)
     return im
@@ -319,6 +336,7 @@ def geometria(direcao, coluna, raca="vale", **mudancas):
     porque se fossem duas contas parecidas em lugares diferentes elas iam
     divergir na primeira vez que alguem mexesse na largura do tronco, e a arma
     passaria a flutuar ao lado da mao sem ninguem entender por que."""
+    direcao, _giro = normalizar(direcao)
     t = tracos(raca, **mudancas)
     c = CORPOS[t["tipo"]]
     e = esqueleto(t["altura"])
@@ -369,6 +387,7 @@ def geometria(direcao, coluna, raca="vale", **mudancas):
 
 
 def bracos(direcao, coluna, tom=0, raca="vale", **mudancas):
+    direcao, giro = normalizar(direcao)
     g = geometria(direcao, coluna, raca, **mudancas)
     t = g["tracos"]
     im = nova()
@@ -389,6 +408,7 @@ def bracos(direcao, coluna, tom=0, raca="vale", **mudancas):
 
     desenhar(g["braco_forte"])
     desenhar(g["braco_fraco"])
+    luz_de_cima(im, [pele, sombra_pele], _tons(raca, tom)[2])
     contorno_seletivo(im, TINTA, TINTA_2)
     return im
 

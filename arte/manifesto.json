@@ -3,28 +3,28 @@
   "total": 113,
   "arquivos": {
     "aranha-filhote.png": {
-      "hash": "3647556a6ec318fd",
-      "bytes": 1403,
+      "hash": "1c0d27bc01822f3a",
+      "bytes": 2034,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "aranha-matriarca.png": {
-      "hash": "9767c4e47864b260",
-      "bytes": 1745,
+      "hash": "bd7023489ecce6c4",
+      "bytes": 2521,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "aranha-media.png": {
-      "hash": "87c1b6474e43f8c1",
-      "bytes": 1686,
+      "hash": "8508251f2fa58f91",
+      "bytes": 2330,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "aranha-pequena.png": {
-      "hash": "2cfe3c7d0afecdd7",
-      "bytes": 1610,
+      "hash": "402ea06f9dda2e81",
+      "bytes": 2283,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "arma-arco.png": {
       "hash": "d1c0eaa8a6fb00ce",
@@ -39,20 +39,20 @@
       "altura": 17
     },
     "arma-espada.png": {
-      "hash": "1e9be9dca8081fcc",
+      "hash": "f955c67852b2eeb8",
       "bytes": 141,
       "largura": 3,
       "altura": 15
     },
     "arma-funda.png": {
-      "hash": "bbfa8b8f74f050a7",
+      "hash": "b2dfb3e0a6538205",
       "bytes": 109,
       "largura": 3,
       "altura": 10
     },
     "arma-martelo.png": {
-      "hash": "8404b8d33c0da159",
-      "bytes": 163,
+      "hash": "2580cb76648f3353",
+      "bytes": 165,
       "largura": 5,
       "altura": 16
     },
@@ -63,292 +63,292 @@
       "altura": 25
     },
     "goblin-chefe.png": {
-      "hash": "25f266340417630d",
-      "bytes": 2763,
+      "hash": "8f38c9d09834864a",
+      "bytes": 3892,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "goblin-gorducho.png": {
-      "hash": "59dcee97d54711f7",
-      "bytes": 2454,
+      "hash": "6ae5bd88d03bc502",
+      "bytes": 3581,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "goblin-magricela.png": {
-      "hash": "4834bc7d9c486fac",
-      "bytes": 2460,
+      "hash": "44547c4730ceded8",
+      "bytes": 3558,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "goblin-moleque.png": {
-      "hash": "91e56964d42fdd6b",
-      "bytes": 2395,
+      "hash": "dee1e9f61953c879",
+      "bytes": 3275,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "goblin.png": {
-      "hash": "4834bc7d9c486fac",
-      "bytes": 2460,
+      "hash": "44547c4730ceded8",
+      "bytes": 3558,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-bracos-anao-0.png": {
-      "hash": "c8e049c9b2aa875e",
-      "bytes": 795,
+      "hash": "e90331d31a9ea019",
+      "bytes": 1066,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-bracos-anao-1.png": {
-      "hash": "827f3bb40a114fb1",
-      "bytes": 846,
+      "hash": "8e8f9a341c16a600",
+      "bytes": 1083,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-bracos-anao-2.png": {
-      "hash": "f656c992b5f7fa5d",
-      "bytes": 777,
+      "hash": "c3c55bb154b663f4",
+      "bytes": 1065,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-bracos-dragao-0.png": {
-      "hash": "987bc70113ce7180",
-      "bytes": 804,
+      "hash": "3f7b0bffd60cab29",
+      "bytes": 1161,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-bracos-dragao-1.png": {
-      "hash": "316b617ae5b04764",
-      "bytes": 806,
+      "hash": "0c99904969015d30",
+      "bytes": 1178,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-bracos-dragao-2.png": {
-      "hash": "fc288bd15839d756",
-      "bytes": 791,
+      "hash": "26eb1a307316b9d2",
+      "bytes": 1182,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-bracos-elfo-0.png": {
-      "hash": "62742a8ae68d7395",
-      "bytes": 748,
+      "hash": "b86dbe864bf20023",
+      "bytes": 1056,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-bracos-elfo-1.png": {
-      "hash": "bd5bad91a45217b4",
-      "bytes": 741,
+      "hash": "569897c9e21a46e0",
+      "bytes": 1034,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-bracos-elfo-2.png": {
-      "hash": "a053874e06719403",
-      "bytes": 740,
+      "hash": "d62d864ce112fb3f",
+      "bytes": 1021,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-bracos-pequenino-0.png": {
-      "hash": "85dbb3785217e7df",
-      "bytes": 763,
+      "hash": "bdf3d5c5c293b308",
+      "bytes": 1063,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-bracos-pequenino-1.png": {
-      "hash": "24c22a9bed293a5b",
-      "bytes": 754,
+      "hash": "3ee9e1b9ea33419d",
+      "bytes": 1029,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-bracos-pequenino-2.png": {
-      "hash": "8e2577623f3352d0",
-      "bytes": 758,
+      "hash": "b00616019dade0da",
+      "bytes": 1017,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-bracos-vale-0.png": {
-      "hash": "9b8ea2824f83754e",
-      "bytes": 763,
+      "hash": "27c56481587a0079",
+      "bytes": 1063,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-bracos-vale-1.png": {
-      "hash": "32a9651942919556",
-      "bytes": 758,
+      "hash": "bd13b0e7e4deba09",
+      "bytes": 1029,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-bracos-vale-2.png": {
-      "hash": "9ba2c1007e300140",
-      "bytes": 758,
+      "hash": "72b2f7bc6d40672c",
+      "bytes": 1017,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-cabelo-cacheado.png": {
-      "hash": "c4bf5e3a228221be",
-      "bytes": 1046,
+      "hash": "ee13782fe3b00ef7",
+      "bytes": 1625,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-cabelo-chanel.png": {
-      "hash": "858f75eccaee27bd",
-      "bytes": 1005,
+      "hash": "3fde94ddd959a5fa",
+      "bytes": 1526,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-cabelo-comprido.png": {
-      "hash": "765885ad71c1263e",
-      "bytes": 1042,
+      "hash": "c67c0960a7540123",
+      "bytes": 1598,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-cabelo-coque.png": {
-      "hash": "3d70dfc5de9e536a",
-      "bytes": 874,
+      "hash": "05f15966f10266ef",
+      "bytes": 1351,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-cabelo-curto.png": {
-      "hash": "69071fe69d4f7def",
-      "bytes": 966,
+      "hash": "701cb21eae5cfad0",
+      "bytes": 1443,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-cabelo-moicano.png": {
-      "hash": "6ba8510baf73ea60",
-      "bytes": 881,
+      "hash": "35e3cc0b9ad1b7c3",
+      "bytes": 1357,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-cabelo-rabo.png": {
-      "hash": "653b00c3b9d39377",
-      "bytes": 1046,
+      "hash": "9e4422cbe2857c01",
+      "bytes": 1585,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-chapeu-boina.png": {
-      "hash": "4a45bece27a48b80",
-      "bytes": 441,
+      "hash": "5d3540f009c0ee5d",
+      "bytes": 615,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-chapeu-capuz.png": {
-      "hash": "2ecf5831af11d96b",
-      "bytes": 620,
+      "hash": "e3a56140202a0071",
+      "bytes": 952,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-chapeu-coroa.png": {
-      "hash": "c18129791c939d40",
-      "bytes": 383,
+      "hash": "478c124dfa141585",
+      "bytes": 536,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-chapeu-elmo.png": {
-      "hash": "d33c2bedbda2d104",
-      "bytes": 620,
+      "hash": "f8efed76e86e7181",
+      "bytes": 890,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-chapeu-palha.png": {
-      "hash": "eccc5391c45c8892",
-      "bytes": 461,
+      "hash": "f691f45031262941",
+      "bytes": 616,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-chapeu-pontudo.png": {
-      "hash": "88bd7c6f1fcc0d07",
-      "bytes": 589,
+      "hash": "d5818c37442c3c47",
+      "bytes": 783,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-corpo-anao-0.png": {
-      "hash": "bc148620834c439d",
-      "bytes": 1664,
+      "hash": "4af77ff8dec2d563",
+      "bytes": 2708,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-corpo-anao-1.png": {
-      "hash": "f82a2c56fba07b1f",
-      "bytes": 1656,
+      "hash": "00dfea94c8d6d81e",
+      "bytes": 2745,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-corpo-anao-2.png": {
-      "hash": "9a699709123f6c0b",
-      "bytes": 1748,
+      "hash": "c58d58a76c272762",
+      "bytes": 2838,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-corpo-dragao-0.png": {
-      "hash": "6d3323ec3ac4c67c",
-      "bytes": 2262,
+      "hash": "15308ce93296439d",
+      "bytes": 3685,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-corpo-dragao-1.png": {
-      "hash": "737414a5d1000eaa",
-      "bytes": 2244,
+      "hash": "5751d60ebdf0f2fa",
+      "bytes": 3582,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-corpo-dragao-2.png": {
-      "hash": "eae8d27f5ba906a3",
-      "bytes": 2262,
+      "hash": "b53625080423815b",
+      "bytes": 3474,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-corpo-elfo-0.png": {
-      "hash": "e5e0779ab0ad5d32",
-      "bytes": 1731,
+      "hash": "efce6d899a5a0d6b",
+      "bytes": 2824,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-corpo-elfo-1.png": {
-      "hash": "9348190f86fac8e3",
-      "bytes": 1692,
+      "hash": "215d709fde5179d3",
+      "bytes": 2887,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-corpo-elfo-2.png": {
-      "hash": "9dbcf9e129815d37",
-      "bytes": 1762,
+      "hash": "656e4b2e8efed1d0",
+      "bytes": 2817,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-corpo-pequenino-0.png": {
-      "hash": "64992b3cc4d05d1c",
-      "bytes": 1538,
+      "hash": "900457547b906166",
+      "bytes": 2520,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-corpo-pequenino-1.png": {
-      "hash": "fa2462acbc76badd",
-      "bytes": 1522,
+      "hash": "52f7d824bb33d8af",
+      "bytes": 2508,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-corpo-pequenino-2.png": {
-      "hash": "746d9179e26845e1",
-      "bytes": 1554,
+      "hash": "a7946a4176ad7c5f",
+      "bytes": 2475,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-corpo-vale-0.png": {
-      "hash": "6036f6963fca1552",
-      "bytes": 1583,
+      "hash": "4585fc7d284d6c6f",
+      "bytes": 2572,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-corpo-vale-1.png": {
-      "hash": "56d2bbf22bd2e0d1",
-      "bytes": 1560,
+      "hash": "badfc5b1345845a5",
+      "bytes": 2564,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "heroi-corpo-vale-2.png": {
-      "hash": "c3140c9b49487933",
-      "bytes": 1610,
+      "hash": "2b85ad462a05198c",
+      "bytes": 2524,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "logo.png": {
       "hash": "59ab17917bce4452",
@@ -357,64 +357,64 @@
       "altura": 118
     },
     "npc-bruxo.png": {
-      "hash": "1569e748c239169a",
-      "bytes": 3737,
+      "hash": "e6d16bd3dac28ba0",
+      "bytes": 5442,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "npc-elfa.png": {
-      "hash": "500337eed3d77708",
-      "bytes": 3194,
+      "hash": "7c1606426c3bcb58",
+      "bytes": 4630,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "npc-ferreiro.png": {
-      "hash": "c69e520432b7cf55",
-      "bytes": 3573,
+      "hash": "5a87f156c7aec4de",
+      "bytes": 5350,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "npc-guarda.png": {
-      "hash": "a3401e692b0ce840",
-      "bytes": 2761,
+      "hash": "0ae3f3b126b6d5a8",
+      "bytes": 3854,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "npc-menina.png": {
-      "hash": "6683cab13cc9d259",
-      "bytes": 2757,
+      "hash": "6cf8a0e3af9ddf14",
+      "bytes": 4118,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "npc-menino.png": {
-      "hash": "0ac905e2d8154b35",
-      "bytes": 3161,
+      "hash": "b2a2efcfa11836b2",
+      "bytes": 4525,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "npc-mercador.png": {
-      "hash": "a11cc96ea0ee1eb4",
-      "bytes": 3254,
+      "hash": "e7df8793fc10f786",
+      "bytes": 4787,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "npc-padeira.png": {
-      "hash": "637f76a737066c48",
-      "bytes": 2957,
+      "hash": "3117341ccc9409c3",
+      "bytes": 4318,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "npc-pescador.png": {
-      "hash": "a5b26882ff66d7e6",
-      "bytes": 2871,
+      "hash": "17d5dd47c78c435a",
+      "bytes": 4204,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "npc-vovo.png": {
-      "hash": "a1a0ae80d81e1a92",
-      "bytes": 2709,
+      "hash": "99451a7d8a8b4bb4",
+      "bytes": 3984,
       "largura": 96,
-      "altura": 128
+      "altura": 256
     },
     "objetos/arbusto.png": {
       "hash": "f1ae7dadc46ac6eb",
@@ -447,20 +447,20 @@
       "altura": 18
     },
     "objetos/casa-grande.png": {
-      "hash": "cd74aa4c695c6749",
-      "bytes": 853,
+      "hash": "92b86bd70637e4b7",
+      "bytes": 850,
       "largura": 64,
       "altura": 68
     },
     "objetos/casa-pequena.png": {
-      "hash": "5d93e1431bf275a2",
-      "bytes": 764,
+      "hash": "8676c298686e50ac",
+      "bytes": 753,
       "largura": 48,
       "altura": 60
     },
     "objetos/casa-vovo.png": {
-      "hash": "006842c8ba1f1bc1",
-      "bytes": 867,
+      "hash": "04f992bf09bef008",
+      "bytes": 863,
       "largura": 64,
       "altura": 68
     },
@@ -471,8 +471,8 @@
       "altura": 20
     },
     "objetos/ferraria.png": {
-      "hash": "009977e4c7f67821",
-      "bytes": 888,
+      "hash": "b142585039f274c6",
+      "bytes": 880,
       "largura": 64,
       "altura": 68
     },
@@ -489,8 +489,8 @@
       "altura": 22
     },
     "objetos/poco.png": {
-      "hash": "0934016735a5e6eb",
-      "bytes": 363,
+      "hash": "818fa67f8601dfb0",
+      "bytes": 362,
       "largura": 28,
       "altura": 30
     },
@@ -501,13 +501,13 @@
       "altura": 46
     },
     "objetos/poste-sino.png": {
-      "hash": "a63d15ea47d903d4",
-      "bytes": 300,
+      "hash": "218064be9b498679",
+      "bytes": 301,
       "largura": 20,
       "altura": 46
     },
     "objetos/varal.png": {
-      "hash": "afef9f9e3985a4a4",
+      "hash": "facb24a442e3590d",
       "bytes": 346,
       "largura": 48,
       "altura": 26
@@ -663,20 +663,20 @@
       "altura": 60
     },
     "tileset.png": {
-      "hash": "c78d809126af4092",
-      "bytes": 2026,
+      "hash": "dc1100a27b5dfd9e",
+      "bytes": 2037,
       "largura": 128,
       "altura": 32
     },
     "titulo.png": {
-      "hash": "49fab6662658be08",
-      "bytes": 9192,
+      "hash": "c1aac8a11463f679",
+      "bytes": 9141,
       "largura": 320,
       "altura": 120
     },
     "ui.png": {
-      "hash": "9b110d3bd825129c",
-      "bytes": 1027,
+      "hash": "b58175f527a2b424",
+      "bytes": 1025,
       "largura": 208,
       "altura": 16
     }

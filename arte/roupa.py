@@ -14,7 +14,10 @@ O balanco da caminhada vem do ponto, nao do desenho.
 Cada folha tem 4 colunas por 2 linhas de 16 x 20:
 
   colunas: 0 de frente, 1 de perfil para a esquerda, 2 de perfil para a
-           direita, 3 de costas
+           direita, 3 de costas. As diagonais reusam a vista vertical: numa
+           peca de roupa de 16 px de largura, a silhueta de frente e a de tres
+           quartos sao a mesma coisa, e o que muda de verdade e o rosto, que
+           mora no corpo e nao aqui
   linhas:  0 parado, 1 no passo A, 2 no passo B. Roupa curta desenha as tres
            iguais. Roupa comprida joga a barra um pixel para cada lado, que e o
            que faz uma tunica longa parecer tecido e nao uma tabua
