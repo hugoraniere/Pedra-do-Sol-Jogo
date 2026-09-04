@@ -34,6 +34,9 @@ export class Interface extends Phaser.Scene {
   private coracoes: Phaser.GameObjects.Image[] = [];
   private textoMoedas!: Phaser.GameObjects.BitmapText;
   private textoSelos!: Phaser.GameObjects.BitmapText;
+  /** true logo depois que uma fala abre com o botao de acao ainda segurado:
+   *  bloqueia avancar a linha ate o botao ser solto uma vez. */
+  private esperandoSoltarAcao = false;
 
   constructor() {
     super("Interface");
@@ -238,6 +241,10 @@ export class Interface extends Phaser.Scene {
     this.textoQuem.setText(p.quem);
     this.caixa.setVisible(true);
     this.zona.setVisible(true);
+    // a MESMA tecla que abriu esta fala (Espaco/Enter, do lado do Mundo) nao
+    // pode tambem completar a primeira linha na hora: exige soltar o botao
+    // uma vez antes de qualquer avanco valer.
+    this.esperandoSoltarAcao = this.controles.acaoSegurada();
     tocar("fala-abre");
     this.escrever(this.linhas[0] ?? "");
   }
@@ -292,6 +299,17 @@ export class Interface extends Phaser.Scene {
   }
 
   update() {
-    if (this.caixa.visible && this.controles.acaoApertada()) this.proximaLinha();
+    // consumida SEMPRE, nunca so dentro do `if`: e a mesma tecla fisica que o
+    // Mundo tambem le, numa instancia PROPRIA de Controles. Se so fosse lida
+    // quando a caixa esta visivel, um Enter apertado com a caixa FECHADA
+    // (o mesmo toque que o Mundo usa para ABRIR a fala) ficaria pendurado em
+    // "recem apertado" nesta tecla, e no frame seguinte, com a caixa recem
+    // aberta, essa tecla velha completaria a primeira linha na hora, pulando
+    // a maquina de escrever antes mesmo do jogador ver a fala comecar.
+    const agiu = this.controles.acaoApertada();
+    if (this.esperandoSoltarAcao && !this.controles.acaoSegurada()) {
+      this.esperandoSoltarAcao = false;
+    }
+    if (this.caixa.visible && agiu && !this.esperandoSoltarAcao) this.proximaLinha();
   }
 }

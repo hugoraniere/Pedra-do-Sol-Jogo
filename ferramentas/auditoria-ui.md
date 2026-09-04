@@ -13,7 +13,7 @@ Problemas encontrados: 0
 | 06-criacao-aparencia | Criacao:92 Som:0 Ponteiro:1 | 0 |
 | 07-criacao-sem-equipamento | Criacao:90 Som:0 Ponteiro:1 | 0 |
 | 08-criacao-pronto | Criacao:24 Som:0 Ponteiro:1 | 0 |
-| 09-mundo | Mundo:80 Interface:37 Som:0 Ponteiro:1 | 0 |
+| 09-mundo | Mundo:88 Interface:37 Som:0 Ponteiro:1 | 0 |
 | 10-ficha-heroi | Interface:37 Ficha:40 Som:0 Ponteiro:1 | 0 |
 | 10b-ficha-poderes | Interface:37 Ficha:29 Som:0 Ponteiro:1 | 0 |
 | 10c-ficha-sei-fazer | Interface:37 Ficha:26 Som:0 Ponteiro:1 | 0 |

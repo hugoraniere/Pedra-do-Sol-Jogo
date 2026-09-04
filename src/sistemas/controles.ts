@@ -54,4 +54,19 @@ export class Controles {
       Phaser.Input.Keyboard.JustDown(t.ENTER)
     );
   }
+
+  /** Espaco ou Enter fisicamente pressionados agora, sem consumir nada.
+   *
+   *  Existe so para quem precisa saber "o dedo ainda esta em cima do
+   *  botao?" depois de um acaoApertada() — segurar Espaco/Enter dispara
+   *  repeticao de tecla do sistema operacional, e cada repeticao E um
+   *  "recem apertado" valido de verdade. Sem isto, fechar uma fala com o
+   *  botao ainda segurado reabria a proxima na hora, porque o heroi
+   *  continua parado do lado do mesmo interagivel: parecia um loop que
+   *  nunca terminava, e so terminava quando o dedo finalmente soltava. */
+  acaoSegurada(): boolean {
+    const t = this.teclas;
+    if (!t) return false;
+    return t.SPACE.isDown || t.ENTER.isDown;
+  }
 }
