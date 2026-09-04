@@ -3,6 +3,7 @@
 import Phaser from "phaser";
 import { COR } from "../dados/config";
 import { texto, marcar } from "./texto";
+import { tocar, type ChaveEfeito } from "./som";
 
 
 export type Botao = Phaser.GameObjects.Container & { marcar(ligado: boolean): void };
@@ -15,7 +16,10 @@ export function botao(
   altura: number,
   rotuloTexto: string,
   aoTocar: () => void,
-  painel: "painel" | "painel-creme" | "painel-ouro" = "painel"
+  painel: "painel" | "painel-creme" | "painel-ouro" = "painel",
+  /** o som do toque. Todo botao confirma; quem volta passa "menu-volta",
+   *  porque voltar e desfazer e nao deve soar como escolher. */
+  somDoToque: ChaveEfeito = "menu-confirma"
 ): Botao {
   const c = cena.add.container(x, y) as Botao;
   const sombra = cena.add
@@ -33,11 +37,19 @@ export function botao(
     fundo.y = v;
     rotulo.y = v;
   };
-  c.on("pointerdown", () => apertar(2));
+  // o som sai no pointerdown, junto com o afundar: som de botao atrasado ate
+  // o dedo levantar nao parece resposta ao toque, parece coincidencia
+  c.on("pointerdown", () => {
+    apertar(2);
+    tocar(somDoToque);
+  });
   c.on("pointerup", () => {
     apertar(0);
     aoTocar();
   });
+  // no computador o mouse passa por cima antes de clicar, e o foco tem som
+  // proprio. No toque isso nunca dispara, e esta certo: dedo nao paira.
+  c.on("pointerover", () => tocar("menu-foco"));
   c.on("pointerout", () => apertar(0));
 
   c.marcar = (ligado: boolean) => {

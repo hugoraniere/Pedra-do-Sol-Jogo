@@ -7,6 +7,11 @@ import { DIALOGOS } from "../dados/dialogos";
 import { estado, salvar, marcarVisitado } from "../sistemas/estado";
 import { Controles } from "../sistemas/controles";
 import { camadasDoHeroi, criarAnimacoes, Heroi } from "../sistemas/heroi";
+import { COLCHAO, PONTOS } from "../dados/sons";
+import {
+  calarAmbiente, montarAmbiente, musica, ouvirDe, passo, soltarPassaros, tocar,
+  type FonteDeSom,
+} from "../sistemas/som";
 
 type FichaObjeto = { w: number; h: number; cw: number; ch: number };
 type Interagivel = { x: number; y: number; chave: string };
@@ -17,6 +22,7 @@ export class Mundo extends Phaser.Scene {
   private interagiveis: Interagivel[] = [];
   private conversando = false;
   private solidos!: Phaser.Physics.Arcade.StaticGroup;
+  private chao!: Phaser.Tilemaps.TilemapLayer;
 
   constructor() {
     super("Mundo");
@@ -45,6 +51,7 @@ export class Mundo extends Phaser.Scene {
     const camada = tilemap.createLayer(0, tiles, 0, 0)!;
     camada.setCollision(SOLIDOS);
     camada.setDepth(-1000);
+    this.chao = camada;
 
     // ------------------------------------------------------- objetos
     mapa.objetos.forEach((peca) => {
@@ -62,6 +69,36 @@ export class Mundo extends Phaser.Scene {
       }
       if (DIALOGOS[peca.nome]) this.interagiveis.push({ x, y: y - 8, chave: peca.nome });
     });
+
+    // --------------------------------------------------- som do lugar
+    // Uma fonte de som e um objeto do mapa que ja existe, nao um marcador novo:
+    // a fogueira que se ve e a fogueira que se ouve. Por isso a lista sai de
+    // PONTOS cruzada com mapa.objetos, e nao de coordenada escrita a mao.
+    const fontes: FonteDeSom[] = [];
+    PONTOS.forEach((ponto) => {
+      if (ponto.tile) {
+        fontes.push({
+          som: ponto.som,
+          x: ponto.tile.x * TILE + TILE / 2,
+          y: ponto.tile.y * TILE + TILE / 2,
+          alcance: ponto.alcance * TILE,
+        });
+        return;
+      }
+      mapa.objetos
+        .filter((peca) => peca.nome === ponto.objeto)
+        .forEach((peca) =>
+          fontes.push({
+            som: ponto.som,
+            x: peca.x * TILE + TILE / 2,
+            y: peca.y * TILE + TILE,
+            alcance: ponto.alcance * TILE,
+          })
+        );
+    });
+    montarAmbiente(COLCHAO.vila, fontes);
+    soltarPassaros(this);
+    musica(this, "vila");
 
     // ------------------------------------------------------- pessoas
     mapa.pessoas.forEach((pessoa) => {
@@ -86,6 +123,11 @@ export class Mundo extends Phaser.Scene {
     );
     this.physics.add.collider(this.heroi, camada);
     this.physics.add.collider(this.heroi, this.solidos);
+    // o passo vem do chao, e quem sabe que chao e esse e o tilemap
+    this.heroi.aoPassar(() => {
+      const tile = this.chao.getTileAtWorldXY(this.heroi.x, this.heroi.y);
+      passo(tile?.index ?? -1);
+    });
 
     this.cameras.main.setBounds(0, 0, tilemap.widthInPixels, tilemap.heightInPixels);
     this.cameras.main.startFollow(this.heroi, true, 0.14, 0.14);
@@ -103,10 +145,14 @@ export class Mundo extends Phaser.Scene {
     this.events.on("dialogo-fim", () => {
       this.conversando = false;
     });
+    // sair do mundo solta os loops. A musica sobrevive: menu e titulo sao o
+    // mesmo lugar do ponto de vista de quem joga, e recomecar a faixa se ouve.
+    this.events.once("shutdown", () => calarAmbiente());
   }
 
   pausar() {
     if (this.conversando) return;
+    tocar("pausa-abre");
     this.heroi.mover(0, 0);
     this.scene.pause();
     this.scene.launch("Pausa");
@@ -124,14 +170,20 @@ export class Mundo extends Phaser.Scene {
     if (alvo.chave === "bau" && marcarVisitado("bau-vila")) {
       estado().moedas += 1;
       salvar();
+      tocar("bau-abre");
+      // a moeda vem depois da tampa, nao junto: dois sons no mesmo instante
+      // viram um so, e o premio e justamente o segundo
+      this.time.delayedCall(220, () => tocar("moeda"));
     }
-    this.abrirFala(fala.quem, fala.linhas);
+    this.abrirFala(fala.quem, fala.linhas, alvo.chave);
   }
 
-  private abrirFala(quem: string, linhas: string[]) {
+  private abrirFala(quem: string, linhas: string[], chave?: string) {
     this.conversando = true;
     this.heroi.mover(0, 0);
-    this.scene.get("Interface").events.emit("falar", { quem, linhas, cena: this });
+    // a chave viaja junto porque e ela, e nao o nome na chapinha, que a
+    // tabela VOZ usa para achar a altura da voz do personagem
+    this.scene.get("Interface").events.emit("falar", { quem, linhas, cena: this, chave });
   }
 
   update() {
@@ -144,5 +196,6 @@ export class Mundo extends Phaser.Scene {
     const d = this.controles.direcao();
     this.heroi.mover(d.x, d.y);
     this.heroi.atualizarProfundidade();
+    ouvirDe(this.heroi.x, this.heroi.y);
   }
 }

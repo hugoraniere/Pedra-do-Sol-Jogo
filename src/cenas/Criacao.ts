@@ -7,6 +7,7 @@
  * formulario, que uma crianca de 7 anos nao le.
  */
 import Phaser from "phaser";
+import { musica } from "../sistemas/som";
 import {
   LARGURA,
   ALTURA,
@@ -57,6 +58,7 @@ export class Criacao extends Phaser.Scene {
   }
 
   create() {
+    musica(this, "menu");
     // todas as combinacoes possiveis de camada precisam de animacao pronta
     criarAnimacoes(this, this.todasAsChaves());
     this.add.rectangle(0, 0, LARGURA, ALTURA, 0xfff8ea).setOrigin(0);

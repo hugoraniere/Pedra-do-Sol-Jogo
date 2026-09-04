@@ -19,6 +19,13 @@ export function definirTamanhoLogico(largura: number, altura: number) {
 
 export const VELOCIDADE = 62;
 
+/** Milissegundos por letra na caixa de fala.
+ *
+ *  A fala aparece letra por letra porque o Lele le devagar: texto que surge
+ *  inteiro de uma vez ele pula sem ler. Nunca e uma espera obrigatoria, porem:
+ *  um toque completa a linha na hora, e o segundo toque avanca. */
+export const VELOCIDADE_FALA = 45;
+
 /** Fonte de pixel do jogo. Vem do pacote @fontsource/silkscreen, sem CDN. */
 export const FONTE = "Silkscreen";
 export const CORPO = "8px";

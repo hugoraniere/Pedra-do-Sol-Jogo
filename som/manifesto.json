@@ -1,0 +1,442 @@
+{
+  "gerado_por": "npm run som",
+  "total": 87,
+  "formato": ".mp3",
+  "sons": {
+    "adaga-estoca": {
+      "origem": "rascunho",
+      "arquivo": "adaga-estoca.mp3",
+      "segundos": 0.09
+    },
+    "adaga-furtiva": {
+      "origem": "rascunho",
+      "arquivo": "adaga-furtiva.mp3",
+      "segundos": 0.07
+    },
+    "arco-arma": {
+      "origem": "rascunho",
+      "arquivo": "arco-arma.mp3",
+      "segundos": 0.22
+    },
+    "arco-solta": {
+      "origem": "rascunho",
+      "arquivo": "arco-solta.mp3",
+      "segundos": 0.14
+    },
+    "bate-bicho": {
+      "origem": "rascunho",
+      "arquivo": "bate-bicho.mp3",
+      "segundos": 0.14
+    },
+    "bate-madeira": {
+      "origem": "rascunho",
+      "arquivo": "bate-madeira.mp3",
+      "segundos": 0.14
+    },
+    "bate-metal": {
+      "origem": "rascunho",
+      "arquivo": "bate-metal.mp3",
+      "segundos": 0.3
+    },
+    "bate-pedra": {
+      "origem": "rascunho",
+      "arquivo": "bate-pedra.mp3",
+      "segundos": 0.1
+    },
+    "bau-abre": {
+      "origem": "rascunho",
+      "arquivo": "bau-abre.mp3",
+      "segundos": 0.28
+    },
+    "bebe-pocao": {
+      "origem": "rascunho",
+      "arquivo": "bebe-pocao.mp3",
+      "segundos": 0.24
+    },
+    "bicho-grande-nota": {
+      "origem": "rascunho",
+      "arquivo": "bicho-grande-nota.mp3",
+      "segundos": 0.4
+    },
+    "bicho-grande-reage": {
+      "origem": "rascunho",
+      "arquivo": "bicho-grande-reage.mp3",
+      "segundos": 0.5
+    },
+    "bicho-grande-senta": {
+      "origem": "rascunho",
+      "arquivo": "bicho-grande-senta.mp3",
+      "segundos": 0.8
+    },
+    "bicho-pequeno-foge": {
+      "origem": "rascunho",
+      "arquivo": "bicho-pequeno-foge.mp3",
+      "segundos": 0.2
+    },
+    "bicho-pequeno-nota": {
+      "origem": "rascunho",
+      "arquivo": "bicho-pequeno-nota.mp3",
+      "segundos": 0.1
+    },
+    "bicho-pequeno-reage": {
+      "origem": "rascunho",
+      "arquivo": "bicho-pequeno-reage.mp3",
+      "segundos": 0.16
+    },
+    "biscoito": {
+      "origem": "rascunho",
+      "arquivo": "biscoito.mp3",
+      "segundos": 0.09
+    },
+    "cajado-carrega": {
+      "origem": "rascunho",
+      "arquivo": "cajado-carrega.mp3",
+      "segundos": 0.5
+    },
+    "cajado-libera": {
+      "origem": "rascunho",
+      "arquivo": "cajado-libera.mp3",
+      "segundos": 0.3
+    },
+    "coracao-novo": {
+      "origem": "rascunho",
+      "arquivo": "coracao-novo.mp3",
+      "segundos": 0.3
+    },
+    "cristal": {
+      "origem": "rascunho",
+      "arquivo": "cristal.mp3",
+      "segundos": 0.44
+    },
+    "dado-chacoalha": {
+      "origem": "rascunho",
+      "arquivo": "dado-chacoalha.mp3",
+      "segundos": 0.54
+    },
+    "dado-para": {
+      "origem": "rascunho",
+      "arquivo": "dado-para.mp3",
+      "segundos": 0.09
+    },
+    "dado-rola": {
+      "origem": "rascunho",
+      "arquivo": "dado-rola.mp3",
+      "segundos": 0.5
+    },
+    "desfecho-oba": {
+      "origem": "rascunho",
+      "arquivo": "desfecho-oba.mp3",
+      "segundos": 0.36
+    },
+    "desfecho-ops": {
+      "origem": "rascunho",
+      "arquivo": "desfecho-ops.mp3",
+      "segundos": 0.45
+    },
+    "desfecho-quase": {
+      "origem": "rascunho",
+      "arquivo": "desfecho-quase.mp3",
+      "segundos": 0.24
+    },
+    "errou": {
+      "origem": "rascunho",
+      "arquivo": "errou.mp3",
+      "segundos": 0.2
+    },
+    "escada": {
+      "origem": "rascunho",
+      "arquivo": "escada.mp3",
+      "segundos": 0.255
+    },
+    "escudo-bloqueia": {
+      "origem": "rascunho",
+      "arquivo": "escudo-bloqueia.mp3",
+      "segundos": 0.2
+    },
+    "escudo-ergue": {
+      "origem": "rascunho",
+      "arquivo": "escudo-ergue.mp3",
+      "segundos": 0.12
+    },
+    "espada-golpe": {
+      "origem": "rascunho",
+      "arquivo": "espada-golpe.mp3",
+      "segundos": 0.16
+    },
+    "espada-saca": {
+      "origem": "rascunho",
+      "arquivo": "espada-saca.mp3",
+      "segundos": 0.18
+    },
+    "fala-abre": {
+      "origem": "rascunho",
+      "arquivo": "fala-abre.mp3",
+      "segundos": 0.09
+    },
+    "fala-fecha": {
+      "origem": "rascunho",
+      "arquivo": "fala-fecha.mp3",
+      "segundos": 0.09
+    },
+    "fala-letra": {
+      "origem": "rascunho",
+      "arquivo": "fala-letra.mp3",
+      "segundos": 0.035
+    },
+    "fechadura": {
+      "origem": "rascunho",
+      "arquivo": "fechadura.mp3",
+      "segundos": 0.15
+    },
+    "feira": {
+      "origem": "rascunho",
+      "arquivo": "feira.mp3",
+      "segundos": 4.1
+    },
+    "flecha-crava": {
+      "origem": "rascunho",
+      "arquivo": "flecha-crava.mp3",
+      "segundos": 0.12
+    },
+    "flecha-voa": {
+      "origem": "rascunho",
+      "arquivo": "flecha-voa.mp3",
+      "segundos": 0.3
+    },
+    "fogueira": {
+      "origem": "rascunho",
+      "arquivo": "fogueira.mp3",
+      "segundos": 3.0
+    },
+    "funda-roda": {
+      "origem": "rascunho",
+      "arquivo": "funda-roda.mp3",
+      "segundos": 1.1
+    },
+    "funda-solta": {
+      "origem": "rascunho",
+      "arquivo": "funda-solta.mp3",
+      "segundos": 0.12
+    },
+    "gargalhada": {
+      "origem": "rascunho",
+      "arquivo": "gargalhada.mp3",
+      "segundos": 0.72
+    },
+    "golpe-trovao": {
+      "origem": "rascunho",
+      "arquivo": "golpe-trovao.mp3",
+      "segundos": 0.5
+    },
+    "lanterna": {
+      "origem": "rascunho",
+      "arquivo": "lanterna.mp3",
+      "segundos": 1.8
+    },
+    "machado-golpe": {
+      "origem": "rascunho",
+      "arquivo": "machado-golpe.mp3",
+      "segundos": 0.18
+    },
+    "machado-lenha": {
+      "origem": "rascunho",
+      "arquivo": "machado-lenha.mp3",
+      "segundos": 0.22
+    },
+    "magia": {
+      "origem": "rascunho",
+      "arquivo": "magia.mp3",
+      "segundos": 0.4
+    },
+    "magia-conserta": {
+      "origem": "rascunho",
+      "arquivo": "magia-conserta.mp3",
+      "segundos": 0.28
+    },
+    "magia-fogo": {
+      "origem": "rascunho",
+      "arquivo": "magia-fogo.mp3",
+      "segundos": 0.4
+    },
+    "magia-gelo": {
+      "origem": "rascunho",
+      "arquivo": "magia-gelo.mp3",
+      "segundos": 0.3
+    },
+    "magia-planta": {
+      "origem": "rascunho",
+      "arquivo": "magia-planta.mp3",
+      "segundos": 0.5
+    },
+    "magia-vento": {
+      "origem": "rascunho",
+      "arquivo": "magia-vento.mp3",
+      "segundos": 0.6
+    },
+    "magia-voz": {
+      "origem": "rascunho",
+      "arquivo": "magia-voz.mp3",
+      "segundos": 0.6
+    },
+    "martelo-conserta": {
+      "origem": "rascunho",
+      "arquivo": "martelo-conserta.mp3",
+      "segundos": 0.26
+    },
+    "martelo-golpe": {
+      "origem": "rascunho",
+      "arquivo": "martelo-golpe.mp3",
+      "segundos": 0.22
+    },
+    "menu-confirma": {
+      "origem": "rascunho",
+      "arquivo": "menu-confirma.mp3",
+      "segundos": 0.11
+    },
+    "menu-foco": {
+      "origem": "rascunho",
+      "arquivo": "menu-foco.mp3",
+      "segundos": 0.03
+    },
+    "menu-volta": {
+      "origem": "rascunho",
+      "arquivo": "menu-volta.mp3",
+      "segundos": 0.11
+    },
+    "metal-alto": {
+      "origem": "rascunho",
+      "arquivo": "metal-alto.mp3",
+      "segundos": 0.8
+    },
+    "moeda": {
+      "origem": "rascunho",
+      "arquivo": "moeda.mp3",
+      "segundos": 0.12
+    },
+    "nome-verdadeiro": {
+      "origem": "rascunho",
+      "arquivo": "nome-verdadeiro.mp3",
+      "segundos": 1.0
+    },
+    "passaro-1": {
+      "origem": "rascunho",
+      "arquivo": "passaro-1.mp3",
+      "segundos": 0.285
+    },
+    "passaro-2": {
+      "origem": "rascunho",
+      "arquivo": "passaro-2.mp3",
+      "segundos": 0.38
+    },
+    "passaro-3": {
+      "origem": "rascunho",
+      "arquivo": "passaro-3.mp3",
+      "segundos": 0.19
+    },
+    "passaro-4": {
+      "origem": "rascunho",
+      "arquivo": "passaro-4.mp3",
+      "segundos": 0.475
+    },
+    "passo-areia": {
+      "origem": "rascunho",
+      "arquivo": "passo-areia.mp3",
+      "segundos": 0.085
+    },
+    "passo-grama": {
+      "origem": "rascunho",
+      "arquivo": "passo-grama.mp3",
+      "segundos": 0.085
+    },
+    "passo-madeira": {
+      "origem": "rascunho",
+      "arquivo": "passo-madeira.mp3",
+      "segundos": 0.085
+    },
+    "passo-pedra": {
+      "origem": "rascunho",
+      "arquivo": "passo-pedra.mp3",
+      "segundos": 0.085
+    },
+    "passo-terra": {
+      "origem": "rascunho",
+      "arquivo": "passo-terra.mp3",
+      "segundos": 0.085
+    },
+    "pausa-abre": {
+      "origem": "rascunho",
+      "arquivo": "pausa-abre.mp3",
+      "segundos": 0.18
+    },
+    "pausa-fecha": {
+      "origem": "rascunho",
+      "arquivo": "pausa-fecha.mp3",
+      "segundos": 0.18
+    },
+    "pedra-bate": {
+      "origem": "rascunho",
+      "arquivo": "pedra-bate.mp3",
+      "segundos": 0.13
+    },
+    "pedra-voa": {
+      "origem": "rascunho",
+      "arquivo": "pedra-voa.mp3",
+      "segundos": 0.25
+    },
+    "pena-levanta": {
+      "origem": "rascunho",
+      "arquivo": "pena-levanta.mp3",
+      "segundos": 0.4
+    },
+    "pista": {
+      "origem": "rascunho",
+      "arquivo": "pista.mp3",
+      "segundos": 0.27
+    },
+    "poco-pingo": {
+      "origem": "rascunho",
+      "arquivo": "poco-pingo.mp3",
+      "segundos": 3.72
+    },
+    "porta": {
+      "origem": "rascunho",
+      "arquivo": "porta.mp3",
+      "segundos": 0.3
+    },
+    "rio": {
+      "origem": "rascunho",
+      "arquivo": "rio.mp3",
+      "segundos": 4.1
+    },
+    "salvou": {
+      "origem": "rascunho",
+      "arquivo": "salvou.mp3",
+      "segundos": 0.18
+    },
+    "selo": {
+      "origem": "rascunho",
+      "arquivo": "selo.mp3",
+      "segundos": 0.32
+    },
+    "tonto": {
+      "origem": "rascunho",
+      "arquivo": "tonto.mp3",
+      "segundos": 0.45
+    },
+    "troca-mapa": {
+      "origem": "rascunho",
+      "arquivo": "troca-mapa.mp3",
+      "segundos": 0.5
+    },
+    "trovao": {
+      "origem": "rascunho",
+      "arquivo": "trovao.mp3",
+      "segundos": 0.7
+    },
+    "vento-campo": {
+      "origem": "rascunho",
+      "arquivo": "vento-campo.mp3",
+      "segundos": 4.1
+    }
+  }
+}

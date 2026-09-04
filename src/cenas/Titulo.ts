@@ -1,6 +1,7 @@
 /** Tela inicial. Primeira coisa que o jogador ve, entao precisa responder duas
  *  perguntas em um segundo: que jogo e este, e onde eu aperto para jogar. */
 import Phaser from "phaser";
+import { musica } from "../sistemas/som";
 import { LARGURA, ALTURA, COR } from "../dados/config";
 import { texto } from "../sistemas/texto";
 import { botao, Botao } from "../sistemas/botao";
@@ -25,6 +26,9 @@ export class Titulo extends Phaser.Scene {
   }
 
   create() {
+    // menu, carregar e criacao sao o mesmo lugar para quem joga: a faixa
+    // atravessa as tres sem recomecar. musica() ignora pedido repetido.
+    musica(this, "menu");
     this.botoes = [];
     this.foco = 0;
 

@@ -13,7 +13,7 @@
 import { createServer } from "node:http";
 import { existsSync, readFileSync, mkdirSync } from "node:fs";
 import { join, extname, resolve } from "node:path";
-import pw from "/home/claude/.npm-global/lib/node_modules/playwright/index.js";
+import pw from "playwright";
 
 const { chromium } = pw;
 const RAIZ = resolve("dist");

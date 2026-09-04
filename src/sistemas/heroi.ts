@@ -128,6 +128,7 @@ export class Heroi extends Phaser.GameObjects.Container {
   private raca = "vale";
   private olhando: NomeDirecao = "baixo";
   private estado: "parado" | "anda" | "conjura" | "tonto" = "parado";
+  private avisarPasso?: () => void;
 
   constructor(cena: Phaser.Scene, x: number, y: number, ficha: FichaHeroi) {
     super(cena, x, y);
@@ -182,9 +183,19 @@ export class Heroi extends Phaser.GameObjects.Container {
       this.add(this.arma);
     }
 
-    // o quadro so muda de verdade quando a animacao vira, entao encaixamos ali
+    // o quadro so muda de verdade quando a animacao vira, entao encaixamos ali.
+    // o passo do pe sai do mesmo lugar, e nao de um cronometro: CICLO_CAMINHADA
+    // e [passoA, parado, passoB, parado], entao o pe encosta nos quadros 1 e 3.
+    // Assim mexer em FPS_CAMINHADA nao desencontra o som do desenho.
     spriteCorpo.off(Phaser.Animations.Events.ANIMATION_UPDATE);
-    spriteCorpo.on(Phaser.Animations.Events.ANIMATION_UPDATE, () => this.encaixar());
+    spriteCorpo.on(
+      Phaser.Animations.Events.ANIMATION_UPDATE,
+      (_anim: Phaser.Animations.Animation, quadro: Phaser.Animations.AnimationFrame) => {
+        this.encaixar();
+        if (this.estado !== "anda") return;
+        if (quadro.index === 1 || quadro.index === 3) this.avisarPasso?.();
+      }
+    );
     this.encaixar();
   }
 
@@ -282,6 +293,12 @@ export class Heroi extends Phaser.GameObjects.Container {
     this.scene.time.delayedCall(duracao, () => {
       if (this.estado === "tonto") this.tocar("parado");
     });
+  }
+
+  /** Avisa a cada pe que encosta no chao. Quem escolhe o som e a cena, porque
+   *  so ela sabe de que e feito o chao naquele ponto. */
+  aoPassar(callback: () => void) {
+    this.avisarPasso = callback;
   }
 
   atualizarProfundidade() {

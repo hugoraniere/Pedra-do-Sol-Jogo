@@ -21,6 +21,8 @@ import { salvar } from "../sistemas/estado";
 import { noAplicativo, sairDoJogo } from "../sistemas/armazenamento";
 import { ORDEM_ZOOM, ZOOM, definirPreferencia, preferencias } from "../sistemas/preferencias";
 import { aplicarVisao, refazerAoRedimensionar } from "../sistemas/visao";
+import { AJUSTES } from "../dados/sons";
+import { abafarMusica, definirSom, tocar } from "../sistemas/som";
 
 /** funcao, nao constante: LARGURA muda com a visao escolhida */
 const larguraCaixa = () => Math.min(208, LARGURA - ESPACO.xl * 2);
@@ -36,6 +38,8 @@ export class Pausa extends Phaser.Scene {
 
   create() {
     this.aba = "menu";
+    // abaixa a trilha, nao para: parar faz a faixa recomecar do zero na volta
+    abafarMusica(AJUSTES.abafarNaPausa);
     this.montarFundo();
     // o conteudo tem que ficar acima dos paineis que a caixa() desenha depois
     this.painel = this.add.container(0, 0).setDepth(10);
@@ -70,6 +74,8 @@ export class Pausa extends Phaser.Scene {
   private fundo?: Phaser.GameObjects.Rectangle;
 
   private voltarAoJogo() {
+    tocar("pausa-fecha");
+    abafarMusica(1);
     this.scene.resume("Mundo");
     this.scene.stop();
   }
@@ -98,6 +104,7 @@ export class Pausa extends Phaser.Scene {
       {
         rotulo: "SAIR PARA O MENU",
         acao: () => {
+          abafarMusica(1);
           salvar();
           this.scene.stop("Interface");
           this.scene.stop("Mundo");
@@ -146,6 +153,7 @@ export class Pausa extends Phaser.Scene {
 
   private salvarComRecado() {
     salvar();
+    tocar("salvou");
     if (!this.recadoEm) return;
     const t = textoNaArea(this, this.recadoEm, "Jogo salvo!", { cor: 0xf5b62b });
     this.painel.add(t);
@@ -162,6 +170,8 @@ export class Pausa extends Phaser.Scene {
       TAMANHO.botao +
       ESPACO.lg +
       alturaDoTexto(linhas.length) +
+      ESPACO.lg +
+      TAMANHO.botao +
       ESPACO.lg +
       TAMANHO.botao;
 
@@ -209,12 +219,40 @@ export class Pausa extends Phaser.Scene {
       );
     });
 
+    // ------------------------------------------------------------ som
+    // Dois botoes, nao uma chavinha: chavinha exige saber que o lado aceso e o
+    // ligado. O rotulo diz a escolha inteira, entao a linha de titulo nao
+    // precisa existir: em 192 px de altura ela era o que jogava o VOLTAR para
+    // fora da tela. "COM SOM" e "SEM SOM" seguem o "COM EQUIPAMENTO" e o
+    // "SEM EQUIPAMENTO" da tela de criacao, que o Lele ja conhece.
+    const linhaSom = p.reservar(TAMANHO.botao, ESPACO.lg);
+    const larguraSom = Math.floor((linhaSom.largura - ESPACO.sm) / 2);
+    ([true, false] as const).forEach((ligado, i) => {
+      const b = botao(
+        this,
+        linhaSom.x + i * (larguraSom + ESPACO.sm) + larguraSom / 2,
+        meio(linhaSom),
+        larguraSom,
+        linhaSom.altura,
+        ligado ? "COM SOM" : "SEM SOM",
+        () => {
+          if (ligado === preferencias().som) return;
+          definirPreferencia("som", ligado);
+          definirSom(ligado);
+          this.desenhar();
+        },
+        "painel-creme"
+      );
+      b.marcar(ligado === preferencias().som);
+      this.painel.add(b);
+    });
+
     const rVoltar = p.reservar(TAMANHO.botao, ESPACO.lg);
     this.painel.add(
       botao(this, LARGURA / 2, meio(rVoltar), 120, rVoltar.altura, "< VOLTAR", () => {
         this.aba = "menu";
         this.desenhar();
-      }, "painel-ouro")
+      }, "painel-ouro", "menu-volta")
     );
   }
 }
