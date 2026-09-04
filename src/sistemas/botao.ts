@@ -2,7 +2,8 @@
  *  Alvo de toque generoso, porque quem joga tem 7 anos. */
 import Phaser from "phaser";
 import { COR } from "../dados/config";
-import { texto } from "./texto";
+import { texto, marcar } from "./texto";
+
 
 export type Botao = Phaser.GameObjects.Container & { marcar(ligado: boolean): void };
 
@@ -44,6 +45,7 @@ export function botao(
     rotulo.setTint(ligado ? 0x2c2440 : 0x5a4e74);
   };
   c.marcar(false);
+  marcar(c, "botao", rotuloTexto);
   void COR;
   return c;
 }

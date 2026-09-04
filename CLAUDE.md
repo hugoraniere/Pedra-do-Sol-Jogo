@@ -33,6 +33,9 @@ npm install
 npm run dev      # abre em http://localhost:5173
 npm run build    # checa os tipos e gera dist/
 npm run arte     # regera toda a pixel art em public/assets (precisa de python3 e Pillow)
+npm run auditar  # percorre as telas procurando sobreposicao e transbordo de UI
+npm run app      # abre o jogo como aplicativo de desktop (Electron)
+npm run app:build# empacota o aplicativo para instalar
 ```
 
 ## Regras deste projeto
@@ -50,7 +53,9 @@ npm run arte     # regera toda a pixel art em public/assets (precisa de python3 
 **Depuracao pelo console.** O jogo expoe `window.jogo`. Da para forcar uma fala com
 `jogo.scene.getScene("Interface").events.emit("falar", { quem, linhas, cena: jogo.scene.getScene("Mundo") })`.
 
-**Verifique antes de dizer que terminou.** `npm run build` tem que passar limpo, e o jogo tem que abrir sem erro no console. Se puder, tire um screenshot com Playwright e olhe.
+**Nenhuma coordenada Y na mao.** Toda UI usa `caixa()` e `pilha()` de `src/sistemas/design.ts`. Se voce somou dois numeros para achar onde vai um botao, esta errado. Ver `docs/07-design-system.md`.
+
+**Verifique antes de dizer que terminou.** `npm run build` tem que passar limpo, `npm run auditar` tem que sair com zero problemas, e o jogo tem que abrir sem erro no console. A auditoria salva um screenshot de cada tela em `ferramentas/telas/`, olhe eles.
 
 ## Estrutura
 
@@ -61,7 +66,10 @@ arte/tiles.py          chao: grama, terra, caminho, agua, caverna
 arte/mundo.py          objetos inteiros: casa, arvore, poco, barraca
 src/main.ts            configuracao do Phaser
 src/dados/             config, mapas, dialogos. conteudo, nao codigo
-src/sistemas/          estado, controles, heroi, botao. pecas reutilizaveis
+src/sistemas/          estado, controles, heroi, botao, design, texto, auditoria
+src/dados/conteudo.ts  racas, classes, magias, armas, loja e bestiario do RPG de mesa
+app/                   o aplicativo de desktop, Electron
+ferramentas/           auditoria de UI e os screenshots que ela tira
 src/cenas/             Boot, Criacao, Mundo, Interface
 arte/gente.py          heroi, npcs e goblin, 16x32
 arte/ui.py             painel de 9 fatias e icones da interface

@@ -22,6 +22,19 @@ a ponta**, sem erro no console e com `npm run build` limpo.
 
 ---
 
+## Fase 0.5, casca do jogo . FEITO
+
+- [x] tela inicial com logo, CONTINUAR, NOVO JOGO, CARREGAR e SAIR
+- [x] tres espacos de save com nome, lugar, tempo, selos e moedas
+- [x] menu de pausa com salvar, configuracoes e sair
+- [x] configuracao de zoom da camera: perto, normal, longe
+- [x] aplicativo de desktop com Electron, pronto para empacotar
+- [x] fonte de bitmap, sem borrao
+- [x] todo o conteudo do RPG de mesa em `src/dados/conteudo.ts`
+- [x] design system com `caixa()` e `pilha()`, e auditor de UI com `npm run auditar`
+
+---
+
 ## Fase 1, a vila fica viva . AGORA
 
 O objetivo e o Lele conseguir jogar a cena 1 inteira sozinho, sem ninguem explicando.
@@ -39,6 +52,42 @@ O objetivo e o Lele conseguir jogar a cena 1 inteira sozinho, sem ninguem explic
       sao os que mais pesam na primeira impressao. Ver `docs/06-fluxo-de-sprites.md`.
       Estender `a_mao()` para personagens e icones, hoje ele so cobre os tiles.
 - [ ] **Sprite de retrato dos NPCs**, 32x32, para a chapinha da caixa de fala.
+- [ ] **Falas com estado.** Hoje cada NPC tem uma fala fixa em `dialogos.ts`. Precisa
+      de variantes: antes de achar a pista, depois de achar, depois de resolver.
+      Estrutura sugerida: `{ id, condicao, linhas }[]` e a primeira condicao que bate
+      e a que toca. O estado ja tem `mochila` e `visitados` para consultar.
+
+---
+
+## Fase 1.5, sprites e animacao
+
+- [ ] **Animacao de caminhada para todo mundo.** Hoje so o heroi anda; NPC e goblin
+      tem um frame parado. Cada criatura precisa das 4 direcoes por 4 frames, no
+      mesmo formato do heroi (`arte/gente.py`, funcao `folha_heroi`).
+- [ ] **Animacao parada.** Um frame de respiracao a cada 2 segundos tira a cara de
+      estatua muito melhor que o tween de escala que esta la hoje.
+- [ ] **Um sprite proprio por criatura do bestiario.** Sao 9, e por enquanto so o
+      goblin existe.
+- [ ] **Sprites a mao onde mais aparece**, ver `docs/06-fluxo-de-sprites.md`.
+
+---
+
+## Fase 1.6, criacao de personagem de verdade
+
+Referencia que o Hugo pediu: Baldur's Gate para a apresentacao, Project Zomboid para
+a ideia de montar o personagem por partes, com a simplicidade de um jogo infantil.
+
+- [ ] **Boneco grande e vivo** no centro da tela, virando de lado quando o jogador
+      quiser, em vez do boneco pequeno parado de hoje.
+- [ ] **Mais camadas de sprite.** Hoje sao tres (base, roupa, cabelo). Faltam:
+      corte de cabelo (nao so a cor), rosto, chapeu, capa, arma na mao, mochila.
+      Cada camada e uma folha nova em `arte/gente.py`, no mesmo formato.
+- [ ] **Escolher a arma** entre as de `conteudo.ts`, com o preview mudando na hora.
+- [ ] **Escolher as tres magias** entre as 13, para a classe Mago.
+- [ ] **Botao COM EQUIPAMENTO / SEM EQUIPAMENTO** que liga e desliga as camadas de
+      arma, chapeu e capa. So preview, nao muda a regra.
+- [ ] **Ficha resumida ao lado do boneco** com raca, classe, dom, atributos e as
+      magias, atualizando conforme ele escolhe.
 
 Pronto quando: da para comecar do zero, achar as tres pistas e sair da vila sem
 nenhuma instrucao de fora.

@@ -13,7 +13,8 @@
     "app:build": "npm run build && electron-builder",
     "app:mac": "npm run build && electron-builder --mac",
     "app:win": "npm run build && electron-builder --win",
-    "app:linux": "npm run build && electron-builder --linux"
+    "app:linux": "npm run build && electron-builder --linux",
+    "auditar": "npm run build && node ferramentas/auditar-ui.mjs"
   },
   "dependencies": {
     "@fontsource/silkscreen": "^5.3.0",
@@ -23,6 +24,7 @@
     "concurrently": "^10.0.5",
     "electron": "^44.2.0",
     "electron-builder": "^26.15.3",
+    "playwright": "^1.62.1",
     "typescript": "^5.7.3",
     "vite": "^6.1.0",
     "wait-on": "^9.1.0"

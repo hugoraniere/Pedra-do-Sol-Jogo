@@ -12,6 +12,9 @@ Como esta organizado:
   arte/ui.py       painel de 9 fatias e icones de interface
   arte/titulo.py   o cenario da tela inicial
   arte/fonte.py    a fonte de bitmap, gerada a partir da Silkscreen
+
+A logo (public/assets/logo.png) e a UNICA arte que nao sai daqui: foi desenhada
+com IA, teve o fundo removido e foi reduzida a mao. Nao apague no npm run arte.
   arte/sprites/    PNG desenhado a mao, ganha do gerado se o nome bater
 
 Regras de arte:

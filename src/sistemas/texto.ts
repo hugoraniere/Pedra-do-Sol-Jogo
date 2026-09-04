@@ -12,6 +12,17 @@ import Phaser from "phaser";
 
 export const FONTE_BITMAP = "aurora";
 
+/** Marca o objeto para o auditor de UI saber o que ele e.
+ *  Mora aqui, e nao em design.ts, so para nao criar import circular. */
+export function marcar(
+  obj: Phaser.GameObjects.GameObject,
+  tipo: "texto" | "botao" | "painel" | "icone" | "fundo",
+  dono?: string
+) {
+  obj.setData("ui", { tipo, dono });
+  return obj;
+}
+
 export type OpcoesTexto = {
   tamanho?: 8 | 16 | 24 | 32;
   cor?: number;
@@ -39,6 +50,7 @@ export function texto(
   if (op.alinhamento === 2) t.setRightAlign();
   if (op.entrelinha !== undefined) t.setLineSpacing(op.entrelinha);
   t.setOrigin(op.ancora ?? 0, op.ancoraY ?? 0);
+  marcar(t, "texto", conteudo.slice(0, 24));
   return t;
 }
 
@@ -53,6 +65,6 @@ export function textoComSombra(
 ): Phaser.GameObjects.BitmapText {
   // a sombra cresce junto com a letra, senao some no titulo grande
   const desvio = Math.max(1, Math.round((op.tamanho ?? 8) / 8));
-  texto(cena, x + desvio, y + desvio, conteudo, { ...op, cor: corSombra });
+  marcar(texto(cena, x + desvio, y + desvio, conteudo, { ...op, cor: corSombra }), "fundo");
   return texto(cena, x, y, conteudo, op);
 }

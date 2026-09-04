@@ -8,6 +8,7 @@ import { Criacao } from "./cenas/Criacao";
 import { Mundo } from "./cenas/Mundo";
 import { Interface } from "./cenas/Interface";
 import { Pausa } from "./cenas/Pausa";
+import { instalarAuditor } from "./sistemas/auditoria";
 
 function comecar() {
   const jogo = new Phaser.Game({
@@ -29,6 +30,7 @@ function comecar() {
   // gancho de depuracao: no console do navegador da para fazer
   //   jogo.scene.getScene("Interface").events.emit("falar", {...})
   (window as unknown as { jogo: Phaser.Game }).jogo = jogo;
+  instalarAuditor(jogo);
 }
 
 // espera a fonte de pixel carregar, senao a primeira tela sai com a fonte do sistema

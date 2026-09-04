@@ -2,7 +2,7 @@
  *  perguntas em um segundo: que jogo e este, e onde eu aperto para jogar. */
 import Phaser from "phaser";
 import { LARGURA, ALTURA, COR } from "../dados/config";
-import { texto, textoComSombra } from "../sistemas/texto";
+import { texto } from "../sistemas/texto";
 import { botao, Botao } from "../sistemas/botao";
 import { abrirEspaco } from "../sistemas/estado";
 import {
@@ -39,18 +39,12 @@ export class Titulo extends Phaser.Scene {
     texto(this, LARGURA - 4, ALTURA - 10, VERSAO, { ancora: 1, cor: 0xfff8ea }).setAlpha(0.7);
   }
 
-  /** Nome do jogo em duas linhas, com sombra dura embaixo. */
+  /** A logo e uma imagem, nao texto: foi desenhada de proposito com volume e
+   *  decoracao, coisa que fonte de bitmap nao faz. */
   private escreverTitulo() {
-    textoComSombra(this, LARGURA / 2, 20, "REINO DE", {
-      tamanho: 16,
-      cor: 0xfff8ea,
-      ancora: 0.5,
-    });
-    textoComSombra(this, LARGURA / 2, 38, "AURORA", {
-      tamanho: 24,
-      cor: 0xf5b62b,
-      ancora: 0.5,
-    });
+    const logo = this.add.image(LARGURA / 2, 8, "logo").setOrigin(0.5, 0);
+    // encolhe por numero inteiro se um dia a logo vier maior que a tela
+    if (logo.width > LARGURA - 16) logo.setScale((LARGURA - 16) / logo.width);
   }
 
   private montarMenu() {

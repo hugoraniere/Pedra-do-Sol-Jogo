@@ -50,16 +50,27 @@ export class Criacao extends Phaser.Scene {
 
   /** grade de botoes centrada, ate 3 por linha */
   private grade(itens: string[], selecionado: number, aoEscolher: (i: number) => void) {
-    const porLinha = 3;
-    const larg = 84;
+    // a largura do botao vem do rotulo mais longo, senao o texto vaza para fora
+    const maisLongo = Math.max(...itens.map((t) => t.length));
+    const largMinima = maisLongo * 7 + 12;
+    const margem = 10;
+    const gap = 6;
+    const cabe = (n: number) => largMinima * n + gap * (n - 1) + margem * 2 <= LARGURA;
+    const porLinha = cabe(3) ? 3 : cabe(2) ? 2 : 1;
+    const larg = Math.floor((LARGURA - margem * 2 - gap * (porLinha - 1)) / porLinha);
     const alt = 18;
+    // a grade vive entre o boneco e a navegacao, e nunca invade nenhum dos dois
+    const linhas = Math.ceil(itens.length / porLinha);
+    const topoGrade = 110;
+    const baseGrade = ALTURA - 26;
+    const passo = Math.min(alt + 8, Math.floor((baseGrade - topoGrade) / linhas));
     const botoes: Botao[] = [];
     itens.forEach((texto, i) => {
       const col = i % porLinha;
       const lin = Math.floor(i / porLinha);
       const totalCols = Math.min(porLinha, itens.length - lin * porLinha);
-      const x = LARGURA / 2 + (col - (totalCols - 1) / 2) * (larg + 6);
-      const y = 122 + lin * (alt + 8);
+      const x = LARGURA / 2 + (col - (totalCols - 1) / 2) * (larg + gap);
+      const y = topoGrade + lin * passo + passo / 2;
       const b = botao(this, x, y, larg, alt, texto, () => {
         aoEscolher(i);
         botoes.forEach((outro, j) => outro.marcar(j === i));

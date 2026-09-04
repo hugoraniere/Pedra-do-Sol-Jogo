@@ -24,6 +24,7 @@ export class Boot extends Phaser.Scene {
     this.load.spritesheet("goblin", "assets/goblin.png", P);
     this.load.spritesheet("npcs", "assets/npcs.png", P);
     this.load.image("titulo", "assets/titulo.png");
+    this.load.image("logo", "assets/logo.png");
     this.load.bitmapFont("aurora", "assets/fonte.png", "assets/fonte.xml");
     this.load.json("objetos", "assets/objetos.json");
     OBJETOS.forEach((n) => this.load.image(`obj-${n}`, `assets/objetos/${n}.png`));
