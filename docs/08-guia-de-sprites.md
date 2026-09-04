@@ -42,7 +42,12 @@ Fontes: [Pixel Art Tutorial, Derek Yu](https://www.derekyu.com/makegames/pixelar
 
 ## Como e a nossa folha
 
-Cada folha de personagem tem **6 colunas por 4 linhas**, cada quadro de 16 x 32.
+Cada folha de personagem tem **6 colunas por 8 linhas**, cada quadro de 16 x 32.
+
+As 8 linhas sao as oito direcoes (`LINHAS` em `arte/base.py`). As quatro
+primeiras sao baixo, esquerda, direita e cima; as quatro ultimas sao as
+diagonais, que `normalizar()` resolve como uma das quatro vistas com o rosto
+virado. Sao 48 quadros por folha, mas so 4 desenhos diferentes.
 
 | Coluna | 0 | 1 | 2 | 3 | 4 | 5 |
 |---|---|---|---|---|---|---|

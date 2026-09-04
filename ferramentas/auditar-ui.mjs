@@ -158,33 +158,35 @@ const problemas = [];
 problemas.push(...(await olhar("01-titulo")));
 
 await clicarBotao("NOVO JOGO");
-problemas.push(...(await olhar("02-criacao-nome")));
-await digitarNome();
-await clicarBotao("SEGUIR >");
-problemas.push(...(await olhar("03-criacao-raca")));
+problemas.push(...(await olhar("02-criacao-raca")));
+// trocar a raca e o que o boneco da vitrine precisa provar: os cinco mudam junto
+await clicarBotao("Anao");
+problemas.push(...(await olhar("03-criacao-raca-anao")));
 await clicarBotao("SEGUIR >");
 problemas.push(...(await olhar("04-criacao-classe")));
+await clicarBotao("Mago");
+problemas.push(...(await olhar("05-criacao-classe-mago")));
 await clicarBotao("SEGUIR >");
-problemas.push(...(await olhar("05-criacao-poder")));
+problemas.push(...(await olhar("06-criacao-poder")));
 await clicarBotao("SEGUIR >");
-problemas.push(...(await olhar("06-criacao-aparencia")));
-await clicarBotao("SEM EQUIPAMENTO");
-problemas.push(...(await olhar("07-criacao-sem-equipamento")));
-await clicarBotao("COM EQUIPAMENTO");
-await clicarBotao("SEGUIR >");
-problemas.push(...(await olhar("08-criacao-pronto")));
+problemas.push(...(await olhar("07-criacao-heroi")));
+await digitarNome();
+problemas.push(...(await olhar("08-criacao-heroi-com-nome")));
+await clicarBotao("SEM ARMA");
+problemas.push(...(await olhar("09-criacao-sem-arma")));
+await clicarBotao("COM ARMA");
 
 await clicarBotao("COMECAR A AVENTURA");
 await pagina.waitForTimeout(1500);
-problemas.push(...(await olhar("09-mundo")));
+problemas.push(...(await olhar("10-mundo")));
 
 await clicarBotao("FICHA");        // o nome do heroi no topo abre a ficha
 await pagina.waitForTimeout(500);
-problemas.push(...(await olhar("10-ficha-heroi")));
+problemas.push(...(await olhar("11-ficha-heroi")));
 await clicarBotao("PROXIMA PAGINA");
-problemas.push(...(await olhar("10b-ficha-poderes")));
+problemas.push(...(await olhar("11b-ficha-poderes")));
 await clicarBotao("PROXIMA PAGINA");
-problemas.push(...(await olhar("10c-ficha-sei-fazer")));
+problemas.push(...(await olhar("11c-ficha-sei-fazer")));
 await clicarBotao("PAGINA ANTERIOR");   // e volta, para conferir que da a volta
 await pagina.waitForTimeout(300);
 await clicarBotao("FECHAR");
@@ -192,15 +194,15 @@ await pagina.waitForTimeout(500);
 
 await clicarRelativo(0.97, 0.042); // engrenagem de pausa no topo
 await pagina.waitForTimeout(500);
-problemas.push(...(await olhar("11-pausa")));
+problemas.push(...(await olhar("12-pausa")));
 await clicarBotao("CONFIGURACOES");
-problemas.push(...(await olhar("12-configuracoes")));
+problemas.push(...(await olhar("13-configuracoes")));
 await clicarBotao("< VOLTAR");            // volta de config para o menu de pausa
 await clicarBotao("SAIR PARA O MENU");
 await pagina.waitForTimeout(1400);
-problemas.push(...(await olhar("13-titulo-com-save")));
+problemas.push(...(await olhar("14-titulo-com-save")));
 await clicarBotao("CARREGAR JOGO");
-problemas.push(...(await olhar("14-carregar")));
+problemas.push(...(await olhar("15-carregar")));
 
 // ------------------------------------- a criacao nas outras duas visoes
 /** A visao escolhida nao e zoom de camera, e resolucao logica: 256x160, 320x192
@@ -216,21 +218,22 @@ async function criacaoNaVisao(zoom) {
   await pagina.reload({ waitUntil: "networkidle" });
   await pagina.waitForTimeout(2500);
   await clicarBotao("NOVO JOGO");
-  problemas.push(...(await olhar(`${zoom}-02-criacao-nome`)));
-  await digitarNome();
-  await clicarBotao("SEGUIR >");
-  problemas.push(...(await olhar(`${zoom}-03-criacao-raca`)));
+  problemas.push(...(await olhar(`${zoom}-02-criacao-raca`)));
+  // o Pequenino e o nome mais longo da vitrine: e ele que aperta a coluna
+  await clicarBotao("Pequenino");
+  problemas.push(...(await olhar(`${zoom}-03-criacao-raca-pequenino`)));
   await clicarBotao("SEGUIR >");
   problemas.push(...(await olhar(`${zoom}-04-criacao-classe`)));
+  await clicarBotao("Cavaleiro");
+  problemas.push(...(await olhar(`${zoom}-05-criacao-classe-cavaleiro`)));
   await clicarBotao("SEGUIR >");
-  problemas.push(...(await olhar(`${zoom}-05-criacao-poder`)));
+  problemas.push(...(await olhar(`${zoom}-06-criacao-poder`)));
   await clicarBotao("SEGUIR >");
-  problemas.push(...(await olhar(`${zoom}-06-criacao-aparencia`)));
-  await clicarBotao("SEM EQUIPAMENTO");
-  problemas.push(...(await olhar(`${zoom}-07-criacao-sem-equipamento`)));
-  await clicarBotao("COM EQUIPAMENTO");
-  await clicarBotao("SEGUIR >");
-  problemas.push(...(await olhar(`${zoom}-08-criacao-pronto`)));
+  problemas.push(...(await olhar(`${zoom}-07-criacao-heroi`)));
+  await digitarNome();
+  problemas.push(...(await olhar(`${zoom}-08-criacao-heroi-com-nome`)));
+  await clicarBotao("SEM ARMA");
+  problemas.push(...(await olhar(`${zoom}-09-criacao-sem-arma`)));
 }
 
 await criacaoNaVisao("perto");

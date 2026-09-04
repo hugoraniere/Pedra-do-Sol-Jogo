@@ -23,6 +23,8 @@ export const ORDEM_PODERES: Atributo[] = ["forca", "esperteza", "coracao"];
 export type Raca = {
   id: string;
   nome: string;
+  /** o nome numa palavra so, para caber embaixo do avatar na criacao */
+  curto: string;
   bonus: Atributo;
   dom: string;
   domTexto: string;
@@ -34,6 +36,7 @@ export const RACAS: Raca[] = [
   {
     id: "vale",
     nome: "Gente do Vale",
+    curto: "Vale",
     bonus: "coracao",
     dom: "Nunca Desisto",
     domTexto: "Uma vez por aventura voce pode rolar o dado de novo.",
@@ -43,6 +46,7 @@ export const RACAS: Raca[] = [
   {
     id: "anao",
     nome: "Anao da Fornalha",
+    curto: "Anao",
     bonus: "forca",
     dom: "Casco Duro",
     domTexto: "Voce comeca com 4 coracoes em vez de 3.",
@@ -52,6 +56,7 @@ export const RACAS: Raca[] = [
   {
     id: "elfo",
     nome: "Elfo da Folha",
+    curto: "Elfo",
     bonus: "esperteza",
     dom: "Olhos de Coruja",
     domTexto: "Voce enxerga no escuro e de bem longe.",
@@ -61,6 +66,7 @@ export const RACAS: Raca[] = [
   {
     id: "pequenino",
     nome: "Pequenino do Trigo",
+    curto: "Pequenino",
     bonus: "coracao",
     dom: "Pe de Coelho",
     domTexto: "Uma vez por aventura voce troca um OPS por um QUASE.",
@@ -70,6 +76,7 @@ export const RACAS: Raca[] = [
   {
     id: "dragao",
     nome: "Cria de Dragao",
+    curto: "Dragao",
     bonus: "forca",
     dom: "Sopro Quentinho",
     domTexto: "Uma vez por aventura voce solta fogo pela boca.",
@@ -82,6 +89,8 @@ export const RACAS: Raca[] = [
 export type Classe = {
   id: string;
   nome: string;
+  /** o nome numa palavra so, para caber embaixo do avatar na criacao */
+  curto: string;
   bonus: Atributo;
   arma: string;
   habilidade: string;
@@ -93,6 +102,7 @@ export const CLASSES: Classe[] = [
   {
     id: "cavaleiro",
     nome: "Cavaleiro",
+    curto: "Cavaleiro",
     bonus: "forca",
     arma: "espada-curta",
     habilidade: "Golpe Trovao",
@@ -102,6 +112,7 @@ export const CLASSES: Classe[] = [
   {
     id: "mago",
     nome: "Mago da Torre",
+    curto: "Mago",
     bonus: "esperteza",
     arma: "cajado",
     habilidade: "Tres Magias",
@@ -111,6 +122,7 @@ export const CLASSES: Classe[] = [
   {
     id: "cacador",
     nome: "Cacador de Dragao",
+    curto: "Cacador",
     bonus: "esperteza",
     arma: "arco",
     habilidade: "Olho de Alvo",
@@ -120,6 +132,7 @@ export const CLASSES: Classe[] = [
   {
     id: "amigo",
     nome: "Amigo dos Bichos",
+    curto: "Amigo",
     bonus: "coracao",
     arma: "funda",
     habilidade: "Fala com Bichos",
@@ -129,6 +142,7 @@ export const CLASSES: Classe[] = [
   {
     id: "ferreiro",
     nome: "Ferreiro Andarilho",
+    curto: "Ferreiro",
     bonus: "forca",
     arma: "martelo",
     habilidade: "Conserta Tudo",

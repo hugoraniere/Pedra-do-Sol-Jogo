@@ -126,7 +126,9 @@ export function caixa(
   );
 
   if (titulo) {
-    const larguraChapa = Math.min(largura - ESPACO.xl, titulo.length * 8 + ESPACO.xl * 2);
+    // medida de verdade, nao "8 px por letra": a fonte e proporcional, e com o
+    // chute a chapa saia larga demais em titulo curto e apertada em titulo longo
+    const larguraChapa = Math.min(largura - ESPACO.xl, medirTexto(cena, titulo) + ESPACO.xl * 2);
     marcar(
       cena.add
         .nineslice(
@@ -168,11 +170,30 @@ export function alturaDoTexto(linhas: number, tamanho: 8 | 16 = 8): number {
   return linhas * (tamanho === 16 ? TAMANHO.linhaTitulo : TAMANHO.linhaTexto);
 }
 
-/** Quebra um texto em linhas que caibam na largura.
+/** Quebra um texto em linhas que caibam na largura, medindo na fonte de verdade.
  *
- *  Mede pelo MAIOR avanco da fonte, nao por 8 px por letra como antes: 8 era
- *  mais largo que qualquer letra existente, entao a linha quebrava cedo e sobrava
- *  borda vazia a direita em toda tela do jogo. */
+ *  Prefira esta a `quebrar` sempre que a cena estiver a mao: a conta por letra
+ *  quebra cedo demais (mede 6 px onde a media e 5), e uma linha a mais no painel
+ *  e uma linha a menos para o desenho.
+ */
+export function quebrarMedido(cena: Phaser.Scene, conteudo: string, larguraPx: number): string[] {
+  const linhas: string[] = [];
+  let atual = "";
+  for (const p of conteudo.split(" ")) {
+    const tentativa = (atual + " " + p).trim();
+    if (atual && medirTexto(cena, tentativa) > larguraPx) {
+      linhas.push(atual);
+      atual = p;
+    } else {
+      atual = tentativa;
+    }
+  }
+  if (atual) linhas.push(atual);
+  return linhas;
+}
+
+/** Quebra sem a cena a mao, chutando pelo MAIOR avanco da fonte. Quebra cedo
+ *  demais de proposito: errar para o lado de sobrar borda nunca vaza painel. */
 export function quebrar(conteudo: string, larguraPx: number): string[] {
   const cabe = Math.max(1, Math.floor(larguraPx / AVANCO_MAX));
   const palavras = conteudo.split(" ");

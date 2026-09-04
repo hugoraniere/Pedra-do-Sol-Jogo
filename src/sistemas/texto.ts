@@ -8,32 +8,29 @@
  * Tamanhos: use sempre multiplo de 8. A fonte foi desenhada em 8 px, entao 8, 16,
  * 24 e 32 ficam perfeitos e qualquer valor no meio volta a borrar.
  *
- * Duas correcoes de metrica moram aqui, e valem para TODO texto do jogo:
+ * A fonte e desenhada pixel por pixel em arte/fonte.py, e nao rasterizada de um
+ * .ttf. Ela e proporcional (o "i" avanca 2 px e o "m" avanca 6) e ja traz 1 px
+ * de ar dentro do proprio avanco, entao aqui nao se mexe mais no espacamento:
+ * a Silkscreen antiga precisava de tracking negativo porque avancava 6 px para
+ * uma letra desenhada em 4.
  *
- * 1. O ESPACO ENTRE LETRAS. A Silkscreen em 8 px avanca 6 px para uma letra
- *    desenhada em 4: metade da largura de cada letra vira vao. A frase "Voce
- *    enxerga no escuro e de bem longe" ocupava 208 px e passa a ocupar 170, e
- *    numa linha de 256 px cabem 64 letras em vez de 51. Nao e so densidade: com
- *    o vao antigo a palavra se desmancha e a crianca le letra por letra.
- *
- * 2. O CENTRO OPTICO. A linha tem 10 px de altura e a letra ocupa de 4 a 9,
- *    entao 4 px de cada linha sao ar acima da letra. Centrar pela caixa joga o
- *    texto 1,5 px abaixo do centro de verdade, e era isso que desalinhava todo
- *    rotulo dentro de botao e de chapinha.
+ * O CENTRO OPTICO deixou de ser correcao daqui e virou desenho: a fonte ocupa a
+ * linha de 10 px inteira, com a maiuscula de 2 a 7 e a perna do "g" ate 9, e ai
+ * o meio da caixa ja e o meio do texto. Corrigir por fora era pior do que
+ * parecia: mover o objeto move a CAIXA junto, e a caixa deslocada invadia a
+ * linha de baixo. Foi assim que o nome do heroi passou a esbarrar na raca dele
+ * dentro da ficha, sem nada estar visivelmente errado na tela.
  */
 import Phaser from "phaser";
 
 export const FONTE_BITMAP = "aurora";
 
-/** Quanto encolher o avanco de cada letra. Ver a nota 1 no topo do arquivo. */
-export const TRACKING = -1;
+/** Quanto encolher o avanco de cada letra. A fonte ja vem com o ar certo. */
+export const TRACKING = 0;
 
 /** O maior avanco da fonte, ja com o tracking. Serve para medir por cima quando
  *  nao da para perguntar a fonte de verdade: nenhuma letra passa disto. */
-export const AVANCO_MAX = 7 + TRACKING;
-
-/** Quanto o texto sobe para ficar no centro optico. Ver a nota 2 no topo. */
-const DESVIO_OPTICO = 2;
+export const AVANCO_MAX = 6 + TRACKING;
 
 /** Marca o objeto para o auditor de UI saber o que ele e.
  *  Mora aqui, e nao em design.ts, so para nao criar import circular. */
@@ -77,9 +74,6 @@ export function texto(
   if (op.alinhamento === 2) t.setRightAlign();
   if (op.entrelinha !== undefined) t.setLineSpacing(op.entrelinha);
   t.setOrigin(op.ancora ?? 0, op.ancoraY ?? 0);
-  // so quem pede para centrar verticalmente precisa da correcao: quem ancora no
-  // topo ja esta onde mandou
-  if (op.ancoraY === 0.5) t.y -= (DESVIO_OPTICO * (tamanho / 8)) / 2;
   marcar(t, "texto", conteudo.slice(0, 24));
   return t;
 }
