@@ -28,7 +28,7 @@ export const COR = {
   papel: 0xfff8ea,
   papel2: 0xfdefd6,
   tinta: 0x2c2440,
-  tintaSuave: 0x5a4e74,
+  tintaSuave: 0x4a3e64,
   ouro: 0xf5b62b,
   vermelho: 0xe2483d,
   azul: 0x2f6fb5,

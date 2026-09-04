@@ -42,7 +42,7 @@ export function botao(
 
   c.marcar = (ligado: boolean) => {
     fundo.setTexture(ligado ? "painel-ouro" : painel);
-    rotulo.setTint(ligado ? 0x2c2440 : 0x5a4e74);
+    rotulo.setTint(ligado ? 0x2c2440 : 0x4a3e64);
   };
   c.marcar(false);
   marcar(c, "botao", rotuloTexto);

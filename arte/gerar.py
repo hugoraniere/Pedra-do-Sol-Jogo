@@ -34,6 +34,7 @@ sys.path.insert(0, RAIZ)
 
 import fonte as fonte_arte
 import gente
+import manifesto as manifesto_arte
 import mundo
 import tiles
 import titulo as titulo_arte
@@ -105,6 +106,24 @@ def main():
     orfaos = limpar_orfaos(comeco)
     if orfaos:
         print("apagados:", ", ".join(sorted(orfaos)))
+
+    # o manifesto e o unico jeito de ver O QUE mudou numa geracao: sem ele o
+    # git status mostra cem PNGs modificados e nao da para saber se voce mexeu
+    # num desenho ou em todos. Tambem e por ele que o verificar.mjs descobre
+    # PNG colado na mao em public/assets
+    antigo = None
+    caminho_manifesto = os.path.join(RAIZ, "manifesto.json")
+    if os.path.exists(caminho_manifesto):
+        with open(caminho_manifesto, encoding="utf-8") as f:
+            antigo = json.load(f)
+    destino, quantos = manifesto_arte.escrever(SAIDA, RAIZ)
+    with open(destino, encoding="utf-8") as f:
+        novos, mudados, sumidos = manifesto_arte.comparar(antigo, json.load(f))
+    print(f"manifesto: {quantos} arquivos")
+    for rotulo, lista in (("novos", novos), ("mudados", mudados), ("sumidos", sumidos)):
+        if lista:
+            print(f"  {rotulo} ({len(lista)}): " + ", ".join(lista[:8]) +
+                  (" ..." if len(lista) > 8 else ""))
     print("arte gerada em", os.path.normpath(SAIDA))
 
 

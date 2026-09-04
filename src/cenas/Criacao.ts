@@ -174,7 +174,7 @@ export class Criacao extends Phaser.Scene {
     const centro = y + alt / 2;
     const larguraRotulo = 76;
     this.grupo.add(
-      texto(this, x, centro, rotulo, { cor: 0x5a4e74, ancoraY: 0.5 })
+      texto(this, x, centro, rotulo, { cor: 0x4a3e64, ancoraY: 0.5 })
     );
     const cx = x + larguraRotulo;
     const larguraControle = largura - larguraRotulo;
@@ -267,7 +267,7 @@ export class Criacao extends Phaser.Scene {
     this.grupo.add(campo);
     this.grupo.add(
       texto(this, LARGURA / 2, 142, "digite no teclado, ou toque aqui para sortear", {
-        cor: 0x5a4e74,
+        cor: 0x4a3e64,
         ancora: 0.5,
       })
         .setInteractive()
@@ -405,7 +405,7 @@ export class Criacao extends Phaser.Scene {
       this.grupo.add(
         texto(this, r.x, r.y, linha, {
           tamanho: i < 2 ? 16 : 8,
-          cor: i < 2 ? 0x2c2440 : 0x5a4e74,
+          cor: i < 2 ? 0x2c2440 : 0x4a3e64,
           larguraMax: r.largura,
           entrelinha: 2,
         })

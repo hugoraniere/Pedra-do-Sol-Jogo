@@ -36,6 +36,7 @@ npm install
 npm run dev      # abre em http://localhost:5173
 npm run build    # checa os tipos e gera dist/
 npm run arte     # regera toda a pixel art em public/assets (precisa de python3 e Pillow)
+npm run verificar# confere os contratos invisiveis: paleta, listas, falas, PNG solto
 npm run auditar  # percorre as telas procurando sobreposicao e transbordo de UI
 npm run conferir # confere as 25 combinacoes de raca e classe, peca por peca
 npm run folha    # monta a folha com as 25 combinacoes, para olhar
@@ -62,7 +63,7 @@ npm run app:build# empacota o aplicativo para instalar
 
 **Nenhuma coordenada Y na mao.** Toda UI usa `caixa()` e `pilha()` de `src/sistemas/design.ts`. Se voce somou dois numeros para achar onde vai um botao, esta errado. Ver `docs/07-design-system.md`.
 
-**Verifique antes de dizer que terminou.** `npm run build` tem que passar limpo, `npm run auditar` e `npm run conferir` tem que sair com zero problemas, e o jogo tem que abrir sem erro no console. A auditoria salva um screenshot de cada tela em `ferramentas/telas/`, e `npm run folha` monta as 25 combinacoes de raca e classe em `ferramentas/telas/personagens.png`. Olhe as duas coisas.
+**Verifique antes de dizer que terminou.** `npm run build` tem que passar limpo, `npm run verificar`, `npm run auditar` e `npm run conferir` tem que sair com zero problemas, e o jogo tem que abrir sem erro no console. A auditoria salva um screenshot de cada tela em `ferramentas/telas/`, e `npm run folha` monta as 25 combinacoes de raca e classe em `ferramentas/telas/personagens.png`. Olhe as duas coisas.
 
 ## Estrutura
 
@@ -76,7 +77,10 @@ src/dados/             config, mapas, dialogos. conteudo, nao codigo
 src/sistemas/          estado, controles, heroi, botao, design, texto, auditoria
 src/dados/conteudo.ts  racas, classes, magias, armas, loja e bestiario do RPG de mesa
 app/                   o aplicativo de desktop, Electron
-ferramentas/           auditoria de UI e os screenshots que ela tira
+ferramentas/verificar.mjs   contratos invisiveis: paleta, listas, falas, PNG solto
+ferramentas/auditar-ui.mjs  sobreposicao e transbordo de UI, tela por tela
+ferramentas/conferir-personagens.mjs  as 25 combinacoes de raca e classe
+arte/manifesto.py      hash de cada PNG gerado, para ver o que mudou
 src/cenas/             Boot, Criacao, Mundo, Interface
 arte/gente.py          junta tudo e salva: heroi em camadas, npcs, goblins, aranhas
 arte/pessoa.py         corpo e bracos por raca, e os pontos de encaixe

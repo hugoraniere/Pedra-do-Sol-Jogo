@@ -168,7 +168,7 @@ export class Pausa extends Phaser.Scene {
     const area = caixa(this, { largura: larguraCaixa(), alturaConteudo, titulo: "CONFIGURACOES" });
     const p = pilha(area, ESPACO.md);
 
-    textoNaArea(this, p.reservar(TAMANHO.linhaTexto), "DE ONDE VOCE VE O JOGO", { cor: 0x5a4e74 });
+    textoNaArea(this, p.reservar(TAMANHO.linhaTexto), "DE ONDE VOCE VE O JOGO", { cor: 0x4a3e64 });
 
     const linhaBotoes = p.reservar(TAMANHO.botao);
     const atual = preferencias().zoom;
@@ -200,7 +200,7 @@ export class Pausa extends Phaser.Scene {
       this.painel.add(
         marcar(
           texto(this, LARGURA / 2, areaTexto.y + i * TAMANHO.linhaTexto, linha, {
-            cor: 0x5a4e74,
+            cor: 0x4a3e64,
             ancora: 0.5,
           }),
           "texto",

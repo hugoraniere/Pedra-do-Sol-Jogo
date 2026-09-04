@@ -51,7 +51,7 @@ export class Carregar extends Phaser.Scene {
       if (!f) {
         this.lista.add(
           texto(this, LARGURA / 2, y + ALTURA_CARTAO / 2, `ESPACO ${i + 1} . VAZIO`, {
-            cor: 0x5a4e74,
+            cor: 0x4a3e64,
             ancora: 0.5,
             ancoraY: 0.5,
           })
@@ -68,8 +68,8 @@ export class Carregar extends Phaser.Scene {
     const classe = CLASSES.find((k) => k.id === f.classe)?.nome ?? f.classe;
 
     c.add(texto(this, 16, y + 5, f.nome.toUpperCase(), { tamanho: 16, cor: 0x2c2440 }));
-    c.add(texto(this, 16, y + 22, `${raca} . ${classe}`, { cor: 0x5a4e74 }));
-    c.add(texto(this, 16, y + 31, `${f.lugar} . ${this.tempo(f.minutos)}`, { cor: 0x5a4e74 }));
+    c.add(texto(this, 16, y + 22, `${raca} . ${classe}`, { cor: 0x4a3e64 }));
+    c.add(texto(this, 16, y + 31, `${f.lugar} . ${this.tempo(f.minutos)}`, { cor: 0x4a3e64 }));
 
     c.add(this.add.image(LARGURA - 96, y + 13, "ui", 3).setScale(0.8));
     c.add(texto(this, LARGURA - 88, y + 9, String(f.selos), { cor: 0x2c2440 }));
