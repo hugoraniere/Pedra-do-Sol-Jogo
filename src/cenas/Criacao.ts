@@ -41,7 +41,7 @@ import { ATRIBUTOS, ORDEM_PODERES, acharMagia } from "../dados/conteudo";
 import { poderesDaOrigem, poderEscolhidoDoHeroi } from "../sistemas/poderes";
 import { novoJogo, VAZIO, Heroi as FichaHeroi } from "../sistemas/estado";
 import { botao, Botao } from "../sistemas/botao";
-import { texto, larguraDoTexto } from "../sistemas/texto";
+import { texto, medirTexto } from "../sistemas/texto";
 import { ESPACO, TAMANHO, marcar, meio, pilha, colunas, Retangulo } from "../sistemas/design";
 import { camadasDoHeroi, criarAnimacoes, Heroi } from "../sistemas/heroi";
 
@@ -227,7 +227,7 @@ export class Criacao extends Phaser.Scene {
       const esquerda = faixa.x + (this.passo > 0 ? larguraVoltar : 0) + ESPACO.sm;
       const direita = faixa.x + faixa.largura - proximo.largura - ESPACO.sm;
       const largura = Math.min(
-        larguraDoTexto(this, meioDaFaixa.rotulo) + ESPACO.lg * 2,
+        medirTexto(this, meioDaFaixa.rotulo) + ESPACO.lg * 2,
         direita - esquerda
       );
       this.grupo.add(
@@ -268,7 +268,7 @@ export class Criacao extends Phaser.Scene {
    *  largura eles tem e quanta altura o conjunto vai ocupar. O palco precisa
    *  desta conta pronta para saber com quanto espaco ele ficou. */
   private medirGrade(itens: string[], largura: number) {
-    const maisLargo = Math.max(...itens.map((t) => larguraDoTexto(this, t)));
+    const maisLargo = Math.max(...itens.map((t) => medirTexto(this, t)));
     const gap = ESPACO.md;
     // ESPACO.xl de folga dentro do botao: e o que o auditor exige entre o
     // rotulo e a borda, e o que a crianca precisa para nao ler letra colada
@@ -421,9 +421,9 @@ export class Criacao extends Phaser.Scene {
    *  o valor mais largo que ela pode CHEGAR a mostrar. Medir so o valor de agora
    *  faria a coluna dancar embaixo do dedo a cada troca. */
   private larguraDosSeletores(linhas: LinhaAparencia[]) {
-    const rotulo = Math.max(...linhas.map((l) => larguraDoTexto(this, l.rotulo))) + ESPACO.sm;
+    const rotulo = Math.max(...linhas.map((l) => medirTexto(this, l.rotulo))) + ESPACO.sm;
     const valor =
-      Math.max(...linhas.flatMap((l) => l.opcoes.map((o) => larguraDoTexto(this, o)))) +
+      Math.max(...linhas.flatMap((l) => l.opcoes.map((o) => medirTexto(this, o)))) +
       ESPACO.md * 2;
     return { rotulo, total: rotulo + (SETA + ESPACO.xs) * 2 + valor };
   }
@@ -662,9 +662,19 @@ export class Criacao extends Phaser.Scene {
 
     this.palcoComBoneco(areaBoneco);
 
-    const alturaLista =
-      linhas.length * TAMANHO.botaoPequeno + (linhas.length - 1) * ESPACO.sm;
-    const p = pilha(areaLista, ESPACO.sm);
+    // a linha em si nao encolhe: 16 px e o minimo que o dedo de uma crianca
+    // acerta (TAMANHO.alvoMinimo). Quem cede e o vao entre elas, ate ESPACO.xs,
+    // e e isso que faz as seis caberem no corpo da tela de 256x160
+    const vaos = linhas.length - 1;
+    const gap = Math.max(
+      ESPACO.xs,
+      Math.min(
+        ESPACO.sm,
+        Math.floor((areaLista.altura - linhas.length * TAMANHO.botaoPequeno) / vaos)
+      )
+    );
+    const alturaLista = linhas.length * TAMANHO.botaoPequeno + vaos * gap;
+    const p = pilha(areaLista, gap);
     p.pular(Math.max(0, Math.floor((areaLista.altura - alturaLista) / 2)));
     linhas.forEach((linha) => {
       const r = p.reservar(TAMANHO.botaoPequeno);

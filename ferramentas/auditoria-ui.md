@@ -15,10 +15,10 @@ Problemas encontrados: 0
 | 08-criacao-pronto | Criacao:24 Som:0 | 0 |
 | 09-mundo | Mundo:80 Interface:37 Som:0 | 0 |
 | 10-ficha-heroi | Interface:37 Ficha:40 Som:0 | 0 |
-| 10b-ficha-poderes | Interface:37 Ficha:31 Som:0 | 0 |
-| 10c-ficha-sei-fazer | Interface:37 Ficha:27 Som:0 | 0 |
+| 10b-ficha-poderes | Interface:37 Ficha:29 Som:0 | 0 |
+| 10c-ficha-sei-fazer | Interface:37 Ficha:26 Som:0 | 0 |
 | 11-pausa | Interface:37 Pausa:22 Som:0 | 0 |
-| 12-configuracoes | Interface:37 Pausa:35 Som:0 | 0 |
+| 12-configuracoes | Interface:37 Pausa:34 Som:0 | 0 |
 | 13-titulo-com-save | Titulo:16 Som:0 | 0 |
 | 14-carregar | Carregar:30 Som:0 | 0 |
 | perto-02-criacao-nome | Criacao:21 Som:0 | 0 |

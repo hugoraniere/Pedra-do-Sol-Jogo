@@ -11,22 +11,38 @@
  */
 import Phaser from "phaser";
 import { LARGURA, ALTURA } from "../dados/config";
-import { texto, marcar, OpcoesTexto } from "./texto";
+import { texto, marcar, medirTexto, AVANCO_MAX, OpcoesTexto } from "./texto";
 
 export { marcar };
 
 /** Escala de espacamento. Sempre multiplo de 2, porque a tela e pixel art. */
 export const ESPACO = { xs: 2, sm: 4, md: 6, lg: 10, xl: 16 } as const;
 
+/** A escala da interface.
+ *
+ *  O alvo e o dedo de uma crianca de 7 anos num iPad, onde o canvas roda em
+ *  escala 3: um botao de 16 px daqui vira 48 pontos de tela, e 44 e o minimo
+ *  para o dedo acertar. Por isso nada de tocar fica abaixo de 16.
+ *
+ *  Chapinha e chip nao sao alvo de toque, entao podem ser menores. Mas nao
+ *  menores que 12: a linha da fonte tem 10 px e ainda precisa de folga, senao a
+ *  letra encosta na borda. */
 export const TAMANHO = {
-  botao: 18,
-  botaoPequeno: 14,
+  botao: 16,
+  botaoPequeno: 16,
   linhaTexto: 10,
-  linhaTitulo: 18,
+  linhaTitulo: 16,
   chapa: 14,
-  paddingPainel: 8,
-  paddingTela: 10,
+  chip: 12,
+  paddingPainel: 6,
+  paddingTela: 8,
+  /** menor alvo que um dedo acerta, em px logicos (44 pontos / escala 3) */
+  alvoMinimo: 16,
 } as const;
+
+/** Largura maxima de um botao. Sem isto o FECHAR ocupava a largura inteira da
+ *  janela, o que no iPad dava 768 pontos de botao: alvo bom tem 44, nao 768. */
+export const LARGURA_MAX_BOTAO = 120;
 
 export type Retangulo = { x: number; y: number; largura: number; altura: number };
 
@@ -152,9 +168,13 @@ export function alturaDoTexto(linhas: number, tamanho: 8 | 16 = 8): number {
   return linhas * (tamanho === 16 ? TAMANHO.linhaTitulo : TAMANHO.linhaTexto);
 }
 
-/** Quebra um texto em linhas que caibam na largura, em caracteres de 8 px. */
+/** Quebra um texto em linhas que caibam na largura.
+ *
+ *  Mede pelo MAIOR avanco da fonte, nao por 8 px por letra como antes: 8 era
+ *  mais largo que qualquer letra existente, entao a linha quebrava cedo e sobrava
+ *  borda vazia a direita em toda tela do jogo. */
 export function quebrar(conteudo: string, larguraPx: number): string[] {
-  const cabe = Math.max(1, Math.floor(larguraPx / 8));
+  const cabe = Math.max(1, Math.floor(larguraPx / AVANCO_MAX));
   const palavras = conteudo.split(" ");
   const linhas: string[] = [];
   let atual = "";
@@ -213,11 +233,14 @@ export function colunas(area: Retangulo, pesos: number[], gap: number = ESPACO.m
   });
 }
 
-/** Altura de um chip, a pilula com uma palavra so. */
-export const ALTURA_CHIP = TAMANHO.botaoPequeno;
+/** Altura de um chip, a pilula com uma palavra so. Nao e alvo de toque. */
+export const ALTURA_CHIP = TAMANHO.chip;
 
-/** Largura que um chip precisa para caber o texto dele. */
-export const larguraDoChip = (conteudo: string) => conteudo.length * 8 + ESPACO.md * 2;
+/** Largura que um chip precisa para caber o texto dele, medida na fonte de
+ *  verdade. Com a conta antiga de 8 px por letra, todo chip nascia com ate 60%
+ *  de borda sobrando de um lado. */
+export const larguraDoChip = (cena: Phaser.Scene, conteudo: string) =>
+  medirTexto(cena, conteudo) + ESPACO.md * 2;
 
 /**
  * Arruma chips em linhas que caibam na largura, sem desenhar nada.
@@ -226,12 +249,17 @@ export const larguraDoChip = (conteudo: string) => conteudo.length * 8 + ESPACO.
  * primeiro pixel aparecer. Entao a mesma conta roda duas vezes: uma para medir,
  * outra para desenhar, e as duas nao podem discordar.
  */
-export function arrumarChips(textos: string[], largura: number, gap = ESPACO.sm): string[][] {
+export function arrumarChips(
+  cena: Phaser.Scene,
+  textos: string[],
+  largura: number,
+  gap = ESPACO.sm
+): string[][] {
   const linhas: string[][] = [];
   let atual: string[] = [];
   let usado = 0;
   for (const conteudo of textos) {
-    const largo = larguraDoChip(conteudo);
+    const largo = larguraDoChip(cena, conteudo);
     if (atual.length && usado + gap + largo > largura) {
       linhas.push(atual);
       atual = [];
@@ -262,7 +290,7 @@ export function chip(
   conteudo: string,
   painel: "painel-creme" | "painel-ouro" = "painel-creme"
 ) {
-  const largura = larguraDoChip(conteudo);
+  const largura = larguraDoChip(cena, conteudo);
   marcar(
     cena.add.nineslice(x, y, painel, undefined, largura, ALTURA_CHIP, 8, 8, 8, 8).setOrigin(0),
     "fundo"
