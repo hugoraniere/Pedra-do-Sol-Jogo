@@ -32,6 +32,7 @@ from PIL import Image
 RAIZ = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, RAIZ)
 
+import cursor as cursor_arte
 import fonte as fonte_arte
 import gente
 import manifesto as manifesto_arte
@@ -83,6 +84,7 @@ def main():
     ficha_objetos = mundo.gerar(SAIDA, a_mao)
     indice_npcs, encaixes = gente.gerar(SAIDA, a_mao)
     indice_ui = ui_arte.gerar(SAIDA)
+    indice_cursor = cursor_arte.gerar(SAIDA)
     titulo_arte.gerar(SAIDA, a_mao)
     ficha_fonte = fonte_arte.gerar(SAIDA, a_mao)
     ui_arte.favicon(os.path.join(RAIZ, "..", "public", "favicon.png"))
@@ -101,6 +103,7 @@ def main():
     print("tiles: ", indice_tiles)
     print("npcs:  ", indice_npcs)
     print("ui:    ", indice_ui)
+    print("cursor:", indice_cursor)
     print("objetos:", ", ".join(ficha_objetos))
     print("fonte: ", ficha_fonte)
     orfaos = limpar_orfaos(comeco)
