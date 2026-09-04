@@ -1,0 +1,96 @@
+{
+  "celula": 16,
+  "quadros": {
+    "normal": {
+      "quadro": 0,
+      "pega": {
+        "x": 3,
+        "y": 1
+      }
+    },
+    "sobre": {
+      "quadro": 1,
+      "pega": {
+        "x": 3,
+        "y": 1
+      }
+    },
+    "clique": {
+      "quadro": 2,
+      "pega": {
+        "x": 3,
+        "y": 2
+      }
+    },
+    "andar": {
+      "quadro": 3,
+      "pega": {
+        "x": 3,
+        "y": 1
+      }
+    },
+    "bloqueado": {
+      "quadro": 4,
+      "pega": {
+        "x": 3,
+        "y": 1
+      }
+    },
+    "falar": {
+      "quadro": 5,
+      "pega": {
+        "x": 8,
+        "y": 8
+      }
+    },
+    "olhar": {
+      "quadro": 6,
+      "pega": {
+        "x": 8,
+        "y": 8
+      }
+    },
+    "pegar": {
+      "quadro": 7,
+      "pega": {
+        "x": 8,
+        "y": 8
+      }
+    },
+    "pegando": {
+      "quadro": 8,
+      "pega": {
+        "x": 8,
+        "y": 8
+      }
+    },
+    "atacar": {
+      "quadro": 9,
+      "pega": {
+        "x": 8,
+        "y": 8
+      }
+    },
+    "anel1": {
+      "quadro": 10,
+      "pega": {
+        "x": 8,
+        "y": 8
+      }
+    },
+    "anel2": {
+      "quadro": 11,
+      "pega": {
+        "x": 8,
+        "y": 8
+      }
+    },
+    "anel3": {
+      "quadro": 12,
+      "pega": {
+        "x": 8,
+        "y": 8
+      }
+    }
+  }
+}
