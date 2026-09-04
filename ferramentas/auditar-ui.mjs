@@ -12,8 +12,9 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
+import { porta } from "./ambiente-atual.mjs";
 
-const PORTA = 4188;
+const PORTA = porta(4188);
 const RAIZ = new URL("../dist/", import.meta.url).pathname;
 const PASTA_TELAS = new URL("./telas/", import.meta.url).pathname;
 

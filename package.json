@@ -9,7 +9,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "arte": "python3 arte/gerar.py",
-    "app": "concurrently -k \"vite\" \"wait-on tcp:5173 && electron .\"",
+    "som": "python3 som/gerar.py",
+    "app": "concurrently -k \"npm run dev\" \"node ferramentas/abrir-app.mjs\"",
     "app:build": "npm run build && electron-builder",
     "app:mac": "npm run build && electron-builder --mac",
     "app:win": "npm run build && electron-builder --win",
@@ -18,7 +19,8 @@
     "conferir": "node ferramentas/conferir-personagens.mjs",
     "folha": "python3 ferramentas/folha-de-personagens.py",
     "verificar": "node ferramentas/verificar.mjs",
-    "contraste": "python3 ferramentas/contraste.py"
+    "contraste": "python3 ferramentas/contraste.py",
+    "ambiente": "node ferramentas/ambiente.mjs"
   },
   "dependencies": {
     "@fontsource/silkscreen": "^5.3.0",

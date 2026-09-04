@@ -8,7 +8,29 @@ const { app, BrowserWindow, ipcMain, screen } = require("electron");
 const fs = require("node:fs/promises");
 const path = require("node:path");
 
-const PASTA_SAVES = () => path.join(app.getPath("userData"), "saves");
+/** Qual ambiente e esta pasta, lendo o mesmo .ambiente que o resto do projeto.
+ *
+ * Em desenvolvimento o jogo pode estar aberto em varias pastas ao mesmo tempo.
+ * A janela precisa saber em que porta o vite dela subiu, e os saves precisam de
+ * uma pasta so deles: senao o teste de uma frente apaga o progresso da outra.
+ */
+function ambiente() {
+  try {
+    const lido = JSON.parse(
+      require("node:fs").readFileSync(path.join(__dirname, "..", ".ambiente"), "utf-8"),
+    );
+    const numero = Number(lido.numero);
+    return Number.isInteger(numero) && numero > 0 && numero <= 9 ? numero : 0;
+  } catch {
+    return 0;
+  }
+}
+
+const AMBIENTE = DEV ? ambiente() : 0;
+const PORTA_VITE = 5173 + AMBIENTE * 10;
+
+const PASTA_SAVES = () =>
+  path.join(app.getPath("userData"), AMBIENTE ? `saves-ambiente-${AMBIENTE}` : "saves");
 const DEV = !app.isPackaged;
 
 async function garantirPasta() {
@@ -73,7 +95,7 @@ function criarJanela() {
   });
 
   janela.once("ready-to-show", () => janela.show());
-  if (DEV) janela.loadURL("http://localhost:5173");
+  if (DEV) janela.loadURL(`http://localhost:${PORTA_VITE}`);
   else janela.loadFile(path.join(__dirname, "..", "dist", "index.html"));
   return janela;
 }
