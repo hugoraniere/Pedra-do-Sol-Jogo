@@ -6,7 +6,7 @@
   "description": "Jogo de aventura do Reino de Aurora, feito para o Lele jogar",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "npm run verificar && tsc --noEmit && vite build",
     "preview": "vite preview",
     "arte": "python3 arte/gerar.py",
     "som": "python3 som/gerar.py",
@@ -18,6 +18,7 @@
     "auditar": "npm run build && node ferramentas/auditar-ui.mjs",
     "conferir": "node ferramentas/conferir-personagens.mjs",
     "folha": "python3 ferramentas/folha-de-personagens.py",
+    "bestiario": "python3 ferramentas/folha-do-bestiario.py",
     "verificar": "node ferramentas/verificar.mjs",
     "criatura": "node ferramentas/conferir-criatura.mjs",
     "condicoes": "node ferramentas/conferir-condicoes.mjs",

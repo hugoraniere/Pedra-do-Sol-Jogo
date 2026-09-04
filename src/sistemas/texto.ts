@@ -7,16 +7,36 @@
  *
  * Tamanhos: use sempre multiplo de 8. A fonte foi desenhada em 8 px, entao 8, 16,
  * 24 e 32 ficam perfeitos e qualquer valor no meio volta a borrar.
+ *
+ * A fonte e desenhada pixel por pixel em arte/fonte.py, e nao rasterizada de um
+ * .ttf. Ela e proporcional (o "i" avanca 2 px e o "m" avanca 6) e ja traz 1 px
+ * de ar dentro do proprio avanco, entao aqui nao se mexe mais no espacamento:
+ * a Silkscreen antiga precisava de tracking negativo porque avancava 6 px para
+ * uma letra desenhada em 4.
+ *
+ * O CENTRO OPTICO deixou de ser correcao daqui e virou desenho: a fonte ocupa a
+ * linha de 10 px inteira, com a maiuscula de 2 a 7 e a perna do "g" ate 9, e ai
+ * o meio da caixa ja e o meio do texto. Corrigir por fora era pior do que
+ * parecia: mover o objeto move a CAIXA junto, e a caixa deslocada invadia a
+ * linha de baixo. Foi assim que o nome do heroi passou a esbarrar na raca dele
+ * dentro da ficha, sem nada estar visivelmente errado na tela.
  */
 import Phaser from "phaser";
 
 export const FONTE_BITMAP = "aurora";
 
+/** Quanto encolher o avanco de cada letra. A fonte ja vem com o ar certo. */
+export const TRACKING = 0;
+
+/** O maior avanco da fonte, ja com o tracking. Serve para medir por cima quando
+ *  nao da para perguntar a fonte de verdade: nenhuma letra passa disto. */
+export const AVANCO_MAX = 6 + TRACKING;
+
 /** Marca o objeto para o auditor de UI saber o que ele e.
  *  Mora aqui, e nao em design.ts, so para nao criar import circular. */
 export function marcar(
   obj: Phaser.GameObjects.GameObject,
-  tipo: "texto" | "botao" | "painel" | "icone" | "fundo",
+  tipo: "texto" | "botao" | "painel" | "icone" | "fundo" | "palco",
   dono?: string
 ) {
   obj.setData("ui", { tipo, dono });
@@ -42,7 +62,11 @@ export function texto(
   conteudo: string,
   op: OpcoesTexto = {}
 ): Phaser.GameObjects.BitmapText {
-  const t = cena.add.bitmapText(x, y, FONTE_BITMAP, conteudo, op.tamanho ?? 8);
+  const tamanho = op.tamanho ?? 8;
+  const t = cena.add.bitmapText(x, y, FONTE_BITMAP, conteudo, tamanho);
+  // o Phaser ja multiplica o espacamento pela escala da fonte, entao o valor
+  // aqui e sempre o mesmo: multiplicar de novo colava as letras no corpo 16
+  t.setLetterSpacing(TRACKING);
   if (op.cor !== undefined) t.setTint(op.cor);
   if (op.larguraMax) t.setMaxWidth(op.larguraMax);
   if (op.alinhamento !== undefined) t.setCenterAlign?.();
@@ -67,4 +91,23 @@ export function textoComSombra(
   const desvio = Math.max(1, Math.round((op.tamanho ?? 8) / 8));
   marcar(texto(cena, x + desvio, y + desvio, conteudo, { ...op, cor: corSombra }), "fundo");
   return texto(cena, x, y, conteudo, op);
+}
+
+/** Largura exata de um texto, perguntando as metricas da fonte carregada.
+ *
+ *  Existe porque medir "8 px por letra" errava por ate 60%: a fonte avanca de 3
+ *  a 7 px conforme a letra. Quem monta chip e chapinha precisa da largura de
+ *  verdade, senao sobra ou falta borda. */
+export function medirTexto(cena: Phaser.Scene, conteudo: string, tamanho: 8 | 16 | 24 | 32 = 8) {
+  const fonte = cena.cache.bitmapFont.get(FONTE_BITMAP) as
+    | { data: { chars: Record<number, { xAdvance: number }>; size: number } }
+    | undefined;
+  if (!fonte) return conteudo.length * (AVANCO_MAX * (tamanho / 8));
+  const escala = tamanho / fonte.data.size;
+  let largura = 0;
+  for (const ch of conteudo) {
+    const c = fonte.data.chars[ch.charCodeAt(0)];
+    largura += ((c?.xAdvance ?? AVANCO_MAX) + TRACKING) * escala;
+  }
+  return Math.ceil(largura);
 }

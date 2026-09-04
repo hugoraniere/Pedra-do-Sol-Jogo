@@ -35,6 +35,43 @@ FOLHA_C    = (108, 182, 108)
 FOLHA      = (72, 142, 82)
 FOLHA_E    = (46, 104, 62)
 
+# ------------------------------------------------------- a Floresta dos Sussurros
+# A mata e mais escura e mais FRIA que a grama da vila, nao so mais escura: e o
+# que faz a floresta parecer outro lugar e nao a vila com mais arvore.
+
+MATA_C     = (72, 130, 88)     # grama de mata, luz
+MATA       = (48, 98, 70)
+MATA_E     = (32, 70, 54)
+
+PINHEIRO_C = (76, 140, 104)    # conifera, puxa para o azul
+PINHEIRO   = (48, 104, 82)
+PINHEIRO_E = (30, 72, 60)
+
+CASCA_C    = (118, 88, 66)     # tronco de mata, mais frio que MADEIRA
+CASCA      = (86, 62, 48)
+CASCA_E    = (58, 42, 36)
+
+MUSGO_C    = (128, 178, 96)
+MUSGO      = (92, 142, 74)
+
+FOLHAGEM_C = (186, 148, 96)    # chao de folha seca
+FOLHAGEM   = (150, 114, 74)
+FOLHAGEM_E = (112, 84, 58)
+
+BARRANCO_C = (140, 132, 146)   # a parede de pedra que corta o mapa
+BARRANCO   = (104, 98, 118)
+BARRANCO_E = (74, 70, 92)
+
+TEIA       = (246, 224, 234)   # a Teia Doce e rosa e comestivel, nao cinza
+TEIA_E     = (214, 178, 200)
+
+COGUMELO   = (226, 88, 84)
+COGUMELO_E = (176, 56, 62)
+COGUMELO_A = (120, 176, 232)   # o que brilha no Bosque das Lanternas
+
+NEVOA      = (196, 214, 226)
+LUZ_FOLHA  = (255, 246, 214)   # o feixe de luz entre as folhas
+
 OURO       = (245, 182, 43)
 OURO_E     = (198, 138, 24)
 VERMELHO   = (226, 72, 61)

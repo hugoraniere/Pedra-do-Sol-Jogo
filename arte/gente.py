@@ -43,6 +43,13 @@ import cabelo as cabelo_arte
 import equipamento
 import goblin as goblin_arte
 import aranha as aranha_arte
+import espantalho as espantalho_arte
+import lobo as lobo_arte
+import bruxa as bruxa_arte
+import troll as troll_arte
+import cavaleiro as cavaleiro_arte
+import serpente as serpente_arte
+import dragao as dragao_arte
 
 from pessoa import ORDEM_RACAS
 from roupa import ESTILOS_ROUPA, ROUPA_DA_CLASSE
@@ -218,6 +225,21 @@ def gerar(saida, a_mao=None):
     for tipo in aranha_arte.TIPOS:
         guardar(f"aranha-{tipo}", folha(aranha_arte.aranha, tipo=tipo))
 
+    # ------ o bestiario, uma folha por criatura
+    # Cada uma na grade do PORTE dela, em src/dados/conteudo.ts. Espremer a
+    # Serpente ou o dragao em 16 x 32 daria dois desenhos ruins; a grade e do
+    # tamanho do bicho, e o jogo le o tamanho da ficha em vez de supor.
+    # As chaves aqui sao as mesmas do campo `sprite` do BESTIARIO: se uma
+    # divergir, a criatura some do jogo calada.
+    guardar("aranha", folha(aranha_arte.aranha, tipo="media"))
+    guardar("espantalho", folha(espantalho_arte.espantalho))
+    guardar("lobo-nevoa", folha(lobo_arte.lobo))
+    guardar("bruxa", folha(bruxa_arte.bruxa))
+    guardar("grulo", folha_de(troll_arte.troll, 24, 40))
+    guardar("cavaleiro-cinzas", folha_de(cavaleiro_arte.cavaleiro, 24, 40))
+    guardar("serpente", folha_de(serpente_arte.serpente, 24, 40))
+    guardar("brasanegra", folha_de(dragao_arte.dragao, 48, 48))
+
     encaixes = {
         "colunas": COLUNAS,
         "linhas": LINHAS,
@@ -248,5 +270,7 @@ def gerar(saida, a_mao=None):
         "npcs": [n for n, _ in NPCS],
         "goblins": list(goblin_arte.TIPOS),
         "aranhas": list(aranha_arte.TIPOS),
+        "criaturas": ["goblin", "aranha", "espantalho", "lobo-nevoa", "serpente",
+                      "grulo", "bruxa", "cavaleiro-cinzas", "brasanegra"],
     }
     return indice, encaixes

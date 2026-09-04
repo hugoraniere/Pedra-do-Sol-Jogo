@@ -163,6 +163,50 @@ if (npcFrame) {
         "esse NPC vai aparecer com o rosto do frame 0, e nada avisa");
 }
 
+/* ------------------------------------- 5.5 criatura em cima de parede */
+// Bicho posto dentro do rio ou dentro da mata nao da erro nenhum: ele aparece,
+// fica boiando, e ninguem entende por que. Aconteceu no primeiro Lobo de Nevoa,
+// que nasceu no meio do riacho. As letras solidas nao ficam escritas aqui: sao
+// deduzidas de SOLIDOS em config.ts e de LETRA_TILE em mapas.ts, senao esta
+// conferencia mentiria no dia em que alguem mexesse na lista.
+
+{
+  const solidosNomes = tudo(
+    /T\.([a-zA-Z0-9]+)/g,
+    bloco(config, "export const SOLIDOS = [", "];")
+  ).map((m) => m[1]);
+
+  const letraSolida = new Set();
+  for (const m of tudo(
+    /^\s*"?([^":\s]+)"?:\s*\[([^\]]+)\]/gm,
+    bloco(mapas, "const LETRA_TILE: Record<string, number[]> = {", "};")
+  )) {
+    const nomes = tudo(/T\.([a-zA-Z0-9]+)/g, m[2]).map((x) => x[1]);
+    if (nomes.some((n) => solidosNomes.includes(n))) letraSolida.add(m[1]);
+  }
+
+  for (const m of mapas.matchAll(/export const (\w+): Mapa = \{/g)) {
+    const nome = m[1];
+    const corpo = mapas.slice(m.index);
+    const desenho = tudo(/"((?:[^"\\]|\\.)*)"/g, bloco(corpo, "  chao: [", "  ],"))
+      .map((l) => l[1].replace(/\\"/g, '"'));
+    if (!desenho.length) continue;
+    const fim = corpo.indexOf("\n};");
+    const listaCriaturas = corpo.slice(0, fim).match(/criaturas: \[([\s\S]*?)\n  \]/);
+    if (!listaCriaturas) continue;
+    for (const c of tudo(/\{\s*id: "([a-z-]+)",\s*x: (\d+),\s*y: (\d+)/g, listaCriaturas[1])) {
+      const [, id, sx, sy] = c;
+      const x = +sx, y = +sy;
+      const letra = desenho[y]?.[x];
+      if (letra === undefined)
+        erro("mapas", `${nome}: a criatura "${id}" esta fora do mapa, em (${x}, ${y})`);
+      else if (letraSolida.has(letra))
+        erro("mapas", `${nome}: a criatura "${id}" nasce dentro de "${letra}" em (${x}, ${y})`,
+          "bicho em cima de parede ou de agua fica boiando e ninguem entende por que");
+    }
+  }
+}
+
 /* ---------------------------------------------------------- 6. a paleta */
 // CLAUDE.md: as duas listas sao a mesma paleta do material impresso.
 // Nada no codigo garante isso. A cor foge devagar e ninguem percebe.
@@ -363,7 +407,15 @@ if (sons) {
     .filter(([, t]) => /from\s+"[^"]*\/(som|sons)"/.test(t))
     .map(([c, t]) => (c === "src/sistemas/som.ts" ? semCarregador(t) : t))
     .join("\n")
-    .replace(/import\s[\s\S]*?from\s+"[^"]+";/g, "");
+    // ancorado no comeco da linha e sem atravessar ";".
+    //
+    // A versao solta, /import\s[\s\S]*?from\s+"..."/, mordia o jogo inteiro: a
+    // palavra "import" dentro de um COMENTARIO abria a mordida, e ela so fechava
+    // no proximo `from "..."` la na frente. Um comentario no meio do Mundo.ts
+    // comia 8 mil caracteres de corpo de cena, e ai o verificador jurava que
+    // nenhuma cena usava COLCHAO nem PONTOS, com o Mundo.ts usando os dois.
+    // Aviso falso e pior que aviso nenhum: ensina a ignorar a lista.
+    .replace(/^[ \t]*import\s(?:[^;]*?from\s+)?"[^"]+";/gm, "");
 
   const GRUPOS = [
     ["EFEITOS", "os sons avulsos do dia a dia"],

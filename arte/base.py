@@ -157,6 +157,20 @@ def folha(desenhar, **kw):
     return im
 
 
+def folha_de(desenhar, largura, altura, **kw):
+    """Como folha(), mas com quadro de outro tamanho.
+
+    Nem toda criatura cabe em 16 x 32. A Serpente e comprida, o Cavaleiro e
+    alto, Brasanegra e um dragao. Espremer os tres na grade do heroi daria tres
+    desenhos ruins; a grade e do tamanho do bicho, e o jogo le o tamanho da
+    ficha em vez de supor."""
+    im = Image.new("RGBA", (largura * len(COLUNAS), altura * len(LINHAS)), VAZIO4)
+    for li, direcao in enumerate(LINHAS):
+        for ci, coluna in enumerate(COLUNAS):
+            im.paste(desenhar(direcao, coluna, **kw), (ci * largura, li * altura))
+    return im
+
+
 def descer(folha_im, dy):
     """Desce o conteudo dy pixels DENTRO DE CADA QUADRO.
 

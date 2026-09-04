@@ -11,3 +11,8 @@ __pycache__/
 # cada frente de trabalho tem os seus, e eles nao entram no git
 .ambiente
 AMBIENTE.md
+
+# o registro das frentes vive fora do git de proposito: versionado, cada pasta
+# teria a sua copia e as conversas so se veriam depois do merge. Ver a skill
+# `frentes` em .claude/skills/frentes/SKILL.md
+FRENTES.md

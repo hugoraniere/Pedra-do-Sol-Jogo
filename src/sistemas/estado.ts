@@ -16,6 +16,13 @@ export type Heroi = {
   chapeu: string;
   corChapeu: number;
   armaSprite: string;
+  /** O +1 que o jogador coloca onde quiser, o passo 4 do manual impresso.
+   *
+   *  Guardamos a ESCOLHA, e nao o total dos tres poderes. O total sai de
+   *  poderesDoHeroi(), somando o +1 da raca, o +1 da classe e este. Assim, se um
+   *  dia a Cria de Dragao trocar de bonus em conteudo.ts, o save do Lele
+   *  acompanha em vez de ficar congelado com a regra antiga dentro dele. */
+  poderEscolhido: string;
 };
 
 export type Estado = {
@@ -27,6 +34,9 @@ export type Estado = {
   selos: number;
   mochila: string[];
   visitados: string[];
+  /** chave estavel de cada criatura ja vencida (`${cena}:${indice}` no mapa),
+   *  para ela nao voltar a existir quando o jogador reentra no lugar */
+  derrotados: string[];
   cena: string;
   lugar: string;
   minutos: number;
@@ -49,6 +59,7 @@ export const VAZIO: Estado = {
     chapeu: "pontudo",
     corChapeu: 0x7b5ac4,
     armaSprite: "cajado",
+    poderEscolhido: "",
   },
   coracoes: 3,
   coracoesMax: 3,
@@ -56,6 +67,7 @@ export const VAZIO: Estado = {
   selos: 0,
   mochila: [],
   visitados: [],
+  derrotados: [],
   cena: "vila",
   lugar: "Vila Semente",
   minutos: 0,
@@ -89,6 +101,10 @@ export function abrirEspaco(espaco: number): boolean {
   const lido = lerEspaco(espaco);
   if (!lido) return false;
   atual = { ...copia(VAZIO), ...lido, espaco };
+  // o espalhamento de cima e raso: o heroi lido substitui o heroi inteiro do
+  // VAZIO, entao um save gravado antes de um campo novo existir voltaria sem
+  // ele. Aqui o heroi antigo ganha os campos que nasceram depois dele.
+  atual.heroi = { ...copia(VAZIO.heroi), ...(lido.heroi ?? {}) };
   inicioDaSessao = Date.now();
   return true;
 }
@@ -113,4 +129,14 @@ export function marcarVisitado(chave: string): boolean {
   atual.visitados.push(chave);
   salvar();
   return true;
+}
+
+export function foiDerrotado(chave: string): boolean {
+  return atual.derrotados.includes(chave);
+}
+
+export function marcarDerrotado(chave: string) {
+  if (atual.derrotados.includes(chave)) return;
+  atual.derrotados.push(chave);
+  salvar();
 }

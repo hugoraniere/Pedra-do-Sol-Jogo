@@ -10,16 +10,21 @@
 
 export type Atributo = "forca" | "esperteza" | "coracao";
 
-export const ATRIBUTOS: Record<Atributo, { nome: string; icone: string }> = {
-  forca: { nome: "FORCA", icone: "forca" },
-  esperteza: { nome: "ESPERTEZA", icone: "esperteza" },
-  coracao: { nome: "CORACAO", icone: "coracao_cheio" },
+export const ATRIBUTOS: Record<Atributo, { nome: string; icone: string; oQueFaz: string }> = {
+  forca: { nome: "FORCA", icone: "forca", oQueFaz: "empurrar, subir, lutar, carregar" },
+  esperteza: { nome: "ESPERTEZA", icone: "esperteza", oQueFaz: "procurar, lembrar, consertar, magia" },
+  coracao: { nome: "CORACAO", icone: "coracao_cheio", oQueFaz: "coragem, fazer amigo, sorte, animais" },
 };
+
+/** A ordem em que os tres poderes aparecem na ficha de papel, de cima para baixo. */
+export const ORDEM_PODERES: Atributo[] = ["forca", "esperteza", "coracao"];
 
 // ------------------------------------------------------------------ racas
 export type Raca = {
   id: string;
   nome: string;
+  /** o nome numa palavra so, para caber embaixo do avatar na criacao */
+  curto: string;
   bonus: Atributo;
   dom: string;
   domTexto: string;
@@ -31,6 +36,7 @@ export const RACAS: Raca[] = [
   {
     id: "vale",
     nome: "Gente do Vale",
+    curto: "Vale",
     bonus: "coracao",
     dom: "Nunca Desisto",
     domTexto: "Uma vez por aventura voce pode rolar o dado de novo.",
@@ -40,6 +46,7 @@ export const RACAS: Raca[] = [
   {
     id: "anao",
     nome: "Anao da Fornalha",
+    curto: "Anao",
     bonus: "forca",
     dom: "Casco Duro",
     domTexto: "Voce comeca com 4 coracoes em vez de 3.",
@@ -49,6 +56,7 @@ export const RACAS: Raca[] = [
   {
     id: "elfo",
     nome: "Elfo da Folha",
+    curto: "Elfo",
     bonus: "esperteza",
     dom: "Olhos de Coruja",
     domTexto: "Voce enxerga no escuro e de bem longe.",
@@ -58,6 +66,7 @@ export const RACAS: Raca[] = [
   {
     id: "pequenino",
     nome: "Pequenino do Trigo",
+    curto: "Pequenino",
     bonus: "coracao",
     dom: "Pe de Coelho",
     domTexto: "Uma vez por aventura voce troca um OPS por um QUASE.",
@@ -67,6 +76,7 @@ export const RACAS: Raca[] = [
   {
     id: "dragao",
     nome: "Cria de Dragao",
+    curto: "Dragao",
     bonus: "forca",
     dom: "Sopro Quentinho",
     domTexto: "Uma vez por aventura voce solta fogo pela boca.",
@@ -79,6 +89,8 @@ export const RACAS: Raca[] = [
 export type Classe = {
   id: string;
   nome: string;
+  /** o nome numa palavra so, para caber embaixo do avatar na criacao */
+  curto: string;
   bonus: Atributo;
   arma: string;
   habilidade: string;
@@ -90,6 +102,7 @@ export const CLASSES: Classe[] = [
   {
     id: "cavaleiro",
     nome: "Cavaleiro",
+    curto: "Cavaleiro",
     bonus: "forca",
     arma: "espada-curta",
     habilidade: "Golpe Trovao",
@@ -99,6 +112,7 @@ export const CLASSES: Classe[] = [
   {
     id: "mago",
     nome: "Mago da Torre",
+    curto: "Mago",
     bonus: "esperteza",
     arma: "cajado",
     habilidade: "Tres Magias",
@@ -108,6 +122,7 @@ export const CLASSES: Classe[] = [
   {
     id: "cacador",
     nome: "Cacador de Dragao",
+    curto: "Cacador",
     bonus: "esperteza",
     arma: "arco",
     habilidade: "Olho de Alvo",
@@ -117,6 +132,7 @@ export const CLASSES: Classe[] = [
   {
     id: "amigo",
     nome: "Amigo dos Bichos",
+    curto: "Amigo",
     bonus: "coracao",
     arma: "funda",
     habilidade: "Fala com Bichos",
@@ -126,6 +142,7 @@ export const CLASSES: Classe[] = [
   {
     id: "ferreiro",
     nome: "Ferreiro Andarilho",
+    curto: "Ferreiro",
     bonus: "forca",
     arma: "martelo",
     habilidade: "Conserta Tudo",
@@ -189,24 +206,155 @@ export const LOJA: Item[] = [
 ];
 
 // ------------------------------------------------------------- bestiario
+//
+// A ficha de cada criatura, inteira. O que estava aqui antes eram cinco campos
+// de enciclopedia (nome, coracoes, fraqueza, texto): dava para escrever o
+// bestiario na tela e mais nada. Agora ela tem o que o jogo precisa para POR a
+// criatura no mapa e para ela reagir.
+//
+// A coluna que manda e `fraquezaId`. Nenhuma das nove fraquezas do RPG de mesa
+// e um tipo de dano: sao todas CONHECIMENTO. Saber e a arma, e por isso a
+// fraqueza precisa ser uma chave que o codigo compara, e nao so a frase bonita
+// que aparece no livro.
+
+/** O que a criatura faz quando ninguem mexe com ela, e o que faz quando mexem. */
+export type Comportamento =
+  /** corre do heroi. So bate se ficar sem saida. */
+  | "foge"
+  /** anda a propria rota e ignora o heroi ate ser tocada. */
+  | "ronda"
+  /** parada, olhando. Quando ve, chama as outras em vez de atacar sozinha. */
+  | "vigia"
+  /** vem para cima, reta e sem pressa. Nao desiste. */
+  | "encara"
+  /** some e reaparece em outro lugar. Nunca aparece duas vezes no mesmo ponto. */
+  | "espreita"
+  /** nao sai do lugar: existe para fechar uma passagem. */
+  | "guarda"
+  /** rotina propria, escrita cena a cena. */
+  | "chefe";
+
+/** Tamanho do quadro do sprite. A folha padrao do jogo e 16 x 32; quem nao
+ *  cabe nela ganha grade propria, e nao um desenho espremido. */
+export type Porte = "pequeno" | "medio" | "grande" | "enorme";
+
+export const PORTES: Record<Porte, { largura: number; altura: number }> = {
+  pequeno: { largura: 16, altura: 32 },
+  medio: { largura: 16, altura: 32 },
+  grande: { largura: 24, altura: 40 },
+  enorme: { largura: 48, altura: 48 },
+};
+
 export type Criatura = {
   id: string;
   nome: string;
   coracoes: number;
+  /** a frase do livro, para o jogador ler */
   fraqueza: string;
+  /** a mesma fraqueza, como chave, para o codigo comparar */
+  fraquezaId: string;
   texto: string;
+  /** chave do sprite em public/assets */
+  sprite: string;
+  porte: Porte;
+  comportamento: Comportamento;
+  /** px por segundo. O heroi anda a 62: acima disso ela alcanca, abaixo nao. */
+  velocidade: number;
+  /** distancia do golpe, em px */
+  alcance: number;
+  /** coracoes por golpe */
+  dano: number;
+  /** o aviso de meio segundo antes do golpe. Toda criatura tem um, e e por ele
+   *  que o jogador aprende a ler a briga em vez de decorar. */
+  telegrafo: string;
+  /** o que fica no chao quando ela e vencida */
+  larga: string[];
+  /** em que lugares ela aparece */
+  onde: string[];
 };
 
 export const BESTIARIO: Criatura[] = [
-  { id: "goblin", nome: "Goblin da Fumaca", coracoes: 1, fraqueza: "barulho alto de metal", texto: "Pequeno, verde, orelhudo. Foge mais do que briga." },
-  { id: "grulo", nome: "Grulo, o Troll", coracoes: 4, fraqueza: "uma boa gargalhada", texto: "Cobra pedagio na ponte. No fundo quer companhia." },
-  { id: "espantalho", nome: "Espantalho Andarilho", coracoes: 2, fraqueza: "agua", texto: "Anda sozinho pelo campo procurando o dono." },
-  { id: "aranha", nome: "Aranha da Teia Doce", coracoes: 2, fraqueza: "comer a teia e escapar", texto: "A teia dela e doce de verdade. Da pra comer." },
-  { id: "lobo-nevoa", nome: "Lobo de Nevoa", coracoes: 2, fraqueza: "luz forte", texto: "Aparece e some no meio da neblina." },
-  { id: "serpente", nome: "Serpente do Pantano", coracoes: 3, fraqueza: "cocegas embaixo do queixo", texto: "Engoliu o Cristal do Meio-dia sem querer." },
-  { id: "cavaleiro-cinzas", nome: "Cavaleiro de Cinzas", coracoes: 5, fraqueza: "agua fria", texto: "Armadura vazia por dentro, cheia de cinza." },
-  { id: "bruxa", nome: "Bruxa Espinho", coracoes: 3, fraqueza: "nao consegue mentir sobre o proprio nome", texto: "Foi ela quem quebrou a Pedra do Sol." },
-  { id: "brasanegra", nome: "Brasanegra", coracoes: 10, fraqueza: "o nome verdadeiro, Aurel", texto: "O dragao guardiao, com o coracao cheio de cinzas." },
+  {
+    id: "goblin", nome: "Goblin da Fumaca", coracoes: 1,
+    fraqueza: "barulho alto de metal", fraquezaId: "barulho-metal",
+    texto: "Pequeno, verde, orelhudo. Foge mais do que briga.",
+    sprite: "goblin", porte: "pequeno", comportamento: "foge",
+    velocidade: 70, alcance: 12, dano: 1,
+    telegrafo: "levanta o pau acima da cabeca e fecha os olhos",
+    larga: ["moeda"], onde: ["floresta", "caverna"],
+  },
+  {
+    id: "aranha", nome: "Aranha da Teia Doce", coracoes: 2,
+    fraqueza: "comer a teia e escapar", fraquezaId: "comer-teia",
+    texto: "A teia dela e doce de verdade. Da pra comer.",
+    sprite: "aranha", porte: "pequeno", comportamento: "ronda",
+    velocidade: 34, alcance: 14, dano: 1,
+    telegrafo: "encolhe as oito pernas antes do bote",
+    larga: ["teia-doce"], onde: ["floresta"],
+  },
+  {
+    id: "espantalho", nome: "Espantalho Andarilho", coracoes: 2,
+    fraqueza: "agua", fraquezaId: "agua",
+    texto: "Anda sozinho pelo campo procurando o dono.",
+    sprite: "espantalho", porte: "medio", comportamento: "ronda",
+    velocidade: 28, alcance: 16, dano: 1,
+    telegrafo: "gira os bracos como cata-vento",
+    larga: ["palha", "moeda"], onde: ["campo", "vila"],
+  },
+  {
+    id: "lobo-nevoa", nome: "Lobo de Nevoa", coracoes: 2,
+    fraqueza: "luz forte", fraquezaId: "luz",
+    texto: "Aparece e some no meio da neblina.",
+    sprite: "lobo-nevoa", porte: "medio", comportamento: "espreita",
+    velocidade: 78, alcance: 14, dano: 1,
+    telegrafo: "a nevoa se junta num ponto antes de ele sair dela",
+    larga: ["presa-de-nevoa"], onde: ["floresta"],
+  },
+  {
+    id: "serpente", nome: "Serpente do Pantano", coracoes: 3,
+    fraqueza: "cocegas embaixo do queixo", fraquezaId: "cocegas",
+    texto: "Engoliu o Cristal do Meio-dia sem querer.",
+    sprite: "serpente", porte: "grande", comportamento: "guarda",
+    velocidade: 40, alcance: 20, dano: 1,
+    telegrafo: "recolhe o pescoco em S e fica quieta demais",
+    larga: ["cristal-meio-dia"], onde: ["pantano"],
+  },
+  {
+    id: "grulo", nome: "Grulo, o Troll", coracoes: 4,
+    fraqueza: "uma boa gargalhada", fraquezaId: "riso",
+    texto: "Cobra pedagio na ponte. No fundo quer companhia.",
+    sprite: "grulo", porte: "grande", comportamento: "guarda",
+    velocidade: 30, alcance: 20, dano: 1,
+    telegrafo: "bate o porrete no chao duas vezes",
+    larga: ["pedagio"], onde: ["ponte"],
+  },
+  {
+    id: "bruxa", nome: "Bruxa Espinho", coracoes: 3,
+    fraqueza: "nao consegue mentir sobre o proprio nome", fraquezaId: "nome-proprio",
+    texto: "Foi ela quem quebrou a Pedra do Sol.",
+    sprite: "bruxa", porte: "medio", comportamento: "chefe",
+    velocidade: 55, alcance: 60, dano: 1,
+    telegrafo: "o espinho racha o chao antes de subir",
+    larga: ["cristal-anoitecer"], onde: ["torre"],
+  },
+  {
+    id: "cavaleiro-cinzas", nome: "Cavaleiro de Cinzas", coracoes: 5,
+    fraqueza: "agua fria", fraquezaId: "agua-fria",
+    texto: "Armadura vazia por dentro, cheia de cinza.",
+    sprite: "cavaleiro-cinzas", porte: "grande", comportamento: "encara",
+    velocidade: 36, alcance: 18, dano: 2,
+    telegrafo: "a viseira acende por dentro",
+    larga: ["cinza"], onde: ["torre", "pico"],
+  },
+  {
+    id: "brasanegra", nome: "Brasanegra", coracoes: 10,
+    fraqueza: "o nome verdadeiro, Aurel", fraquezaId: "nome-verdadeiro",
+    texto: "O dragao guardiao, com o coracao cheio de cinzas.",
+    sprite: "brasanegra", porte: "enorme", comportamento: "chefe",
+    velocidade: 45, alcance: 90, dano: 2,
+    telegrafo: "o peito acende de dentro para fora antes do sopro",
+    larga: ["pedra-do-sol"], onde: ["pico"],
+  },
 ];
 
 // ------------------------------------------------------------- utilidades

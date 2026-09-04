@@ -11,8 +11,11 @@
  * mesmo nome, e ganha do rascunho sem mexer em nenhuma linha de codigo.
  *
  * O volume e sempre relativo a fala, que e o som mais importante do jogo e vale 1.
- * Passo vale 0.2 de proposito: e o som que mais toca, e som que mais toca tem que
- * ser o mais discreto, senao cansa em dois minutos.
+ *
+ * O passo e o som que mais toca, entao o instinto e deixar ele bem baixo pra nao
+ * cansar. Na pratica isso o apagou: ele nao competia com a fala, sumia junto com
+ * o ambiente. Andar e a acao que o Lele mais faz no jogo, e acao que nao devolve
+ * nada parece que nao aconteceu. Agora ele se ouve. Se cansar, e aqui que abaixa.
  */
 
 import { T } from "./config";
@@ -66,11 +69,11 @@ export type ChaveColchao = keyof typeof COLCHAO;
 
 export const EFEITOS = {
   // --- passos, um por tipo de chao. ver PASSO_DO_TILE la embaixo
-  "passo-grama": { arquivo: "passo-grama", volume: 0.2, variacao: 120 },
-  "passo-terra": { arquivo: "passo-terra", volume: 0.2, variacao: 120 },
-  "passo-areia": { arquivo: "passo-areia", volume: 0.18, variacao: 120 },
-  "passo-madeira": { arquivo: "passo-madeira", volume: 0.22, variacao: 100 },
-  "passo-pedra": { arquivo: "passo-pedra", volume: 0.22, variacao: 100 },
+  "passo-grama": { arquivo: "passo-grama", volume: 0.45, variacao: 120 },
+  "passo-terra": { arquivo: "passo-terra", volume: 0.45, variacao: 120 },
+  "passo-areia": { arquivo: "passo-areia", volume: 0.42, variacao: 120 },
+  "passo-madeira": { arquivo: "passo-madeira", volume: 0.5, variacao: 100 },
+  "passo-pedra": { arquivo: "passo-pedra", volume: 0.5, variacao: 100 },
 
   // --- fala
   "fala-abre": { arquivo: "fala-abre", volume: 0.5 },
@@ -306,13 +309,17 @@ export const FRAQUEZA_SONORA = {
 /** Pesada. NAO entra no Boot: travaria a barra de carregamento no wifi do iPad.
  *  Carrega depois, com o jogo ja rodando.
  *
- *  Nao tem rascunho gerado: melodia sintetizada seria pior que silencio. Estas
- *  duas ficam faltando na banca ate baixarem de verdade. */
+ *  As duas sao rascunho como todo o resto, mas rascunho ESCRITO: a melodia esta
+ *  nota por nota em som/gerar.py, secao "musica", e da pra mexer nela sem saber
+ *  nada de sintese. Trilha gravada por gente entra por som/prontos/ e ganha.
+ *
+ *  O volume e mais baixo que o de qualquer efeito de proposito: trilha que
+ *  disputa com a fala atrapalha justamente quem le devagar. */
 export const MUSICAS = {
   /** vale para o Titulo, o Carregar e a Criacao: do ponto de vista do jogador
    *  sao o mesmo lugar, fora do mundo. Nao recomece a faixa entre eles. */
-  menu: { arquivo: "musica-menu", volume: 0.45, loop: true, pendente: true },
-  vila: { arquivo: "musica-vila", volume: 0.4, loop: true, pendente: true },
+  menu: { arquivo: "musica-menu", volume: 0.4, loop: true },
+  vila: { arquivo: "musica-vila", volume: 0.32, loop: true },
 } satisfies Record<string, FichaSom>;
 
 /* ---------------------------------------------------------------- ambiente */

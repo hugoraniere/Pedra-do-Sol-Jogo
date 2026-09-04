@@ -3,6 +3,13 @@
 Escrito depois da reforma de racas e classes, para ser executado em fases.
 Nada aqui foi implementado ainda.
 
+> **A "Escolha 1" deste documento foi retomada em `docs/estudo-de-resolucao.md`.**
+> Aqui a recomendacao era a opcao B, 32 x 64. La a recomendacao e **tile 48,
+> personagem 48 x 96, em escala 1**, com a conta refeita para computador em
+> primeiro lugar. As duas nao podem valer ao mesmo tempo: quem executar precisa
+> fechar uma e riscar a outra. O resto deste documento, sobre contraste e UI,
+> nao foi afetado.
+
 ## O problema, em uma frase cada
 
 **Resolucao.** O jogo roda em 320 x 192 pixels logicos, com tile de 16 e

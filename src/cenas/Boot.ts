@@ -5,6 +5,7 @@ import {
   RACAS_SPRITE, TIPOS_CORPO, CABELOS_ESTILO, ROUPAS_ESTILO, CHAPEUS, ARMAS_SPRITE,
   NPCS_SPRITE, GOBLINS_SPRITE, ARANHAS_SPRITE, PECA_ROUPA,
 } from "../dados/config";
+import { BESTIARIO, PORTES } from "../dados/conteudo";
 import { prepararArmazenamento } from "../sistemas/armazenamento";
 import { guardarEncaixes, Encaixes } from "../sistemas/encaixes";
 import { vigiarCarregamento } from "../sistemas/doutor";
@@ -60,7 +61,14 @@ export class Boot extends Phaser.Scene {
     NPCS_SPRITE.forEach((n) => this.load.spritesheet(`npc-${n}`, `assets/npc-${n}.png`, P));
     GOBLINS_SPRITE.forEach((g) => this.load.spritesheet(`goblin-${g}`, `assets/goblin-${g}.png`, P));
     ARANHAS_SPRITE.forEach((a) => this.load.spritesheet(`aranha-${a}`, `assets/aranha-${a}.png`, P));
-    this.load.spritesheet("goblin", "assets/goblin.png", P);
+    // O bestiario carrega a si mesmo. Cada criatura diz na ficha qual e o
+    // sprite dela e qual o porte, e o porte diz o tamanho do quadro: assim
+    // criatura nova entra no jogo mexendo so em conteudo.ts, sem tocar aqui.
+    BESTIARIO.forEach((c) => {
+      const q = PORTES[c.porte];
+      this.load.spritesheet(c.sprite, `assets/${c.sprite}.png`,
+        { frameWidth: q.largura, frameHeight: q.altura });
+    });
     this.load.image("titulo", "assets/titulo.png");
     this.load.image("logo", "assets/logo.png");
     this.load.bitmapFont("aurora", "assets/fonte.png", "assets/fonte.xml");

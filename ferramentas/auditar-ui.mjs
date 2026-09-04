@@ -78,6 +78,28 @@ async function clicarRelativo(fx, fy) {
   await clicar(Math.round(t.largura * fx), Math.round(t.altura * fy));
 }
 
+/** Clica num texto pelo comeco do que ele diz. Mesmo motivo do clicarBotao: a
+ *  dica de sortear o nome mudou de altura junto com o layout, e um clique em
+ *  fracao da tela passou a cair na caixa do nome sem ninguem perceber. */
+async function clicarTexto(inicio) {
+  const ponto = await pagina.evaluate((alvo) => {
+    const achatar = (l) => l.flatMap((o) => (Array.isArray(o.list) ? [o, ...achatar(o.list)] : [o]));
+    for (const cena of window.jogo.scene.getScenes(true)) {
+      const t = achatar(cena.children.list).find(
+        (o) => o.getData?.("ui")?.tipo === "texto" && String(o.getData("ui").dono ?? "").startsWith(alvo)
+      );
+      if (t) {
+        const r = t.getBounds();
+        return { x: r.centerX, y: r.centerY };
+      }
+    }
+    return null;
+  }, inicio);
+  if (!ponto) throw new Error(`texto nao encontrado: ${inicio}`);
+  await clicar(ponto.x, ponto.y);
+  await pagina.waitForTimeout(350);
+}
+
 /** Clica num botao pelo rotulo, nao pela coordenada. Assim mexer no layout nao
  *  quebra a auditoria, que e justamente quem deveria pegar o estrago do layout. */
 async function clicarBotao(rotulo) {
@@ -94,6 +116,22 @@ async function clicarBotao(rotulo) {
   if (!ponto) throw new Error(`botao nao encontrado: ${rotulo}`);
   await clicar(ponto.x, ponto.y);
   await pagina.waitForTimeout(350);
+}
+
+/** O nome do heroi nos testes.
+ *
+ *  O percurso sorteava o nome, e o sorteio escolhe um de cinco a cada rodada:
+ *  todo screenshot que mostra o nome mudava sozinho, sem nada ter mudado na tela.
+ *  PNG instavel em pasta versionada vira conflito de imagem no merge, e conflito
+ *  de imagem nao se resolve. Com o nome fixo, um screenshot so muda quando a UI
+ *  muda de verdade, e ai o diff quer dizer alguma coisa.
+ *
+ *  O nome e o do heroi que o Lele criou na mesa. */
+const NOME_DO_HEROI = "Trovao Floresta"; // 15 letras: LETRAS_DO_NOME em Criacao.ts e 16, e "Trovao da Floresta" (18) nao cabe
+
+async function digitarNome() {
+  await pagina.keyboard.type(NOME_DO_HEROI, { delay: 20 });
+  await pagina.waitForTimeout(250);
 }
 
 const telas = [];
@@ -120,35 +158,84 @@ const problemas = [];
 problemas.push(...(await olhar("01-titulo")));
 
 await clicarBotao("NOVO JOGO");
-problemas.push(...(await olhar("02-criacao-nome")));
-await clicarRelativo(0.5, 0.74); // sortear nome
-await clicarBotao("SEGUIR >");
-problemas.push(...(await olhar("03-criacao-raca")));
+problemas.push(...(await olhar("02-criacao-raca")));
+// trocar a raca e o que o boneco da vitrine precisa provar: os cinco mudam junto
+await clicarBotao("Anao");
+problemas.push(...(await olhar("03-criacao-raca-anao")));
 await clicarBotao("SEGUIR >");
 problemas.push(...(await olhar("04-criacao-classe")));
+await clicarBotao("Mago");
+problemas.push(...(await olhar("05-criacao-classe-mago")));
 await clicarBotao("SEGUIR >");
-problemas.push(...(await olhar("05-criacao-aparencia")));
-await clicarBotao("SEM EQUIPAMENTO");
-problemas.push(...(await olhar("06-criacao-sem-equipamento")));
-await clicarBotao("COM EQUIPAMENTO");
+problemas.push(...(await olhar("06-criacao-poder")));
 await clicarBotao("SEGUIR >");
-problemas.push(...(await olhar("07-criacao-pronto")));
+problemas.push(...(await olhar("07-criacao-heroi")));
+await digitarNome();
+problemas.push(...(await olhar("08-criacao-heroi-com-nome")));
+await clicarBotao("SEM ARMA");
+problemas.push(...(await olhar("09-criacao-sem-arma")));
+await clicarBotao("COM ARMA");
 
 await clicarBotao("COMECAR A AVENTURA");
 await pagina.waitForTimeout(1500);
-problemas.push(...(await olhar("08-mundo")));
+problemas.push(...(await olhar("10-mundo")));
+
+await clicarBotao("FICHA");        // o nome do heroi no topo abre a ficha
+await pagina.waitForTimeout(500);
+problemas.push(...(await olhar("11-janela-eu")));
+for (const aba of ["PODERES", "MAGIAS", "MOCHILA", "DIARIO", "MENU"]) {
+  await clicarBotao(aba);
+  problemas.push(...(await olhar(`11-janela-${aba.toLowerCase()}`)));
+}
+await clicarBotao("FECHAR");
+await pagina.waitForTimeout(500);
 
 await clicarRelativo(0.97, 0.042); // engrenagem de pausa no topo
 await pagina.waitForTimeout(500);
-problemas.push(...(await olhar("09-pausa")));
+problemas.push(...(await olhar("12-pausa")));
 await clicarBotao("CONFIGURACOES");
-problemas.push(...(await olhar("10-configuracoes")));
+problemas.push(...(await olhar("13-configuracoes")));
 await clicarBotao("< VOLTAR");            // volta de config para o menu de pausa
 await clicarBotao("SAIR PARA O MENU");
 await pagina.waitForTimeout(1400);
-problemas.push(...(await olhar("11-titulo-com-save")));
+problemas.push(...(await olhar("14-titulo-com-save")));
 await clicarBotao("CARREGAR JOGO");
-problemas.push(...(await olhar("12-carregar")));
+problemas.push(...(await olhar("15-carregar")));
+
+// ------------------------------------- a criacao nas outras duas visoes
+/** A visao escolhida nao e zoom de camera, e resolucao logica: 256x160, 320x192
+ *  ou 400x240. O percurso de cima roda na do meio, e por isso passou anos verde
+ *  enquanto a tela de criacao se quebrava em 256x160, onde a grade de botoes
+ *  subia por cima do palco do boneco. Aqui a criacao inteira roda de novo nas
+ *  outras duas, que e onde a conta de altura aperta. */
+async function criacaoNaVisao(zoom) {
+  await pagina.evaluate(
+    (z) => localStorage.setItem("aurora-preferencias", JSON.stringify({ zoom: z, som: true })),
+    zoom
+  );
+  await pagina.reload({ waitUntil: "networkidle" });
+  await pagina.waitForTimeout(2500);
+  await clicarBotao("NOVO JOGO");
+  problemas.push(...(await olhar(`${zoom}-02-criacao-raca`)));
+  // o Pequenino e o nome mais longo da vitrine: e ele que aperta a coluna
+  await clicarBotao("Pequenino");
+  problemas.push(...(await olhar(`${zoom}-03-criacao-raca-pequenino`)));
+  await clicarBotao("SEGUIR >");
+  problemas.push(...(await olhar(`${zoom}-04-criacao-classe`)));
+  await clicarBotao("Cavaleiro");
+  problemas.push(...(await olhar(`${zoom}-05-criacao-classe-cavaleiro`)));
+  await clicarBotao("SEGUIR >");
+  problemas.push(...(await olhar(`${zoom}-06-criacao-poder`)));
+  await clicarBotao("SEGUIR >");
+  problemas.push(...(await olhar(`${zoom}-07-criacao-heroi`)));
+  await digitarNome();
+  problemas.push(...(await olhar(`${zoom}-08-criacao-heroi-com-nome`)));
+  await clicarBotao("SEM ARMA");
+  problemas.push(...(await olhar(`${zoom}-09-criacao-sem-arma`)));
+}
+
+await criacaoNaVisao("perto");
+await criacaoNaVisao("longe");
 
 await navegador.close();
 http.close();
