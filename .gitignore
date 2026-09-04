@@ -3,3 +3,7 @@ dist
 .DS_Store
 *.log
 .vite
+
+# cache do python, gerado ao rodar npm run arte
+__pycache__/
+*.pyc
