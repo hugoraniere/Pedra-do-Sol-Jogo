@@ -77,17 +77,20 @@ HEROI = [
 ]
 
 # magricela: cabeca estreita e orelha comprida
+# magricela, o batedor: cabeca alta e fina, um espigao so no topo (nao duas
+# orelhas), olhos apertados e um dente torto pra fora. O dente e o que mais
+# ajuda a distinguir a 16px: silhueta de boca muda, nao so a cor.
 GOBLIN_MAGRICELA = [
     "................",
-    "..k..........k..",
-    "..kk........kk..",
-    "...kk..kkk.kk...",
+    ".......k........",
+    "......kkkk......",
+    "....kkkGGGkk....",
     "....kkkGGGkk....",
     "....kGGGGGGk....",
     "...kkGGGGGGkk...",
-    "...kGWkGGkWGk...",
+    "...kGkkGGkkGk...",
     "...kGGGGGGGGk...",
-    "....kGgggggk....",
+    "....kGggWggk....",
     "....kGkkkkGk....",
     ".....kGGGGk.....",
     "......kkkk......",
@@ -96,7 +99,9 @@ GOBLIN_MAGRICELA = [
     "................",
 ]
 
-# gorducho: cabeca larga, bochecha
+# gorducho, o brutamontes: cabeca larga e duas presas para fora do maxilar,
+# pendurando abaixo da mandibula. As presas sao a peca que nenhum outro
+# goblin tem, entao a silhueta muda mesmo com o rosto parado.
 GOBLIN_GORDUCHO = [
     "................",
     ".k............k.",
@@ -111,18 +116,21 @@ GOBLIN_GORDUCHO = [
     "..kGgggggggggk..",
     "..kkGGGGGGGGkk..",
     "....kkkkkkkk....",
-    "................",
+    "....W......W....",
     "................",
     "................",
 ]
 
-# moleque: pequeno, e o unico com franja
+# moleque, o pirralho: cabeca pequena e uma crista laranja, cor que nenhum
+# outro goblin usa. Cor por cima de silhueta: a 16px a cor acende primeiro
+# que a forma, e e a mesma licao do resto da interface (ver
+# docs/interface-de-combate.md, secao 5).
 GOBLIN_MOLEQUE = [
     "................",
-    "................",
-    "...kk.kkkk.kk...",
-    "...kkkEEEEkkk...",
-    "....kEEEEEEk....",
+    "........f.......",
+    ".......fff......",
+    "....k.fffff.k...",
+    "....kffffffk....",
     "....kGGGGGGk....",
     "...kkGGGGGGkk...",
     "...kGWkGGkWGk...",

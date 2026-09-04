@@ -19,6 +19,8 @@
     "conferir": "node ferramentas/conferir-personagens.mjs",
     "folha": "python3 ferramentas/folha-de-personagens.py",
     "verificar": "node ferramentas/verificar.mjs",
+    "criatura": "node ferramentas/conferir-criatura.mjs",
+    "condicoes": "node ferramentas/conferir-condicoes.mjs",
     "contraste": "python3 ferramentas/contraste.py",
     "ambiente": "node ferramentas/ambiente.mjs",
     "icones": "python3 arte/icones.py"

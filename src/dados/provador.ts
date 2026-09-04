@@ -11,6 +11,8 @@
  * milissegundo**. Alcance conta CASAS e espera conta TURNOS. Era a coisa mais
  * facil de deixar passar na virada para turnos, e a que mais confundiria depois.
  */
+import type { Comportamento } from "../sistemas/criatura";
+import type { Marca } from "../sistemas/marcas";
 
 /** Os quadros de public/assets/icones.png, na ordem de arte/icones.py.
  *  Folha propria do combate, separada de ui.png. */
@@ -44,6 +46,10 @@ export type AcaoDeProva = {
   /** uma frase curta, mostrada quando o dedo ou o mouse para em cima do slot */
   dica: string;
   som: "cajado" | "soco" | "fogo" | "gelo" | "voz";
+  /** o verbo que ela imprime em quem acerta. So Bafo Gelado tem uma nesta
+   *  fase (Fase 3 do plano); as outras marcas chegam na Fase 4, junto com as
+   *  superficies de chao que a maioria delas muda. */
+  marca?: Marca;
 };
 
 /** Os seis slots. Cada um prova uma coisa diferente do turno.
@@ -58,7 +64,7 @@ export const ACOES_DE_PROVA: AcaoDeProva[] = [
   { id: "golpe-cajado", tipo: "golpe", nome: "CAJADO", dica: "Bate de perto. O cajado nao foi feito pra isso.", icone: ICONE.cajado, cor: 0xb08658, forma: "casa", alcance: 1, espera: 0, atributo: "forca", som: "cajado" },
   { id: "soco", tipo: "golpe", nome: "SEM ARMA", dica: "Sempre da pra usar. Nunca quebra nada.", icone: ICONE.punho, cor: 0x4a3e64, forma: "casa", alcance: 1, espera: 0, atributo: "forca", som: "soco" },
   { id: "bola-de-fogo", tipo: "magia", nome: "BOLA DE FOGO", dica: "Uma bola de fogo que voa longe.", icone: ICONE.fogo, cor: 0xf2802b, forma: "casa", alcance: 6, espera: 2, atributo: "esperteza", som: "fogo" },
-  { id: "bafo-gelado", tipo: "magia", nome: "BAFO GELADO", dica: "Um sopro que pega todo mundo na linha.", icone: ICONE.gelo, cor: 0x7ec4f2, forma: "linha", alcance: 3, espera: 2, atributo: "esperteza", som: "gelo" },
+  { id: "bafo-gelado", tipo: "magia", nome: "BAFO GELADO", dica: "Um sopro que pega todo mundo na linha.", icone: ICONE.gelo, cor: 0x7ec4f2, forma: "linha", alcance: 3, espera: 2, atributo: "esperteza", som: "gelo", marca: "gelo" },
   { id: "voz-de-trovao", tipo: "magia", nome: "VOZ DE TROVAO", dica: "Um grito que pega todo mundo em volta.", icone: ICONE.trovao, cor: 0x7b5ac4, forma: "aoRedor", alcance: 3, espera: 3, atributo: "esperteza", som: "voz" },
   { id: "sopro-quentinho", tipo: "skill", nome: "SOPRO QUENTINHO", dica: "So uma vez por luta. Vale a pena guardar.", icone: ICONE.sopro, cor: 0xf5b62b, forma: "casa", alcance: 2, espera: 0, usosPorCombate: 1, atributo: "coracao", som: "fogo" },
 ];
@@ -93,12 +99,17 @@ export const ARENA = {
   entrada: { x: 6, y: 6 },
   /** `bonus` e o que a criatura soma no 1d6 dela. Agora ela ROLA tambem: os dois
    *  lados usam o mesmo dado e a mesma tabela de tres faixas, e o jogador ve as
-   *  duas rolagens no mesmo cartao. Ver docs/plano-do-combate.md. */
+   *  duas rolagens no mesmo cartao. Ver docs/plano-do-combate.md.
+   *
+   *  `comportamento` e o que decide o que ela FAZ no proprio turno, ver
+   *  src/sistemas/criatura.ts. Os quatro tipos cobrem os tres, de proposito:
+   *  magricela (medroso) prova a fuga, gorducho e chefe (curioso) provam a
+   *  perseguicao, moleque (passeia) prova o "ignora ate encostar". */
   goblins: [
-    { sprite: "goblin-magricela", nome: "MAGRICELA", x: 14, y: 3, coracoes: 1, bonus: 0 },
-    { sprite: "goblin-gorducho", nome: "GORDUCHO", x: 18, y: 7, coracoes: 2, bonus: 1 },
-    { sprite: "goblin-moleque", nome: "MOLEQUE", x: 12, y: 12, coracoes: 1, bonus: 0 },
-    { sprite: "goblin-chefe", nome: "CHEFE", x: 20, y: 11, coracoes: 3, bonus: 2 },
+    { sprite: "goblin-magricela", nome: "MAGRICELA", x: 14, y: 3, coracoes: 1, bonus: 0, comportamento: "medroso" as Comportamento },
+    { sprite: "goblin-gorducho", nome: "GORDUCHO", x: 18, y: 7, coracoes: 2, bonus: 1, comportamento: "curioso" as Comportamento },
+    { sprite: "goblin-moleque", nome: "MOLEQUE", x: 12, y: 12, coracoes: 1, bonus: 0, comportamento: "passeia" as Comportamento },
+    { sprite: "goblin-chefe", nome: "CHEFE", x: 20, y: 11, coracoes: 3, bonus: 2, comportamento: "curioso" as Comportamento },
   ],
   arbustos: [
     { x: 9, y: 3 },
@@ -108,5 +119,5 @@ export const ARENA = {
   /** o goblin invisivel. So aparece se levar golpe, e so entra na ordem de
    *  turno depois de aparecer: nao da para o jogador esperar a vez de alguem
    *  que ele nao sabe que existe. */
-  invisivel: { sprite: "goblin-magricela", nome: "ESCONDIDO", x: 8, y: 8, coracoes: 2, bonus: 0 },
+  invisivel: { sprite: "goblin-magricela", nome: "ESCONDIDO", x: 8, y: 8, coracoes: 2, bonus: 0, comportamento: "medroso" as Comportamento },
 };

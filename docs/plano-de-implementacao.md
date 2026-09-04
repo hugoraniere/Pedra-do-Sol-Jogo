@@ -118,6 +118,12 @@ Tamanho: P
 
 ## FASE 1 . fechar o basico: a criatura de verdade
 
+> **Feita.** `src/sistemas/criatura.ts`, `ferramentas/conferir-criatura.mjs`
+> (`npm run criatura`, 13 casos), e `jogarCriatura` em `Provador.ts` ramificando
+> pelos tres comportamentos. Conferido tambem ao vivo no `?provador`: o
+> magricela ataca de surpresa uma vez e foge na proxima, o moleque vira
+> curioso pra sempre ao ser notado, o medroso fraco foge sem nem tentar bater.
+
 Sem isso o combate e um saco de pancada. E o item que mais muda a sensacao de
 jogo por linha de codigo escrita.
 
@@ -172,6 +178,12 @@ Tamanho: P
 
 ## FASE 2 . o heroi apanhar direito
 
+> **Feita.** `invencivelAte` guarda a janela de 900ms em `heroiApanha`; o
+> pisca-pisca roda sempre (mesmo bloqueando o dano, para o jogador ver que
+> "quase levou"), e `fx.achatar` simula o quadro `machucado` que a folha ainda
+> nao tem. Conferido: golpes emendados descontam so 1 coracao, e a janela
+> reabre sozinha no proximo golpe de verdade.
+
 ### 2.1 Invencibilidade real
 Arquivo: `src/cenas/Provador.ts`, `heroiApanha`
 Faz: hoje `heroiApanha` sempre aplica dano quando chamada. Falta um campo
@@ -192,6 +204,62 @@ com `fx.achatar(heroi, 1.15, 0.8, 90)` no instante do impacto: e squash sem
 sprite novo, e ja da 70% do efeito visual de "levei um soco".
 Pronto quando: visualmente distinguivel de "conjura" (que nao muda a escala).
 Tamanho: P
+
+---
+
+## FASE 2.5 . a regra dura: o combate nunca troca de lugar
+
+Pedida antes da Fase 3, de proposito: e mais barato travar isto agora, com
+pouco codigo em jogo, do que descobrir na Fase 7 que o combate depende de um
+"lugar de batalha" que a Vila Semente de verdade nao tem. Ver
+`docs/plano-do-combate.md`, secao 3.6, para a regra por extenso e o porque.
+
+### 2.5.1 `conferirMesmoLugar()`
+Arquivo: `src/cenas/Provador.ts`
+Faz: um metodo publico de diagnostico (no mesmo espirito de
+`sistemas/bancada.ts`, so que vivendo na propria cena por precisar de
+`comecarCombate` privado). Tira uma fotografia do estado do "lugar" ANTES de
+chamar `comecarCombate()`, dispara o combate, e compara **na hora**, sem
+esperar o tween de ajuste de casa: a garantia e geometrica (o alvo e sempre o
+centro da propria casa onde o heroi ja estava), entao vale em qualquer
+instante da animacao, e o teste nao fica refem do relogio do jogo:
+
+```ts
+type FotoDoLugar = {
+  cenaKey: string;
+  tilemap: Phaser.Tilemaps.Tilemap;        // identidade do objeto, nao copia
+  alvoDaCamera: unknown;
+  casaDoHeroi: { tx: number; ty: number };
+};
+```
+
+Compara `cenaKey` igual, `tilemap` **o mesmo objeto** (`===`, nao os mesmos
+dados), `alvoDaCamera` o mesmo heroi, a casa que `comecarCombate` REALMENTE
+usou (lida de `this.ultimoAjuste`, nunca recalculada por fora — testar a
+propria formula contra ela mesma so prova que ela concorda com ela mesma), e
+o deslocamento em pixel **por eixo, com limites diferentes**: meia casa (8px)
+em X, uma casa inteira (16px) em Y, porque o sprite e ancorado pelo centro
+horizontal mas pelo pe na vertical. Devolve uma lista OK/FALHA, no mesmo
+formato de texto das outras conferencias deste projeto, pra rodar direto no
+console: `jogo.scene.getScene("Provador").conferirMesmoLugar()`.
+
+> Duas armadilhas apareceram so ao RODAR isto, nao ao escrever: (1) ler
+> `this.heroi.x/y` logo depois de criar o tween sempre devolve o valor de
+> ANTES, porque o Phaser so move a propriedade no proximo quadro — um teste
+> assim passaria sempre, sem testar nada; (2) o limite "meia casa nos dois
+> eixos" estava errado, porque Y e ancorado pelo pe, nao pelo centro. As duas
+> so ficaram visiveis testando de verdade num canto de casa, nao no centro.
+Pronto quando: os quatro itens (cena, tilemap, camera, casa) voltam OK depois
+de um combate comecar a partir de tres pontos diferentes do mapa (perto da
+agua, perto da moldura de pedra, no canto).
+Tamanho: P
+
+### 2.5.2 A trava para a Fase 7
+Arquivo: `docs/plano-de-implementacao.md` (este arquivo), secao 7.3
+Faz: acrescenta a frase que impede a Fase 7.3 de nascer como cena separada — a
+integracao com `Mundo.ts` tem que rodar o turno em cima do MESMO tilemap que
+`Mundo.ts` ja desenha, nunca criar um `Combate.ts` com o proprio `create()`.
+Tamanho: (documentacao, sem codigo)
 
 ---
 
@@ -441,6 +509,15 @@ Arquivo: `src/cenas/Mundo.ts`, `src/dados/mapas.ts`
 Faz: um goblin `medroso`, perto do poste do sino (o sino ja existe no mapa e ja
 tem a fraqueza escrita no bestiario — a combinacao pronta para o jogador
 descobrir sozinho).
+
+> **Trava, ver secao 2.5**: o turno roda em cima do `Tilemap` que `Mundo.ts`
+> ja cria para a Vila Semente. Nao existe `Combate.ts`, nao existe
+> `scene.start` para uma cena de batalha, nao existe segundo mapa. Se a
+> integracao comecar assim, ela ja nasceu errada — volte e leia
+> `docs/plano-do-combate.md` secao 3.6 antes de continuar. `conferirMesmoLugar()`
+> (2.5.1) tem que continuar passando dentro de `Mundo.ts` tambem, nao so no
+> `?provador`.
+
 Tamanho: P, depois de 7.2
 
 ---
@@ -459,6 +536,19 @@ onde `npm run arte` roda por inteiro.
 Tamanho: G
 
 ### 8.2 Os icones que faltam
+
+**Regra confirmada com o Hugo**: um retrato por TIPO de criatura, nunca um por
+individuo na tela. Tres goblins `magricela` na arena usam o mesmo retrato — o
+jogador precisa reconhecer "aquele tipo de goblin", nao decorar cada um. Quem
+foge da regra e todo bicho **unico e nomeado** do bestiario (o chefe goblin,
+Grulo, Bruxa Espinho, Brasanegra): esses ganham retrato proprio, porque sao
+diferentes de verdade. Ja escrito assim em `arte/icones.py` (cabecalho de
+`RETRATOS`), e os tres goblins normais foram redesenhados nesta rodada para se
+distinguirem a 16px: `magricela` ganhou um espigao unico no topo e olhos
+apertados, `gorducho` ganhou presas pendendo do queixo, `moleque` ganhou uma
+crista laranja (cor antes de silhueta, a mesma licao da secao 5 de
+`docs/interface-de-combate.md`). Faltam os retratos das outras 8 criaturas do
+`BESTIARIO` de `conteudo.ts`.
 Hoje existem 5 retratos + 6 acoes + 6 faces de dado (`arte/icones.py`). Faltam:
 icones de condicao (13, um por `IdCondicao`), icones de superficie (6), e os
 sprites dos objetos com estado (Fase 5.3, se nao coube em `icones.py`).

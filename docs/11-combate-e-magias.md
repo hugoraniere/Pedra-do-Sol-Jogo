@@ -271,25 +271,58 @@ O **golpe sem arma** nao e um castigo por estar desarmado. Ele tem funcao:
 - em bicho amigo ele vira **carinho**, nao golpe
 - esta sempre disponivel, sem recarga, sem condicao
 
-Cada arma ganha uma ficha de ataque em `conteudo.ts`. Continua sendo so dado.
+Cada arma vira uma acao de golpe, no mesmo tipo `AcaoDeProva`. **Atualizado para
+casas e turnos** (a tabela original estava em pixel/ms, de antes do combate virar por
+turnos):
 
-| Arma | Dano | Alcance | Recuo | Recarga | Marca extra |
-|---|---|---|---|---|---|
-| **sem arma** | 1 | 14px | 0 | 400ms | . |
-| espada-curta | 1 | 20px | 90 | 500ms | . |
-| adaga | 1 | 14px | 40 | **300ms** (rapida) | . |
-| machado | 1 | 20px | 90 | 600ms | `corta` (derruba arvore, abre mato) |
-| martelo | 1 | 18px | 130 | 700ms | `quebra` (racha pedra) |
-| **cajado** | 1 | 18px | **140** | **800ms** | `empurra` |
-| arco | 1 | 120px | 40 | 700ms | projetil |
-| funda | 1 | 100px | 40 | 600ms | projetil, nunca resolve |
-| escudo | . | . | . | . | nao ataca: segura um golpe |
+| Arma | Classe dona | Alcance | Espera | Marca extra |
+|---|---|---|---|---|
+| **sem arma** | qualquer | 1 casa | 0 (todo turno) | . |
+| espada-curta | Cavaleiro | 1 casa | 0 | . |
+| adaga | (item de loja) | 1 casa | 0 | `+1 escondido`: some do 1d6 quando **ESCONDIDO** |
+| machado | (item de loja) | 1 casa | 1 turno | `corta` (derruba arvore, abre mato) |
+| martelo | Ferreiro | 1 casa | 1 turno | `quebra` (racha pedra) |
+| **cajado** | Mago | 1 casa | 1 turno | `empurra`, nunca `corta`/`quebra` |
+| **arco** | Cacador | **5 casas** | 1 turno | projetil, forma `casa` |
+| **funda** | Amigo dos Bichos | **4 casas** | 0 (todo turno) | projetil, **nunca passa de QUASE** |
+| escudo | (item de loja) | . | . | nao ataca: guarda **PROTEGIDO** por 1 golpe |
 
 **O cajado.** Nao e arma de bater, e da pra bater com ele. A ficha diz isso sem
-precisar de texto: ele **acerta, mas o que ele faz de melhor e empurrar**, e e o mais
-lento da lista. Quem escolhe cajado esta escolhendo o `+1 em magia` que a arma ja dava
-no RPG de mesa, nao a pancada. O Trovao da Floresta pode sair no tapa, so nao vai ser
-bom nisso, e isso e engracado em vez de punitivo.
+precisar de texto: ele **acerta, mas o que ele faz de melhor e empurrar**, nunca corta
+nem quebra objeto como as armas de verdade fariam. Quem escolhe cajado esta escolhendo
+o `+1 em magia` que a arma ja dava no RPG de mesa, nao a pancada. O Trovao da Floresta
+pode sair no tapa, so nao vai ser bom nisso, e isso e engracado em vez de punitivo.
+
+**O arco.** E a unica arma de golpe com alcance de verdade — 5 casas, contra 1 das
+armas corpo a corpo. Isso ja e a identidade toda do Cacador de Dragao sem precisar de
+regra nova: ele bate de longe, o resto bate perto. O golpe do arco ganha a mesma
+animacao de projetil que Bola de Fogo (ver secao 15, `fx.projetil`), so que sem marca
+nenhuma — e so uma flecha.
+
+**A funda.** Tem uma trava que nenhuma outra arma tem: **o resultado dela nunca passa
+de QUASE**, mesmo tirando 6 no dado. Isso ja e a mesa (`ARMAS` em `conteudo.ts`:
+"nunca passa de QUASE"), e sobrevive por inteiro: e a arma do Amigo dos Bichos, a
+classe que a mesa desenhou pra **nao** ser sobre lutar bem. Ganhar OBA com ela deixaria
+de fazer sentido narrativo.
+
+### As cinco racas, e o que cada uma muda no combate
+
+Nao precisam de arma propria — o bonus delas ja e todo em atributo e no Dom (skill do
+slot dourado, ver secao 3). O que muda por raca, so olhando pra combate:
+
+| Raca | +1 em | Dom | O que isso faz no 1d6 |
+|---|---|---|---|
+| Gente do Vale | CORACAO | Nunca Desisto | skill: rola de novo 1x por combate |
+| Anao da Fornalha | FORCA | Casco Duro | passiva: 4 coracoes em vez de 3 |
+| Elfo da Folha | ESPERTEZA | Olhos de Coruja | passiva: revela invisivel a distancia |
+| Pequenino do Trigo | CORACAO | Pe de Coelho | skill: troca um OPS por QUASE |
+| Cria de Dragao | FORCA | Sopro Quentinho | skill: dano de area, 1x por combate |
+
+Golpe usa FORCA, magia usa ESPERTEZA (ja implementado, `atributo` em `AcaoDeProva`).
+Isso quer dizer, sem nenhuma regra nova: **Anao e Cria de Dragao acertam mais golpe**,
+**Elfo e Cacador acertam mais magia**, e as duas racas de CORACAO (Vale, Pequenino) sao
+identicas nos dois — o bonus delas e todo em resiliencia (mais coracao, ou uma segunda
+chance no dado), nao em acerto.
 
 ---
 
