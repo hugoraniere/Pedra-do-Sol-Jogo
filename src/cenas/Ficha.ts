@@ -1,15 +1,17 @@
-/** A ficha do heroi, aberta por cima do mundo.
+/** A janela do heroi, aberta por cima do mundo.
  *
- * E a ficha de papel que o Lele preencheu na mesa, virada em tela. A de papel
- * tem duas folhas A4; a tela tem 320 por 192, entao aqui sao tres paginas curtas
- * com uma ideia cada: quem eu sou, meus poderes, o que eu sei fazer. Vira com as
- * setas ao lado do FECHAR, e da a volta: ele nunca fica preso no fim.
+ * Um lugar so, com abas no topo, como o inventario do Stardew Valley: EU,
+ * PODERES, MAGIAS, MOCHILA, DIARIO, MENU. Cada aba e a folha de papel que o
+ * Lele preencheu na mesa, ou uma promessa do que ainda vai existir.
  *
- * Fonte da verdade: docs/referencia/sistema-do-rpg-de-mesa.md e o material
- * impresso (ficha do heroi, manual do criador de heroi).
+ * As tres primeiras vem do material impresso: docs/referencia/sistema-do-rpg-
+ * de-mesa.md e os PDFs (ficha do heroi, manual do criador de heroi). MOCHILA e
+ * DIARIO ainda nao tem dado nenhum por tras: mostram um recado honesto em vez
+ * de fingir que ja existem. MENU e a ponte para a Pausa, ate o dia em que a
+ * Pausa virar conteudo desta mesma janela.
  *
- * O que a ficha de papel tem e esta ainda nao mostra, porque nao existe no
- * estado do jogo: mascote, ponto fraco, grito de guerra, e o +1 de poder que o
+ * O que a ficha de papel tem e ainda nao mostra, porque nao existe no estado
+ * do jogo: mascote, ponto fraco, grito de guerra, e o +1 de poder que o
  * jogador escolhe. Nada disso e inventado aqui: quando a criacao perguntar e o
  * estado guardar, vira mais um bloco nas listas abaixo.
  *
@@ -30,7 +32,8 @@ import { estado } from "../sistemas/estado";
 import { Heroi, camadasDoHeroi, criarAnimacoes } from "../sistemas/heroi";
 import { ICONE, LADO_ICONE } from "../sistemas/icones";
 import { poderesDoHeroi } from "../sistemas/poderes";
-import { alturaUtilDaJanela, janela, larguraUtilDaJanela } from "../sistemas/janela";
+import { Aba, alturaUtilDaJanela, janela, larguraUtilDaJanela } from "../sistemas/janela";
+import { botao } from "../sistemas/botao";
 import {
   ALTURA_CHIP,
   ESPACO,
@@ -57,14 +60,26 @@ type Bloco =
   | { tipo: "identidade" }
   | { tipo: "titulo"; conteudo: string; valor?: string }
   | { tipo: "texto"; linhas: string[] }
-  | { tipo: "chips"; linhas: string[][] };
+  | { tipo: "chips"; linhas: string[][] }
+  | { tipo: "acao"; rotulo: string; aoTocar: () => void };
 
 /** Um titulo e o que vem embaixo dele sao um GRUPO, e o grupo nao se parte.
  *  Sem isto a tela baixa deixava "MINHAS MAGIAS" sozinho, sem magia nenhuma
  *  embaixo, que e pior do que nao mostrar. */
 type Grupo = Bloco[];
 
-type Pagina = { titulo: string; grupos: Grupo[] };
+type Pagina = { grupos: Grupo[] };
+
+/** As abas, na ordem em que aparecem. Fixas: nao dependem do estado do heroi,
+ *  entao moram fora da classe, e o indice aqui e o mesmo indice de paginas(). */
+const ABAS: Aba[] = [
+  { rotulo: "EU" },
+  { rotulo: "PODERES" },
+  { rotulo: "MAGIAS" },
+  { rotulo: "MOCHILA" },
+  { rotulo: "DIARIO" },
+  { rotulo: "MENU" },
+];
 
 export class Ficha extends Phaser.Scene {
   private pagina = 0;
@@ -82,16 +97,15 @@ export class Ficha extends Phaser.Scene {
     this.input.keyboard?.removeAllListeners("keydown");
     this.input.keyboard?.on("keydown", (e: KeyboardEvent) => {
       if (e.key === "Escape") this.fechar();
-      if (e.key === "ArrowLeft") this.virar(-1);
-      if (e.key === "ArrowRight") this.virar(1);
+      if (e.key === "ArrowLeft") this.irPara(this.pagina - 1);
+      if (e.key === "ArrowRight") this.irPara(this.pagina + 1);
     });
     refazerAoRedimensionar(this, () => this.desenhar());
   }
 
-  private virar(passo: number) {
-    const paginas = this.paginas();
-    // da a volta: ele nunca chega numa seta que nao faz nada
-    this.pagina = (this.pagina + passo + paginas.length) % paginas.length;
+  private irPara(indice: number) {
+    // da a volta: as setas do teclado nunca chegam numa aba que nao existe
+    this.pagina = (indice + ABAS.length) % ABAS.length;
     this.desenhar();
   }
 
@@ -115,9 +129,15 @@ export class Ficha extends Phaser.Scene {
     const chips = (textos: string[]): Bloco => ({ tipo: "chips", linhas: arrumarChips(this, textos, largura) });
     const paragrafo = (conteudo: string): Bloco => ({ tipo: "texto", linhas: quebrar(conteudo, largura) });
 
+    // um recado honesto no lugar de fingir que existe conteudo: a mochila e o
+    // diario ainda nao tem dado nenhum por tras, entao nao inventamos um aqui
+    const emConstrucao = (recado: string): Pagina => ({
+      grupos: [[paragrafo(recado)]],
+    });
+
     return [
       {
-        titulo: "MEU HEROI",
+        // EU
         grupos: [
           [{ tipo: "identidade" }],
           [
@@ -127,14 +147,14 @@ export class Ficha extends Phaser.Scene {
         ],
       },
       {
-        titulo: "MEUS PODERES",
+        // PODERES
         grupos: ORDEM_PODERES.map((id) => [
           { tipo: "titulo", conteudo: ATRIBUTOS[id].nome, valor: String(poderes[id]) } as Bloco,
           paragrafo(ATRIBUTOS[id].oQueFaz),
         ]),
       },
       {
-        titulo: "O QUE EU SEI FAZER",
+        // MAGIAS (a pagina "o que eu sei fazer" da versao anterior)
         grupos: [
           [{ tipo: "titulo", conteudo: raca.dom.toUpperCase() }, paragrafo(raca.domTexto)],
           [
@@ -142,6 +162,24 @@ export class Ficha extends Phaser.Scene {
             // quando a classe tem magia, o nome das magias vale mais do que a
             // frase explicando que ele tem magias: ele ja sabe, quer saber quais
             magias.length ? chips(magias) : paragrafo(classe.habilidadeTexto),
+          ],
+        ],
+      },
+      emConstrucao("A mochila ainda esta vazia. Um dia vai ter aqui o que voce guardar."),
+      emConstrucao("O diario ainda nao existe. Um dia vai ter aqui o que voce ja descobriu."),
+      {
+        // MENU: ponte para a Pausa, ate ela virar conteudo desta mesma janela
+        grupos: [
+          [paragrafo("Pausar o jogo, salvar, ou mudar como voce ve a tela.")],
+          [
+            {
+              tipo: "acao",
+              rotulo: "ABRIR PAUSA",
+              aoTocar: () => {
+                this.scene.stop();
+                this.scene.launch("Pausa");
+              },
+            },
           ],
         ],
       },
@@ -158,6 +196,7 @@ export class Ficha extends Phaser.Scene {
     if (bloco.tipo === "identidade") return this.alturaDaIdentidade();
     if (bloco.tipo === "titulo") return bloco.valor ? ALTURA_CHIP : TAMANHO.linhaTexto;
     if (bloco.tipo === "texto") return bloco.linhas.length * TAMANHO.linhaTexto;
+    if (bloco.tipo === "acao") return TAMANHO.botao;
     return alturaDosChips(bloco.linhas);
   }
 
@@ -191,7 +230,7 @@ export class Ficha extends Phaser.Scene {
 
     // mede primeiro: grupo que nao couber nesta resolucao nao entra, e sai
     // INTEIRO, nunca deixando um titulo orfao
-    const teto = alturaUtilDaJanela();
+    const teto = alturaUtilDaJanela({ comAbas: true });
     const cabem: Grupo[] = [];
     let usado = 0;
     for (const grupo of pagina.grupos) {
@@ -202,10 +241,9 @@ export class Ficha extends Phaser.Scene {
     }
 
     const area = janela(this, {
-      titulo: pagina.titulo,
       alturaConteudo: usado,
       aoFechar: () => this.fechar(),
-      virarPagina: (passo) => this.virar(passo),
+      abas: { itens: ABAS, ativa: this.pagina, aoEscolher: (i) => this.irPara(i) },
     });
 
     const p = pilha(area, ESPACO.md);
@@ -221,11 +259,16 @@ export class Ficha extends Phaser.Scene {
             const r = p.reservar(TAMANHO.linhaTexto, j === 0 ? gap : 0);
             marcar(texto(this, r.x, r.y, linha, { cor: COR.tintaSuave }), "texto", linha);
           });
-        } else {
+        } else if (bloco.tipo === "chips") {
           bloco.linhas.forEach((linha, j) => {
             const r = p.reservar(ALTURA_CHIP, j === 0 ? gap : ESPACO.sm);
             chipsNaLinha(this, r, linha);
           });
+        } else {
+          // creme, nao ouro: FECHAR e sempre a acao em destaque desta janela, e
+          // dois botoes dourados lado a lado nao diriam qual e o principal
+          const r = p.reservar(TAMANHO.botao, gap);
+          botao(this, r.x + r.largura / 2, meio(r), Math.min(r.largura, 160), r.altura, bloco.rotulo, bloco.aoTocar, "painel-creme");
         }
       });
     });

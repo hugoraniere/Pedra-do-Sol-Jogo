@@ -21,7 +21,8 @@
     "bestiario": "python3 ferramentas/folha-do-bestiario.py",
     "verificar": "node ferramentas/verificar.mjs",
     "contraste": "python3 ferramentas/contraste.py",
-    "ambiente": "node ferramentas/ambiente.mjs"
+    "ambiente": "node ferramentas/ambiente.mjs",
+    "icones": "python3 arte/icones.py"
   },
   "dependencies": {
     "@fontsource/silkscreen": "^5.3.0",

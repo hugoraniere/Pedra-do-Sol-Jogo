@@ -5,7 +5,8 @@ import { TILE, SOLIDOS, COR, ALTURA_PERSONAGEM } from "../dados/config";
 import { MAPAS, VILA, montarChao, plantarMata, Mapa, Saida } from "../dados/mapas";
 import { acharCriatura } from "../dados/conteudo";
 import { DIALOGOS } from "../dados/dialogos";
-import { estado, salvar, marcarVisitado } from "../sistemas/estado";
+import { estado, salvar, marcarVisitado, foiDerrotado } from "../sistemas/estado";
+import type { Encontro } from "./Combate";
 import { Controles } from "../sistemas/controles";
 import { camadasDoHeroi, criarAnimacoes, Heroi } from "../sistemas/heroi";
 import { COLCHAO, PONTOS } from "../dados/sons";
@@ -36,6 +37,15 @@ type Interagivel = {
   obj: Phaser.GameObjects.Image | Phaser.GameObjects.Sprite;
 };
 type Ponto = { x: number; y: number };
+
+/** Um bicho plantado no mapa, com a chave estavel que o marca como derrotado
+ *  em `estado()` e o corpo que precisa sumir junto quando ele perde a luta. */
+type CriaturaViva = { sprite: Phaser.GameObjects.Sprite; corpo: Phaser.GameObjects.Rectangle; id: string; chave: string };
+
+/** A quantas casas um goblin nota o heroi e o combate comeca. Mesma ideia do
+ *  Provador (`docs/plano-do-combate.md`), numero proprio porque aqui e o
+ *  mundo aberto quem decide, nao a arena. */
+const DISTANCIA_DE_ENCONTRO = 3;
 
 /** folga em volta da caixa DE VERDADE do alvo, so para o acerto do
  *  ponteiro. Sem isto, tocar 1 px fora da borda visivel de um bau ou de um
@@ -104,6 +114,7 @@ export class Mundo extends Phaser.Scene {
    *  contorno_alfa) — nunca um retangulo generico, porque um retangulo nao
    *  hospeda a forma de um poco ou de um personagem, so a caixa dele. */
   private destaqueCopias: Phaser.GameObjects.Image[] = [];
+  private criaturas: CriaturaViva[] = [];
 
   /** De onde o heroi entra. Vazio quer dizer "a entrada de sempre do mapa";
    *  quem chega de outro lugar manda o tile pelo qual apareceu. */
@@ -235,10 +246,14 @@ export class Mundo extends Phaser.Scene {
     });
 
     // ------------------------------------------------------ criaturas
-    // Presenca, e so. Elas ficam paradas respirando no lugar; andar, reagir e
-    // brigar sao do sistema de combate, que ainda nao existe. Ate la o mundo ja
-    // tem bicho dentro, que e o que permite ver se a arte e a escala funcionam.
-    (mapa.criaturas ?? []).forEach((bicho) => {
+    // Presenca, e so. Elas ficam paradas respirando no lugar; quem faz o
+    // goblin brigar de verdade e `conferirEncontro()`, mais abaixo. As outras
+    // (aranha, lobo de nevoa) ainda so decoram: o combate ainda so sabe lutar
+    // contra goblin, ver `Combate.ts`.
+    this.criaturas = [];
+    (mapa.criaturas ?? []).forEach((bicho, i) => {
+      const chave = `${st0.cena}:${i}`;
+      if (foiDerrotado(chave)) return;
       const ficha = acharCriatura(bicho.id);
       if (!ficha) return;
       const x = bicho.x * TILE + TILE / 2;
@@ -249,6 +264,7 @@ export class Mundo extends Phaser.Scene {
       const corpo = this.add.rectangle(x, y - 4, 10, 8);
       this.solidos.add(corpo);
       (corpo.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
+      this.criaturas.push({ sprite: s, corpo, id: bicho.id, chave });
     });
 
     // ------------------------------------------------------- a malha
@@ -313,6 +329,19 @@ export class Mundo extends Phaser.Scene {
       // mesmo aperto que fechou a fala, repetido pelo sistema operacional),
       // nao deixa reabrir na hora: exige soltar uma vez primeiro
       this.esperandoSoltarAcao = this.controles.acaoSegurada();
+    });
+    // volta do Combate: reacende a Interface e tira do mapa quem perdeu a
+    // luta la dentro. `scene.resume` dispara este evento sozinho, o mesmo
+    // que a Pausa ja usa para devolver o controle ao jogador.
+    this.events.on("resume", () => {
+      this.scene.setVisible(true, "Interface");
+      this.scene.resume("Interface");
+      this.criaturas = this.criaturas.filter((c) => {
+        if (!foiDerrotado(c.chave)) return true;
+        c.sprite.destroy();
+        c.corpo.destroy();
+        return false;
+      });
     });
     // sair do mundo solta os loops. A musica sobrevive: menu e titulo sao o
     // mesmo lugar do ponto de vista de quem joga, e recomecar a faixa se ouve.
@@ -408,6 +437,35 @@ export class Mundo extends Phaser.Scene {
     this.atualizarDestaque();
     ouvirDe(this.heroi.x, this.heroi.y);
     this.conferirSaida();
+    this.conferirEncontro();
+  }
+
+  /** Chegou perto demais de um goblin? O mundo para e a luta comeca.
+   *
+   *  So goblin briga por enquanto: e a unica criatura que `Combate.ts` sabe
+   *  colocar numa arena (retrato, folha de sprite parada-baixo). Aranha e
+   *  lobo de nevoa continuam so decorando ate ganharem a mesma entrada. */
+  private conferirEncontro() {
+    if (this.conversando || this.trocandoDeMapa) return;
+    const hx = Math.floor(this.heroi.x / TILE);
+    const hy = Math.floor((this.heroi.y - 1) / TILE);
+    const perto = this.criaturas.filter((c) => {
+      if (c.id !== "goblin") return false;
+      const cx = Math.floor(c.sprite.x / TILE);
+      const cy = Math.floor((c.sprite.y - 1) / TILE);
+      return Math.hypot(cx - hx, cy - hy) <= DISTANCIA_DE_ENCONTRO;
+    });
+    if (perto.length === 0) return;
+    this.iniciarCombate(perto);
+  }
+
+  private iniciarCombate(alvos: CriaturaViva[]) {
+    this.heroi.mover(0, 0);
+    const encontro: Encontro = alvos.map((a) => ({ id: a.id, chave: a.chave }));
+    this.scene.pause();
+    this.scene.pause("Interface");
+    this.scene.setVisible(false, "Interface");
+    this.scene.launch("Combate", { encontro });
   }
 
   // ----------------------------------------------------------- o clique

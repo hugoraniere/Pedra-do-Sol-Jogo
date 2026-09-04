@@ -1,6 +1,6 @@
 {
   "gerado_por": "npm run arte",
-  "total": 134,
+  "total": 135,
   "arquivos": {
     "aranha-filhote.png": {
       "hash": "73b3d6cc5fac3ef6",
@@ -93,10 +93,10 @@
       "altura": 256
     },
     "fonte.png": {
-      "hash": "d082115f02bf683a",
-      "bytes": 1033,
-      "largura": 256,
-      "altura": 25
+      "hash": "4921c647d9df7088",
+      "bytes": 1221,
+      "largura": 128,
+      "altura": 40
     },
     "goblin-chefe.png": {
       "hash": "276e08c0edbe9b51",
@@ -391,6 +391,12 @@
       "bytes": 2542,
       "largura": 96,
       "altura": 256
+    },
+    "icones.png": {
+      "hash": "0f9dc4e7be982c43",
+      "bytes": 1313,
+      "largura": 272,
+      "altura": 16
     },
     "lobo-nevoa.png": {
       "hash": "818aa1483a7b0ecc",
