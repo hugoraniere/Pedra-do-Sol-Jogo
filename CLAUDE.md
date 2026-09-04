@@ -102,6 +102,7 @@ npm run conferir # confere as 25 combinacoes de raca e classe, peca por peca
 npm run folha    # monta a folha com as 25 combinacoes, para olhar
 npm run app      # abre o jogo como aplicativo de desktop (Electron)
 npm run app:build# empacota o aplicativo para instalar
+npm run ambiente # frentes de trabalho paralelas: listar, criar, fechar
 ```
 
 ## Regras deste projeto
@@ -154,6 +155,17 @@ cena e sem sprite, testaveis sozinhas. A cena so mostra o resultado.
 `src/sistemas/design.ts`. Se voce somou dois numeros para achar onde vai um botao,
 esta errado. Ver `docs/07-design-system.md`.
 
+**Uma frente por pasta.** O projeto fica aberto em varias pastas ao mesmo tempo,
+uma por frente de trabalho, cada uma um worktree com galho e portas proprios.
+**Se existir um `AMBIENTE.md` na raiz desta pasta, leia antes de qualquer outra
+coisa: ele diz de quais arquivos esta pasta cuida, e voce nao mexe nos das
+outras.** Duas frentes editando o mesmo arquivo e o unico jeito de este esquema
+dar errado. Toda porta sai de `ferramentas/ambiente-atual.mjs`, nenhuma escrita
+na mao: com duas pastas na mesma porta, uma serve a tela da outra e a auditoria
+passa verde sem motivo. O `FRENTES.md` na raiz da pasta principal e o registro
+vivo do que cada conversa esta fazendo, e fica fora do git de proposito. Ver
+`docs/12-ambientes-paralelos.md`.
+
 **Verifique antes de dizer que terminou.** `npm run build` tem que passar limpo, e
 ele ja comeca chamando `npm run verificar`: contrato invisivel quebrado reprova a
 compilacao em vez de virar bug silencioso no iPad do Lele. `npm run contraste`,
@@ -179,6 +191,8 @@ app/                   o aplicativo de desktop, Electron
 ferramentas/verificar.mjs   contratos invisiveis: paleta, listas, falas, PNG solto
 ferramentas/auditar-ui.mjs  sobreposicao e transbordo de UI, tela por tela
 ferramentas/conferir-personagens.mjs  as 25 combinacoes de raca e classe
+ferramentas/ambiente.mjs    cria e fecha as frentes de trabalho paralelas
+ferramentas/ambiente-atual.mjs  o numero e as portas desta pasta
 arte/manifesto.py      hash de cada PNG gerado, para ver o que mudou
 src/cenas/             Boot, Som, Titulo, Carregar, Criacao, Mundo, Interface, Pausa
 som/gerar.py           todo o som, e as duas trilhas escritas nota por nota
