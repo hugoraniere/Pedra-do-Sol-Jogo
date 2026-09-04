@@ -47,7 +47,7 @@ import {
   quebrar,
   Retangulo,
 } from "../sistemas/design";
-import { texto } from "../sistemas/texto";
+import { medirTexto, texto } from "../sistemas/texto";
 import { refazerAoRedimensionar } from "../sistemas/visao";
 import { tocar } from "../sistemas/som";
 
@@ -112,7 +112,7 @@ export class Ficha extends Phaser.Scene {
     const arma = acharArma(classe.arma);
     const magias = st.heroi.magias.map((m) => acharMagia(m)?.nome).filter((n): n is string => !!n);
 
-    const chips = (textos: string[]): Bloco => ({ tipo: "chips", linhas: arrumarChips(textos, largura) });
+    const chips = (textos: string[]): Bloco => ({ tipo: "chips", linhas: arrumarChips(this, textos, largura) });
     const paragrafo = (conteudo: string): Bloco => ({ tipo: "texto", linhas: quebrar(conteudo, largura) });
 
     return [
@@ -240,7 +240,7 @@ export class Ficha extends Phaser.Scene {
       conteudo
     );
     if (valor === undefined) return;
-    chip(this, linha.x + linha.largura - larguraDoChip(valor), linha.y, valor, "painel-ouro");
+    chip(this, linha.x + linha.largura - larguraDoChip(this, valor), linha.y, valor, "painel-ouro");
   }
 
   /** Retrato de um lado, quem ele e do outro. E a cabeca da ficha de papel. */
@@ -268,9 +268,9 @@ export class Ficha extends Phaser.Scene {
 
     const rNome = p.reservar(TAMANHO.linhaTitulo);
     const nome = st.heroi.nome || "Heroi";
-    // 16 px por letra na fonte grande: nome comprido volta para a fonte pequena
-    // em vez de vazar para fora do painel
-    const tamanho = nome.length * 16 <= rNome.largura ? 16 : 8;
+    // o nome do heroi e o titulo da tela: so cai para a fonte pequena quando o
+    // nome medido de verdade nao couber na coluna
+    const tamanho = medirTexto(this, nome, 16) <= rNome.largura ? 16 : 8;
     marcar(
       texto(this, rNome.x, meio(rNome), nome, { tamanho, cor: COR.tinta, ancoraY: 0.5 }),
       "texto",

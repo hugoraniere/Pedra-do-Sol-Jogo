@@ -12,7 +12,7 @@
 import Phaser from "phaser";
 import { ALTURA, LARGURA, COR } from "../dados/config";
 import { botao } from "./botao";
-import { ESPACO, TAMANHO, caixa, marcar, meio, pilha, Retangulo } from "./design";
+import { ESPACO, LARGURA_MAX_BOTAO, TAMANHO, caixa, marcar, meio, pilha, Retangulo } from "./design";
 
 /** Largura de janela na visao normal. Em tela menor ela encolhe junto.
  *
@@ -84,7 +84,7 @@ export function janela(
   const larguraSeta = virar ? TAMANHO.botao + ESPACO.lg : 0;
   const larguraFechar = Math.min(
     linhaFechar.largura - (larguraSeta + ESPACO.sm) * 2,
-    LARGURA_MAXIMA / 2
+    LARGURA_MAX_BOTAO
   );
   botao(
     cena,
