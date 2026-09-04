@@ -6,7 +6,7 @@
   "description": "Jogo de aventura do Reino de Aurora, feito para o Lele jogar",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "npm run verificar && tsc --noEmit && vite build",
     "preview": "vite preview",
     "arte": "python3 arte/gerar.py",
     "som": "python3 som/gerar.py",

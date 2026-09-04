@@ -363,7 +363,15 @@ if (sons) {
     .filter(([, t]) => /from\s+"[^"]*\/(som|sons)"/.test(t))
     .map(([c, t]) => (c === "src/sistemas/som.ts" ? semCarregador(t) : t))
     .join("\n")
-    .replace(/import\s[\s\S]*?from\s+"[^"]+";/g, "");
+    // ancorado no comeco da linha e sem atravessar ";".
+    //
+    // A versao solta, /import\s[\s\S]*?from\s+"..."/, mordia o jogo inteiro: a
+    // palavra "import" dentro de um COMENTARIO abria a mordida, e ela so fechava
+    // no proximo `from "..."` la na frente. Um comentario no meio do Mundo.ts
+    // comia 8 mil caracteres de corpo de cena, e ai o verificador jurava que
+    // nenhuma cena usava COLCHAO nem PONTOS, com o Mundo.ts usando os dois.
+    // Aviso falso e pior que aviso nenhum: ensina a ignorar a lista.
+    .replace(/^[ \t]*import\s(?:[^;]*?from\s+)?"[^"]+";/gm, "");
 
   const GRUPOS = [
     ["EFEITOS", "os sons avulsos do dia a dia"],
