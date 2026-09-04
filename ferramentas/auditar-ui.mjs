@@ -78,6 +78,28 @@ async function clicarRelativo(fx, fy) {
   await clicar(Math.round(t.largura * fx), Math.round(t.altura * fy));
 }
 
+/** Clica num texto pelo comeco do que ele diz. Mesmo motivo do clicarBotao: a
+ *  dica de sortear o nome mudou de altura junto com o layout, e um clique em
+ *  fracao da tela passou a cair na caixa do nome sem ninguem perceber. */
+async function clicarTexto(inicio) {
+  const ponto = await pagina.evaluate((alvo) => {
+    const achatar = (l) => l.flatMap((o) => (Array.isArray(o.list) ? [o, ...achatar(o.list)] : [o]));
+    for (const cena of window.jogo.scene.getScenes(true)) {
+      const t = achatar(cena.children.list).find(
+        (o) => o.getData?.("ui")?.tipo === "texto" && String(o.getData("ui").dono ?? "").startsWith(alvo)
+      );
+      if (t) {
+        const r = t.getBounds();
+        return { x: r.centerX, y: r.centerY };
+      }
+    }
+    return null;
+  }, inicio);
+  if (!ponto) throw new Error(`texto nao encontrado: ${inicio}`);
+  await clicar(ponto.x, ponto.y);
+  await pagina.waitForTimeout(350);
+}
+
 /** Clica num botao pelo rotulo, nao pela coordenada. Assim mexer no layout nao
  *  quebra a auditoria, que e justamente quem deveria pegar o estrago do layout. */
 async function clicarBotao(rotulo) {
@@ -121,7 +143,7 @@ problemas.push(...(await olhar("01-titulo")));
 
 await clicarBotao("NOVO JOGO");
 problemas.push(...(await olhar("02-criacao-nome")));
-await clicarRelativo(0.5, 0.74); // sortear nome
+await clicarTexto("digite no teclado"); // sortear nome
 await clicarBotao("SEGUIR >");
 problemas.push(...(await olhar("03-criacao-raca")));
 await clicarBotao("SEGUIR >");
@@ -163,6 +185,40 @@ await pagina.waitForTimeout(1400);
 problemas.push(...(await olhar("13-titulo-com-save")));
 await clicarBotao("CARREGAR JOGO");
 problemas.push(...(await olhar("14-carregar")));
+
+// ------------------------------------- a criacao nas outras duas visoes
+/** A visao escolhida nao e zoom de camera, e resolucao logica: 256x160, 320x192
+ *  ou 400x240. O percurso de cima roda na do meio, e por isso passou anos verde
+ *  enquanto a tela de criacao se quebrava em 256x160, onde a grade de botoes
+ *  subia por cima do palco do boneco. Aqui a criacao inteira roda de novo nas
+ *  outras duas, que e onde a conta de altura aperta. */
+async function criacaoNaVisao(zoom) {
+  await pagina.evaluate(
+    (z) => localStorage.setItem("aurora-preferencias", JSON.stringify({ zoom: z, som: true })),
+    zoom
+  );
+  await pagina.reload({ waitUntil: "networkidle" });
+  await pagina.waitForTimeout(2500);
+  await clicarBotao("NOVO JOGO");
+  problemas.push(...(await olhar(`${zoom}-02-criacao-nome`)));
+  await clicarTexto("digite no teclado");
+  await clicarBotao("SEGUIR >");
+  problemas.push(...(await olhar(`${zoom}-03-criacao-raca`)));
+  await clicarBotao("SEGUIR >");
+  problemas.push(...(await olhar(`${zoom}-04-criacao-classe`)));
+  await clicarBotao("SEGUIR >");
+  problemas.push(...(await olhar(`${zoom}-05-criacao-poder`)));
+  await clicarBotao("SEGUIR >");
+  problemas.push(...(await olhar(`${zoom}-06-criacao-aparencia`)));
+  await clicarBotao("SEM EQUIPAMENTO");
+  problemas.push(...(await olhar(`${zoom}-07-criacao-sem-equipamento`)));
+  await clicarBotao("COM EQUIPAMENTO");
+  await clicarBotao("SEGUIR >");
+  problemas.push(...(await olhar(`${zoom}-08-criacao-pronto`)));
+}
+
+await criacaoNaVisao("perto");
+await criacaoNaVisao("longe");
 
 await navegador.close();
 http.close();

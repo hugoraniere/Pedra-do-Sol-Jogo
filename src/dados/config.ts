@@ -61,6 +61,11 @@ export const SOLIDOS = [T.agua, T.agua2, T.pedra, T.paredeCaverna];
 /** Altura do frame do personagem. Mudou de 24 para 32 na virada de arte. */
 export const ALTURA_PERSONAGEM = 32;
 
+/** Largura do frame do personagem. E a mesma do quadro da roupa: o corpo e a
+ *  roupa sao desenhados na mesma grade, e heroi.ts encosta a roupa em -8, que e
+ *  a metade dela. Quem monta palco e retrato precisa deste numero. */
+export const LARGURA_PERSONAGEM = 16;
+
 /** Grade da folha de personagem, igual a de arte/gente.py.
  *  6 colunas por 4 linhas, quadro = linha * 6 + coluna. */
 export const QUADRO = { parado: 0, passoA: 1, passoB: 2, respira: 3, conjura: 4, tonto: 5 } as const;

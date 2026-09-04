@@ -16,7 +16,7 @@ export const FONTE_BITMAP = "aurora";
  *  Mora aqui, e nao em design.ts, so para nao criar import circular. */
 export function marcar(
   obj: Phaser.GameObjects.GameObject,
-  tipo: "texto" | "botao" | "painel" | "icone" | "fundo",
+  tipo: "texto" | "botao" | "painel" | "icone" | "fundo" | "palco",
   dono?: string
 ) {
   obj.setData("ui", { tipo, dono });
@@ -67,4 +67,22 @@ export function textoComSombra(
   const desvio = Math.max(1, Math.round((op.tamanho ?? 8) / 8));
   marcar(texto(cena, x + desvio, y + desvio, conteudo, { ...op, cor: corSombra }), "fundo");
   return texto(cena, x, y, conteudo, op);
+}
+
+/** Quanto um texto vai ocupar de largura, perguntado a fonte em vez de estimado.
+ *
+ *  A fonte de bitmap e proporcional: o M e o l tem a mesma altura e larguras bem
+ *  diferentes. Contar caractere vezes 8 erra para os dois lados, e foi assim que
+ *  "Tunica de mago" saiu por cima das setas na tela de aparencia em 256 px. Aqui
+ *  quem responde e o proprio Phaser, com o mesmo calculo que ele usa ao desenhar.
+ */
+export function larguraDoTexto(
+  cena: Phaser.Scene,
+  conteudo: string,
+  tamanho: 8 | 16 | 24 | 32 = 8
+): number {
+  const medida = cena.add.bitmapText(0, 0, FONTE_BITMAP, conteudo, tamanho).setVisible(false);
+  const largura = medida.width;
+  medida.destroy();
+  return largura;
 }

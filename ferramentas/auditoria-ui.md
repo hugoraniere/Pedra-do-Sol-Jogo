@@ -1,6 +1,6 @@
 # Auditoria de UI
 
-Telas visitadas: 16
+Telas visitadas: 30
 Problemas encontrados: 0
 
 | Tela | Objetos | Problemas |
@@ -9,7 +9,7 @@ Problemas encontrados: 0
 | 02-criacao-nome | Criacao:21 Som:0 | 0 |
 | 03-criacao-raca | Criacao:42 Som:0 | 0 |
 | 04-criacao-classe | Criacao:42 Som:0 | 0 |
-| 05-criacao-poder | Criacao:35 Som:0 | 0 |
+| 05-criacao-poder | Criacao:34 Som:0 | 0 |
 | 06-criacao-aparencia | Criacao:92 Som:0 | 0 |
 | 07-criacao-sem-equipamento | Criacao:90 Som:0 | 0 |
 | 08-criacao-pronto | Criacao:24 Som:0 | 0 |
@@ -21,5 +21,19 @@ Problemas encontrados: 0
 | 12-configuracoes | Interface:37 Pausa:35 Som:0 | 0 |
 | 13-titulo-com-save | Titulo:16 Som:0 | 0 |
 | 14-carregar | Carregar:30 Som:0 | 0 |
+| perto-02-criacao-nome | Criacao:21 Som:0 | 0 |
+| perto-03-criacao-raca | Criacao:42 Som:0 | 0 |
+| perto-04-criacao-classe | Criacao:42 Som:0 | 0 |
+| perto-05-criacao-poder | Criacao:34 Som:0 | 0 |
+| perto-06-criacao-aparencia | Criacao:92 Som:0 | 0 |
+| perto-07-criacao-sem-equipamento | Criacao:90 Som:0 | 0 |
+| perto-08-criacao-pronto | Criacao:24 Som:0 | 0 |
+| longe-02-criacao-nome | Criacao:21 Som:0 | 0 |
+| longe-03-criacao-raca | Criacao:42 Som:0 | 0 |
+| longe-04-criacao-classe | Criacao:42 Som:0 | 0 |
+| longe-05-criacao-poder | Criacao:34 Som:0 | 0 |
+| longe-06-criacao-aparencia | Criacao:92 Som:0 | 0 |
+| longe-07-criacao-sem-equipamento | Criacao:90 Som:0 | 0 |
+| longe-08-criacao-pronto | Criacao:24 Som:0 | 0 |
 
 Nenhum problema de sobreposicao ou transbordo encontrado.

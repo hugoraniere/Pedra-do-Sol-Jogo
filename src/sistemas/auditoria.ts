@@ -6,6 +6,7 @@
  *   . botao por cima de botao
  *   . qualquer coisa saindo da tela
  *   . qualquer coisa saindo do painel em que deveria estar
+ *   . botao ou texto por cima do palco do boneco
  *
  * Fica sempre no build, custa quase nada e nao roda sozinho. Para usar:
  *   . no console do navegador:  auditarUI()
@@ -16,7 +17,13 @@ import { LARGURA, ALTURA } from "../dados/config";
 
 export type Problema = {
   cena: string;
-  tipo: "sobreposicao" | "fora-da-tela" | "fora-do-painel" | "atras-do-painel" | "rotulo-vaza";
+  tipo:
+    | "sobreposicao"
+    | "fora-da-tela"
+    | "fora-do-painel"
+    | "atras-do-painel"
+    | "rotulo-vaza"
+    | "cobre-o-palco";
   descricao: string;
   a: string;
   b?: string;
@@ -27,7 +34,11 @@ type Marca = { tipo: string; dono?: string };
 function rotulo(obj: Phaser.GameObjects.GameObject): string {
   const g = obj as unknown as { text?: string; texture?: { key?: string } };
   const marca = obj.getData("ui") as Marca | undefined;
-  const nome = g.text ? `"${String(g.text).slice(0, 24)}"` : g.texture?.key ?? obj.type;
+  // um botao e um container: nao tem texto nem textura propria, e sairia no
+  // relatorio como "botao:Container". O rotulo dele esta na marca
+  const nome = g.text
+    ? `"${String(g.text).slice(0, 24)}"`
+    : g.texture?.key ?? marca?.dono ?? obj.type;
   return `${marca?.tipo ?? obj.type}:${nome}`;
 }
 
@@ -64,6 +75,11 @@ export function auditarCena(cena: Phaser.Scene): Problema[] {
     return m && (m.tipo === "texto" || m.tipo === "botao");
   });
   const paineis = todos.filter((o) => (o.getData("ui") as Marca | undefined)?.tipo === "painel");
+  // o palco do boneco e o proprio boneco. Sao fundo, e por isso ficavam fora de
+  // toda comparacao: a grade de botoes da tela de criacao cobria o personagem
+  // inteiro em 256x160 e a auditoria passava verde. Quem e "palco" nao pode ter
+  // nada tocavel em cima.
+  const palcos = todos.filter((o) => (o.getData("ui") as Marca | undefined)?.tipo === "palco");
 
   // ------------------------------------------------- 1. saindo da tela
   for (const o of conteudo) {
@@ -135,7 +151,26 @@ export function auditarCena(cena: Phaser.Scene): Problema[] {
     }
   }
 
-  // ----------------------------------- 4. rotulo maior que o proprio botao
+  // --------------------------------------- 4. botao em cima do palco
+  for (const o of conteudo) {
+    const r = limites(o);
+    if (!r) continue;
+    for (const palco of palcos) {
+      const rp = limites(palco);
+      if (!rp) continue;
+      const area = sobreposicao(r, rp);
+      if (area <= 4) continue;
+      problemas.push({
+        cena: cena.scene.key,
+        tipo: "cobre-o-palco",
+        descricao: `tapa o boneco em ${Math.round(area)} px de area`,
+        a: rotulo(o),
+        b: rotulo(palco),
+      });
+    }
+  }
+
+  // ----------------------------------- 5. rotulo maior que o proprio botao
   for (const b of conteudo) {
     if ((b.getData("ui") as Marca).tipo !== "botao") continue;
     const c = b as unknown as { list?: Phaser.GameObjects.GameObject[]; width?: number };
@@ -154,7 +189,7 @@ export function auditarCena(cena: Phaser.Scene): Problema[] {
     }
   }
 
-  // ------------------------------------------------- 5. um em cima do outro
+  // ------------------------------------------------- 6. um em cima do outro
   for (let i = 0; i < conteudo.length; i++) {
     for (let j = i + 1; j < conteudo.length; j++) {
       const a = conteudo[i];
