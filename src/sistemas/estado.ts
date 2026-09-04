@@ -7,8 +7,15 @@ export type Heroi = {
   raca: string;
   classe: string;
   magias: string[];
+  /** aparencia: tudo o que muda as camadas de sprite */
+  tomPele: number;
+  estiloCabelo: string;
   corCabelo: number;
+  estiloRoupa: string;
   corRoupa: number;
+  chapeu: string;
+  corChapeu: number;
+  armaSprite: string;
 };
 
 export type Estado = {
@@ -34,8 +41,14 @@ export const VAZIO: Estado = {
     raca: "elfo",
     classe: "mago",
     magias: [],
+    tomPele: 0,
+    estiloCabelo: "comprido",
     corCabelo: 0x3e9b62,
+    estiloRoupa: "folhas",
     corRoupa: 0x3e9b62,
+    chapeu: "nenhum",
+    corChapeu: 0x7b5ac4,
+    armaSprite: "cajado",
   },
   coracoes: 3,
   coracoesMax: 3,

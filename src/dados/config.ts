@@ -39,6 +39,53 @@ export const SOLIDOS = [T.agua, T.agua2, T.pedra, T.paredeCaverna];
 /** Altura do frame do personagem. Mudou de 24 para 32 na virada de arte. */
 export const ALTURA_PERSONAGEM = 32;
 
+/** Grade da folha de personagem, igual a de arte/gente.py.
+ *  6 colunas por 4 linhas, quadro = linha * 6 + coluna. */
+export const QUADRO = { parado: 0, passoA: 1, passoB: 2, respira: 3, conjura: 4, tonto: 5 } as const;
+export const LINHA_DIRECAO = { baixo: 0, esquerda: 1, direita: 2, cima: 3 } as const;
+export const COLUNAS_FOLHA = 6;
+
+/** Ciclo de caminhada no padrao do Stardew: contato, passo, contato, outro passo,
+ *  a 5 quadros por segundo. Com 4 quadros diferentes a perna pisca. */
+export const CICLO_CAMINHADA = [QUADRO.passoA, QUADRO.parado, QUADRO.passoB, QUADRO.parado];
+export const FPS_CAMINHADA = 5;
+
+/** Opcoes de aparencia do heroi. Precisam bater com arte/gente.py. */
+export const TONS_PELE = [
+  { id: 0, nome: "Clara" },
+  { id: 1, nome: "Morena" },
+  { id: 2, nome: "Escura" },
+];
+
+export const CABELOS_ESTILO = [
+  { id: "curto", nome: "Curto" },
+  { id: "comprido", nome: "Comprido" },
+  { id: "cacheado", nome: "Cacheado" },
+  { id: "rabo", nome: "Rabo de cavalo" },
+  { id: "moicano", nome: "Moicano" },
+];
+
+export const ROUPAS_ESTILO = [
+  { id: "tunica", nome: "Tunica" },
+  { id: "folhas", nome: "Folhas" },
+  { id: "capa", nome: "Capa" },
+];
+
+export const CHAPEUS = [
+  { id: "nenhum", nome: "Sem chapeu" },
+  { id: "pontudo", nome: "Pontudo" },
+  { id: "palha", nome: "De palha" },
+  { id: "capuz", nome: "Capuz" },
+  { id: "coroa", nome: "Coroa" },
+];
+
+export const ARMAS_SPRITE = ["nenhuma", "cajado", "espada", "arco", "martelo", "funda"] as const;
+
+export const NPCS_SPRITE = [
+  "vovo", "ferreiro", "menina", "pescador", "mercador",
+  "menino", "guarda", "padeira", "elfa", "bruxo",
+] as const;
+
 /** Objetos do mundo, um PNG cada em public/assets/objetos/.
  *  A lista tem que bater com OBJETOS em arte/mundo.py. */
 export const OBJETOS = [

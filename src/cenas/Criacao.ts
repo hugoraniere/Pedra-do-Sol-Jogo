@@ -1,22 +1,42 @@
-/** Criacao do personagem em passos curtos, um por tela.
- *  A aventura e a mesma para todo mundo, so o heroi muda. */
+/** Criacao do personagem.
+ *
+ * Quatro passos curtos: nome, povo, classe e aparencia. A aparencia e uma tela so,
+ * com o boneco grande de um lado e uma lista de escolhas do outro, cada uma com
+ * seta para a esquerda e para a direita. Foi a forma de ter a montagem por partes
+ * que o Hugo pediu (referencia Baldur's Gate e Project Zomboid) sem virar um
+ * formulario, que uma crianca de 7 anos nao le.
+ */
 import Phaser from "phaser";
-import { LARGURA, ALTURA, COR, CABELOS, ROUPAS, RACAS, CLASSES } from "../dados/config";
-import { texto } from "../sistemas/texto";
-import { novoJogo, VAZIO } from "../sistemas/estado";
+import {
+  LARGURA,
+  ALTURA,
+  CABELOS,
+  ROUPAS,
+  RACAS,
+  CLASSES,
+  TONS_PELE,
+  CABELOS_ESTILO,
+  ROUPAS_ESTILO,
+  CHAPEUS,
+} from "../dados/config";
 import { acharMagia } from "../dados/conteudo";
+import { novoJogo, VAZIO, Heroi as FichaHeroi } from "../sistemas/estado";
 import { botao, Botao } from "../sistemas/botao";
-import { criarAnimacoes, Heroi } from "../sistemas/heroi";
+import { texto } from "../sistemas/texto";
+import { ESPACO, TAMANHO, marcar, meio, pilha } from "../sistemas/design";
+import { camadasDoHeroi, criarAnimacoes, Heroi } from "../sistemas/heroi";
 
-const PASSOS = ["Nome", "Raca", "Classe", "Cabelo", "Roupa", "Pronto"] as const;
+const PASSOS = ["Nome", "Raca", "Classe", "Aparencia", "Pronto"] as const;
+
+const SORTEIO = ["Trovao da Floresta", "Vento Ligeiro", "Pedra Valente", "Faisca", "Lua Nova"];
 
 export class Criacao extends Phaser.Scene {
   private passo = 0;
+  private espaco = 0;
   private grupo!: Phaser.GameObjects.Container;
   private boneco!: Heroi;
-  private rascunho = JSON.parse(JSON.stringify(VAZIO.heroi)) as typeof VAZIO.heroi;
-
-  private espaco = 0;
+  private rascunho: FichaHeroi = JSON.parse(JSON.stringify(VAZIO.heroi));
+  private comEquipamento = true;
 
   constructor() {
     super("Criacao");
@@ -24,56 +44,101 @@ export class Criacao extends Phaser.Scene {
 
   init(dados: { espaco?: number }) {
     this.espaco = dados?.espaco ?? 0;
+    this.passo = 0;
+    this.rascunho = JSON.parse(JSON.stringify(VAZIO.heroi));
+    this.comEquipamento = true;
   }
 
   create() {
-    criarAnimacoes(this);
-    this.add.rectangle(0, 0, LARGURA, ALTURA, COR.papel).setOrigin(0);
-    texto(this, LARGURA / 2, 6, "REINO DE AURORA", { cor: 0x5a4e74, ancora: 0.5 });
+    // todas as combinacoes possiveis de camada precisam de animacao pronta
+    criarAnimacoes(this, this.todasAsChaves());
+    this.add.rectangle(0, 0, LARGURA, ALTURA, 0xfff8ea).setOrigin(0);
+    marcar(this.add.image(0, 0, "titulo").setOrigin(0).setAlpha(0.25), "fundo");
 
-    this.boneco = new Heroi(this, LARGURA / 2, 94, this.rascunho.corRoupa, this.rascunho.corCabelo);
-    this.boneco.body.setAllowGravity(false);
+    this.boneco = new Heroi(this, 0, 0, this.rascunho);
     this.boneco.body.moves = false;
-    this.boneco.setScale(2);
-
-    this.grupo = this.add.container(0, 0);
+    this.grupo = this.add.container(0, 0).setDepth(10);
     this.desenharPasso();
+  }
+
+  private todasAsChaves(): string[] {
+    const chaves = new Set<string>();
+    TONS_PELE.forEach((t) => {
+      chaves.add(`heroi-corpo-${t.id}`);
+      chaves.add(`heroi-bracos-${t.id}`);
+    });
+    CABELOS_ESTILO.forEach((c) => chaves.add(`heroi-cabelo-${c.id}`));
+    ROUPAS_ESTILO.forEach((r) => chaves.add(`heroi-roupa-${r.id}`));
+    CHAPEUS.filter((c) => c.id !== "nenhum").forEach((c) => chaves.add(`heroi-chapeu-${c.id}`));
+    chaves.add("heroi-arma-cajado");
+    return [...chaves];
+  }
+
+  /** o que o boneco mostra depende do botao com equipamento / sem equipamento */
+  private fichaDoPreview(): FichaHeroi {
+    if (this.comEquipamento) return this.rascunho;
+    return { ...this.rascunho, chapeu: "nenhum", armaSprite: "nenhuma" };
+  }
+
+  private atualizarBoneco(x: number, y: number, escala: number) {
+    this.boneco.setPosition(x, y).setScale(escala);
+    this.boneco.trocarAparencia(this.fichaDoPreview());
+    void camadasDoHeroi;
   }
 
   private limpar() {
     this.grupo.removeAll(true);
+    this.input.keyboard?.removeAllListeners("keydown");
   }
 
   private titulo(pergunta: string) {
-    this.grupo.add(texto(this, LARGURA / 2, 18, pergunta, { tamanho: 16, cor: 0x2c2440, ancora: 0.5 }));
+    this.grupo.add(
+      texto(this, LARGURA / 2, 8, pergunta, { tamanho: 16, cor: 0x2c2440, ancora: 0.5 })
+    );
   }
 
-  /** grade de botoes centrada, ate 3 por linha */
+  private navegacao(rotulo = "SEGUIR >") {
+    if (this.passo > 0) {
+      this.grupo.add(
+        botao(this, 36, ALTURA - 12, 60, TAMANHO.botao, "< VOLTAR", () => {
+          this.passo -= 1;
+          this.desenharPasso();
+        }, "painel-creme")
+      );
+    }
+    this.grupo.add(
+      botao(this, LARGURA - 42, ALTURA - 12, 72, TAMANHO.botao, rotulo, () => {
+        this.passo = Math.min(this.passo + 1, PASSOS.length - 1);
+        this.desenharPasso();
+      }, "painel-ouro")
+    );
+  }
+
+  /** grade de escolha unica, usada em povo e classe */
   private grade(itens: string[], selecionado: number, aoEscolher: (i: number) => void) {
-    // a largura do botao vem do rotulo mais longo, senao o texto vaza para fora
     const maisLongo = Math.max(...itens.map((t) => t.length));
-    const largMinima = maisLongo * 7 + 12;
     const margem = 10;
-    const gap = 6;
-    const cabe = (n: number) => largMinima * n + gap * (n - 1) + margem * 2 <= LARGURA;
+    const gap = ESPACO.md;
+    const cabe = (n: number) => (maisLongo * 7 + 12) * n + gap * (n - 1) + margem * 2 <= LARGURA;
     const porLinha = cabe(3) ? 3 : cabe(2) ? 2 : 1;
     const larg = Math.floor((LARGURA - margem * 2 - gap * (porLinha - 1)) / porLinha);
-    const alt = 18;
-    // a grade vive entre o boneco e a navegacao, e nunca invade nenhum dos dois
     const linhas = Math.ceil(itens.length / porLinha);
-    const topoGrade = 110;
-    const baseGrade = ALTURA - 26;
-    const passo = Math.min(alt + 8, Math.floor((baseGrade - topoGrade) / linhas));
+    // a grade cresce de baixo para cima: o passo nunca fica menor que o botao,
+    // senao uma linha sobe em cima da outra
+    const passo = TAMANHO.botao + ESPACO.sm;
+    const base = ALTURA - 26;
+    const area = { x: margem, y: base - linhas * passo, largura: LARGURA - margem * 2, altura: linhas * passo };
     const botoes: Botao[] = [];
-    itens.forEach((texto, i) => {
+
+    itens.forEach((rotulo, i) => {
       const col = i % porLinha;
       const lin = Math.floor(i / porLinha);
-      const totalCols = Math.min(porLinha, itens.length - lin * porLinha);
-      const x = LARGURA / 2 + (col - (totalCols - 1) / 2) * (larg + gap);
-      const y = topoGrade + lin * passo + passo / 2;
-      const b = botao(this, x, y, larg, alt, texto, () => {
+      const nesta = Math.min(porLinha, itens.length - lin * porLinha);
+      const x = LARGURA / 2 + (col - (nesta - 1) / 2) * (larg + gap);
+      const y = area.y + lin * passo + passo / 2;
+      const b = botao(this, x, y, larg, TAMANHO.botao, rotulo, () => {
         aoEscolher(i);
-        botoes.forEach((outro, j) => outro.marcar(j === i));
+        botoes.forEach((o, j) => o.marcar(j === i));
       });
       b.marcar(i === selecionado);
       botoes.push(b);
@@ -81,134 +146,259 @@ export class Criacao extends Phaser.Scene {
     });
   }
 
-  private avancar() {
-    this.passo = Math.min(this.passo + 1, PASSOS.length - 1);
-    this.desenharPasso();
-  }
-
-  private voltar() {
-    this.passo = Math.max(this.passo - 1, 0);
-    this.desenharPasso();
-  }
-
-  private navegacao(rotuloSeguir = "SEGUIR >") {
-    if (this.passo > 0) {
-      this.grupo.add(botao(this, 34, ALTURA - 14, 52, 16, "< VOLTAR", () => this.voltar(), "painel-creme"));
-    }
+  /** uma linha de escolha: < NOME DO VALOR > */
+  /** uma linha compacta: ROTULO  < valor >  , tudo na mesma altura */
+  private seletor(
+    y: number,
+    x: number,
+    largura: number,
+    rotulo: string,
+    valor: string,
+    aoMudar: (passo: number) => void
+  ) {
+    const alt = TAMANHO.botaoPequeno;
+    const centro = y + alt / 2;
+    const larguraRotulo = 76;
     this.grupo.add(
-      botao(this, LARGURA - 40, ALTURA - 14, 64, 16, rotuloSeguir, () => this.avancar(), "painel-ouro")
+      texto(this, x, centro, rotulo, { cor: 0x5a4e74, ancoraY: 0.5 })
     );
+    const cx = x + larguraRotulo;
+    const larguraControle = largura - larguraRotulo;
+    this.grupo.add(botao(this, cx + 7, centro, 14, alt, "<", () => aoMudar(-1), "painel-creme"));
+    this.grupo.add(
+      botao(this, cx + larguraControle - 7, centro, 14, alt, ">", () => aoMudar(1), "painel-creme")
+    );
+    this.grupo.add(
+      this.add
+        .nineslice(cx + 16, y, "painel", undefined, larguraControle - 32, alt, 8, 8, 8, 8)
+        .setOrigin(0)
+    );
+    this.grupo.add(
+      texto(this, cx + larguraControle / 2, centro, valor, {
+        cor: 0x2c2440,
+        ancora: 0.5,
+        ancoraY: 0.5,
+      })
+    );
+  }
+
+  private ciclar<Tipo>(lista: Tipo[], atual: number, passo: number): number {
+    return (atual + passo + lista.length) % lista.length;
   }
 
   private desenharPasso() {
     this.limpar();
-    this.boneco.trocarCores(this.rascunho.corRoupa, this.rascunho.corCabelo);
 
     switch (PASSOS[this.passo]) {
-      case "Nome": {
-        this.titulo("Qual e o nome do seu heroi?");
-        this.grupo.add(
-          this.add.nineslice(LARGURA / 2, 124, "painel-creme", undefined, 200, 22, 8, 8, 8, 8).setOrigin(0.5)
-        );
-        const campo = texto(this, LARGURA / 2, 117, this.rascunho.nome || "_", {
-          tamanho: 16,
-          cor: 0x2c2440,
-          ancora: 0.5,
-        });
-        this.grupo.add(campo);
-        this.grupo.add(
-          texto(this, LARGURA / 2, 142, "digite no teclado, ou toque aqui para sortear", {
-            cor: 0x5a4e74,
-            ancora: 0.5,
-          })
-            .setInteractive()
-            .on("pointerdown", () => {
-              const sorteio = ["Trovao da Floresta", "Vento Ligeiro", "Pedra Valente", "Faisca"];
-              this.rascunho.nome = Phaser.Utils.Array.GetRandom(sorteio);
-              campo.setText(this.rascunho.nome);
-            })
-        );
-        this.input.keyboard?.removeAllListeners("keydown");
-        this.input.keyboard?.on("keydown", (e: KeyboardEvent) => {
-          if (PASSOS[this.passo] !== "Nome") return;
-          if (e.key === "Backspace") this.rascunho.nome = this.rascunho.nome.slice(0, -1);
-          else if (e.key === "Enter") this.avancar();
-          else if (e.key.length === 1 && this.rascunho.nome.length < 20) this.rascunho.nome += e.key;
-          campo.setText(this.rascunho.nome || "_");
-        });
-        this.navegacao();
+      case "Nome":
+        this.passoNome();
         break;
-      }
-      case "Raca": {
+      case "Raca":
         this.titulo("De que povo ele e?");
-        const i = RACAS.findIndex((r) => r.id === this.rascunho.raca);
-        this.grade(RACAS.map((r) => r.nome), i < 0 ? 0 : i, (k) => {
-          this.rascunho.raca = RACAS[k].id;
-        });
+        this.atualizarBoneco(LARGURA / 2, 96, 1.75);
+        this.grade(
+          RACAS.map((r) => r.nome),
+          Math.max(0, RACAS.findIndex((r) => r.id === this.rascunho.raca)),
+          (k) => {
+            this.rascunho.raca = RACAS[k].id;
+          }
+        );
         this.navegacao();
         break;
-      }
-      case "Classe": {
+      case "Classe":
         this.titulo("O que ele sabe fazer?");
-        const i = CLASSES.findIndex((c) => c.id === this.rascunho.classe);
-        this.grade(CLASSES.map((c) => c.nome), i < 0 ? 0 : i, (k) => {
-          this.rascunho.classe = CLASSES[k].id;
-          this.rascunho.magias = [...CLASSES[k].magias];
-        });
-        this.navegacao();
-        break;
-      }
-      case "Cabelo": {
-        this.titulo("A cor do cabelo");
-        const i = CABELOS.findIndex((c) => c.cor === this.rascunho.corCabelo);
-        this.grade(CABELOS.map((c) => c.nome), i < 0 ? 0 : i, (k) => {
-          this.rascunho.corCabelo = CABELOS[k].cor;
-          this.boneco.trocarCores(this.rascunho.corRoupa, this.rascunho.corCabelo);
-        });
-        this.navegacao();
-        break;
-      }
-      case "Roupa": {
-        this.titulo("A cor da roupa");
-        const i = ROUPAS.findIndex((c) => c.cor === this.rascunho.corRoupa);
-        this.grade(ROUPAS.map((c) => c.nome), i < 0 ? 0 : i, (k) => {
-          this.rascunho.corRoupa = ROUPAS[k].cor;
-          this.boneco.trocarCores(this.rascunho.corRoupa, this.rascunho.corCabelo);
-        });
-        this.navegacao();
-        break;
-      }
-      case "Pronto": {
-        if (!this.rascunho.nome) this.rascunho.nome = "Heroi";
-        if (!this.rascunho.magias.length) {
-          this.rascunho.magias = [...CLASSES.find((c) => c.id === this.rascunho.classe)!.magias];
-        }
-        this.titulo(this.rascunho.nome);
-        const classe = CLASSES.find((c) => c.id === this.rascunho.classe)!;
-        const raca = RACAS.find((r) => r.id === this.rascunho.raca)!;
-        this.grupo.add(
-          texto(
-            this,
-            LARGURA / 2,
-            116,
-              [
-                `${raca.nome} . ${classe.nome}`,
-                `Dom: ${raca.dom}`,
-                classe.magias.length
-                  ? `Magias: ${classe.magias.map((m) => acharMagia(m)?.nome ?? m).join(", ")}`
-                  : `Habilidade: ${classe.habilidade}`,
-            ].join("\n"),
-            { cor: 0x2c2440, ancora: 0.5, alinhamento: 1, entrelinha: 4 }
-          )
+        this.atualizarBoneco(LARGURA / 2, 96, 1.75);
+        this.grade(
+          CLASSES.map((c) => c.nome),
+          Math.max(0, CLASSES.findIndex((c) => c.id === this.rascunho.classe)),
+          (k) => {
+            this.rascunho.classe = CLASSES[k].id;
+            this.rascunho.magias = [...CLASSES[k].magias];
+            this.rascunho.armaSprite = CLASSES[k].arma === "cajado" ? "cajado" : CLASSES[k].arma;
+          }
         );
-        this.grupo.add(
-          botao(this, LARGURA / 2, ALTURA - 16, 120, 20, "COMECAR A AVENTURA", () => {
-            novoJogo(this.espaco, this.rascunho);
-            this.scene.start("Mundo");
-          }, "painel-ouro")
-        );
+        this.navegacao();
         break;
-      }
+      case "Aparencia":
+        this.passoAparencia();
+        break;
+      case "Pronto":
+        this.passoPronto();
+        break;
     }
+  }
+
+  // ------------------------------------------------------------- nome
+  private passoNome() {
+    this.titulo("Qual e o nome do seu heroi?");
+    this.atualizarBoneco(LARGURA / 2, 96, 1.75);
+
+    this.grupo.add(
+      this.add.nineslice(LARGURA / 2, 124, "painel-creme", undefined, 210, 22, 8, 8, 8, 8).setOrigin(0.5)
+    );
+    const campo = texto(this, LARGURA / 2, 117, this.rascunho.nome || "_", {
+      tamanho: 16,
+      cor: 0x2c2440,
+      ancora: 0.5,
+    });
+    this.grupo.add(campo);
+    this.grupo.add(
+      texto(this, LARGURA / 2, 142, "digite no teclado, ou toque aqui para sortear", {
+        cor: 0x5a4e74,
+        ancora: 0.5,
+      })
+        .setInteractive()
+        .on("pointerdown", () => {
+          this.rascunho.nome = Phaser.Utils.Array.GetRandom(SORTEIO);
+          campo.setText(this.rascunho.nome);
+        })
+    );
+
+    this.input.keyboard?.on("keydown", (e: KeyboardEvent) => {
+      if (PASSOS[this.passo] !== "Nome") return;
+      if (e.key === "Backspace") this.rascunho.nome = this.rascunho.nome.slice(0, -1);
+      else if (e.key === "Enter") {
+        this.passo += 1;
+        this.desenharPasso();
+        return;
+      } else if (e.key.length === 1 && this.rascunho.nome.length < 20) {
+        this.rascunho.nome += e.key;
+      }
+      campo.setText(this.rascunho.nome || "_");
+    });
+    this.navegacao();
+  }
+
+  // -------------------------------------------------------- aparencia
+  private passoAparencia() {
+    this.titulo("Como ele e?");
+    this.atualizarBoneco(48, 140, 3);
+
+    const x = 96;
+    const largura = LARGURA - x - 8;
+    const p = pilha({ x, y: 30, largura, altura: 120 }, ESPACO.sm);
+
+    const linhas: [string, string, (d: number) => void][] = [
+      [
+        "PELE",
+        TONS_PELE[this.rascunho.tomPele]?.nome ?? "Clara",
+        (d) => {
+          this.rascunho.tomPele = this.ciclar(TONS_PELE, this.rascunho.tomPele, d);
+        },
+      ],
+      [
+        "CABELO",
+        CABELOS_ESTILO.find((c) => c.id === this.rascunho.estiloCabelo)?.nome ?? "Curto",
+        (d) => {
+          const i = CABELOS_ESTILO.findIndex((c) => c.id === this.rascunho.estiloCabelo);
+          this.rascunho.estiloCabelo = CABELOS_ESTILO[this.ciclar(CABELOS_ESTILO, Math.max(0, i), d)].id;
+        },
+      ],
+      [
+        "COR DO CABELO",
+        CABELOS.find((c) => c.cor === this.rascunho.corCabelo)?.nome ?? "Verde folha",
+        (d) => {
+          const i = CABELOS.findIndex((c) => c.cor === this.rascunho.corCabelo);
+          this.rascunho.corCabelo = CABELOS[this.ciclar(CABELOS, Math.max(0, i), d)].cor;
+        },
+      ],
+      [
+        "ROUPA",
+        ROUPAS_ESTILO.find((r) => r.id === this.rascunho.estiloRoupa)?.nome ?? "Tunica",
+        (d) => {
+          const i = ROUPAS_ESTILO.findIndex((r) => r.id === this.rascunho.estiloRoupa);
+          this.rascunho.estiloRoupa = ROUPAS_ESTILO[this.ciclar(ROUPAS_ESTILO, Math.max(0, i), d)].id;
+        },
+      ],
+      [
+        "COR DA ROUPA",
+        ROUPAS.find((r) => r.cor === this.rascunho.corRoupa)?.nome ?? "Verde mata",
+        (d) => {
+          const i = ROUPAS.findIndex((r) => r.cor === this.rascunho.corRoupa);
+          this.rascunho.corRoupa = ROUPAS[this.ciclar(ROUPAS, Math.max(0, i), d)].cor;
+        },
+      ],
+      [
+        "CHAPEU",
+        CHAPEUS.find((c) => c.id === this.rascunho.chapeu)?.nome ?? "Sem chapeu",
+        (d) => {
+          const i = CHAPEUS.findIndex((c) => c.id === this.rascunho.chapeu);
+          this.rascunho.chapeu = CHAPEUS[this.ciclar(CHAPEUS, Math.max(0, i), d)].id;
+        },
+      ],
+    ];
+
+    linhas.forEach(([rotulo, valor, mudar]) => {
+      const r = p.reservar(TAMANHO.botaoPequeno);
+      this.seletor(r.y, r.x, r.largura, rotulo, valor, (d) => {
+        mudar(d);
+        this.desenharPasso();
+      });
+    });
+
+    // o preview de equipamento que o Hugo pediu: ve o heroi com e sem
+    this.grupo.add(
+      botao(
+        this,
+        58,
+        ALTURA - 30,
+        104,
+        TAMANHO.botaoPequeno,
+        this.comEquipamento ? "SEM EQUIPAMENTO" : "COM EQUIPAMENTO",
+        () => {
+          this.comEquipamento = !this.comEquipamento;
+          this.desenharPasso();
+        },
+        "painel-creme"
+      )
+    );
+    this.navegacao();
+  }
+
+  // ----------------------------------------------------------- pronto
+  private passoPronto() {
+    if (!this.rascunho.nome) this.rascunho.nome = "Heroi";
+    const classe = CLASSES.find((c) => c.id === this.rascunho.classe)!;
+    const raca = RACAS.find((r) => r.id === this.rascunho.raca)!;
+    if (!this.rascunho.magias.length) this.rascunho.magias = [...classe.magias];
+
+    this.titulo(this.rascunho.nome.toUpperCase());
+    this.atualizarBoneco(64, 132, 3);
+
+    const x = 116;
+    const p = pilha({ x, y: 34, largura: LARGURA - x - 10, altura: 110 }, ESPACO.sm);
+    const linhas = [
+      `${raca.nome}`,
+      `${classe.nome}`,
+      `Dom: ${raca.dom}`,
+      classe.magias.length
+        ? `Magias: ${classe.magias.map((m) => acharMagia(m)?.nome ?? m).join(", ")}`
+        : `Habilidade: ${classe.habilidade}`,
+    ];
+    linhas.forEach((linha, i) => {
+      const r = p.reservar(i < 2 ? TAMANHO.linhaTitulo : TAMANHO.linhaTexto * 2);
+      this.grupo.add(
+        texto(this, r.x, r.y, linha, {
+          tamanho: i < 2 ? 16 : 8,
+          cor: i < 2 ? 0x2c2440 : 0x5a4e74,
+          larguraMax: r.largura,
+          entrelinha: 2,
+        })
+      );
+      void meio;
+    });
+
+    this.grupo.add(
+      botao(this, LARGURA / 2, ALTURA - 14, 168, TAMANHO.botao, "COMECAR A AVENTURA", () => {
+        novoJogo(this.espaco, this.rascunho);
+        this.scene.start("Mundo");
+      }, "painel-ouro")
+    );
+    this.grupo.add(
+      botao(this, 36, ALTURA - 34, 60, TAMANHO.botaoPequeno, "< VOLTAR", () => {
+        this.passo -= 1;
+        this.desenharPasso();
+      }, "painel-creme")
+    );
   }
 }

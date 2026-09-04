@@ -74,3 +74,38 @@ ROUPAS = [
     ("Ouro",          "#F5B62B"),
     ("Rosa",          "#EE7BA6"),
 ]
+
+
+# ---------------------------------------------------------------- rampas
+# Uma rampa e o trio sombra / base / luz de um material. As sombras puxam para o
+# roxo e as luzes para o amarelo, o chamado deslocamento de matiz. E o que faz a
+# cor parecer iluminada em vez de so mais escura ou mais clara.
+
+def _limita(v):
+    return max(0, min(255, int(v)))
+
+
+def rampa(base, forca=42):
+    """Devolve (sombra, base, luz) com deslocamento de matiz."""
+    r, g, b = base[:3]
+    sombra = (_limita(r - forca * 1.15), _limita(g - forca * 1.25), _limita(b - forca * 0.55))
+    luz = (_limita(r + forca * 0.95), _limita(g + forca * 0.85), _limita(b + forca * 0.45))
+    return sombra, (r, g, b), luz
+
+
+PELE_TONS = [
+    rampa((246, 214, 180)),   # claro
+    rampa((214, 168, 126)),   # medio
+    rampa((162, 112, 78)),    # escuro
+]
+
+CABELO_TONS = {
+    "verde": (62, 155, 98),
+    "castanho": (138, 90, 52),
+    "preto": (59, 53, 80),
+    "ruivo": (210, 98, 47),
+    "loiro": (235, 195, 92),
+    "azul": (79, 150, 214),
+    "branco": (232, 228, 220),
+    "rosa": (238, 123, 166),
+}

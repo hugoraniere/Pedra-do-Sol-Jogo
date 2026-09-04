@@ -71,10 +71,10 @@ src/dados/conteudo.ts  racas, classes, magias, armas, loja e bestiario do RPG de
 app/                   o aplicativo de desktop, Electron
 ferramentas/           auditoria de UI e os screenshots que ela tira
 src/cenas/             Boot, Criacao, Mundo, Interface
-arte/gente.py          heroi, npcs e goblin, 16x32
+arte/gente.py          heroi em camadas, npcs e goblin. folha 6x4, ver docs/08
 arte/ui.py             painel de 9 fatias e icones da interface
 arte/sprites/          desenhos a mao que substituem os gerados
-docs/                  conceito, roteiro, arquitetura, arte, roadmap, fluxo de sprites
+docs/                  conceito, roteiro, arquitetura, arte, roadmap, sprites, design
 docs/referencia/       o RPG de mesa original e as ilustracoes que inspiram a arte
 ```
 

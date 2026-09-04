@@ -1,6 +1,9 @@
 /** Carrega a arte e manda pra criacao de personagem ou direto pro mundo. */
 import Phaser from "phaser";
-import { LARGURA, ALTURA, COR, ALTURA_PERSONAGEM, OBJETOS } from "../dados/config";
+import {
+  LARGURA, ALTURA, COR, ALTURA_PERSONAGEM, OBJETOS,
+  TONS_PELE, CABELOS_ESTILO, ROUPAS_ESTILO, CHAPEUS, ARMAS_SPRITE, NPCS_SPRITE,
+} from "../dados/config";
 import { prepararArmazenamento } from "../sistemas/armazenamento";
 
 export class Boot extends Phaser.Scene {
@@ -18,11 +21,25 @@ export class Boot extends Phaser.Scene {
 
     this.load.image("tileset", "assets/tileset.png");
     const P = { frameWidth: 16, frameHeight: ALTURA_PERSONAGEM };
-    this.load.spritesheet("heroi-base", "assets/heroi-base.png", P);
-    this.load.spritesheet("heroi-roupa", "assets/heroi-roupa.png", P);
-    this.load.spritesheet("heroi-cabelo", "assets/heroi-cabelo.png", P);
+    // o heroi e montado em camadas, uma folha por peca
+    TONS_PELE.forEach((t) => {
+      this.load.spritesheet(`heroi-corpo-${t.id}`, `assets/heroi-corpo-${t.id}.png`, P);
+      this.load.spritesheet(`heroi-bracos-${t.id}`, `assets/heroi-bracos-${t.id}.png`, P);
+    });
+    CABELOS_ESTILO.forEach((c) =>
+      this.load.spritesheet(`heroi-cabelo-${c.id}`, `assets/heroi-cabelo-${c.id}.png`, P)
+    );
+    ROUPAS_ESTILO.forEach((r) =>
+      this.load.spritesheet(`heroi-roupa-${r.id}`, `assets/heroi-roupa-${r.id}.png`, P)
+    );
+    CHAPEUS.filter((c) => c.id !== "nenhum").forEach((c) =>
+      this.load.spritesheet(`heroi-chapeu-${c.id}`, `assets/heroi-chapeu-${c.id}.png`, P)
+    );
+    ARMAS_SPRITE.filter((a) => a !== "nenhuma").forEach((a) =>
+      this.load.spritesheet(`heroi-arma-${a}`, `assets/heroi-arma-${a}.png`, P)
+    );
+    NPCS_SPRITE.forEach((n) => this.load.spritesheet(`npc-${n}`, `assets/npc-${n}.png`, P));
     this.load.spritesheet("goblin", "assets/goblin.png", P);
-    this.load.spritesheet("npcs", "assets/npcs.png", P);
     this.load.image("titulo", "assets/titulo.png");
     this.load.image("logo", "assets/logo.png");
     this.load.bitmapFont("aurora", "assets/fonte.png", "assets/fonte.xml");

@@ -6,13 +6,8 @@ import { VILA, montarChao, Mapa } from "../dados/mapas";
 import { DIALOGOS } from "../dados/dialogos";
 import { estado, salvar, marcarVisitado } from "../sistemas/estado";
 import { Controles } from "../sistemas/controles";
-import { criarAnimacoes, Heroi } from "../sistemas/heroi";
+import { camadasDoHeroi, criarAnimacoes, Heroi } from "../sistemas/heroi";
 import { valorDoZoom } from "../sistemas/preferencias";
-
-const NPC_FRAME: Record<string, number> = {
-  vovo: 0, ferreiro: 1, menina: 2, pescador: 3,
-  mercador: 4, menino: 5, guarda: 6, padeira: 7,
-};
 
 type FichaObjeto = { w: number; h: number; cw: number; ch: number };
 type Interagivel = { x: number; y: number; chave: string };
@@ -29,13 +24,19 @@ export class Mundo extends Phaser.Scene {
   }
 
   create() {
-    criarAnimacoes(this);
+    const mapaAtual: Mapa = VILA;
+    const st0 = estado();
+    criarAnimacoes(this, [
+      ...camadasDoHeroi(st0.heroi).map((c) => c.chave),
+      ...mapaAtual.pessoas.map((p) => `npc-${p.sprite}`),
+      "goblin",
+    ]);
     this.controles = new Controles(this);
     this.interagiveis = [];
     this.conversando = false;
     this.solidos = this.physics.add.staticGroup();
 
-    const mapa: Mapa = VILA;
+    const mapa: Mapa = mapaAtual;
     const fichas = this.cache.json.get("objetos") as Record<string, FichaObjeto>;
 
     // ---------------------------------------------------------- chao
@@ -67,30 +68,22 @@ export class Mundo extends Phaser.Scene {
     mapa.pessoas.forEach((pessoa) => {
       const x = pessoa.x * TILE + TILE / 2;
       const y = pessoa.y * TILE + TILE;
-      const s = this.add.sprite(x, y, "npcs", NPC_FRAME[pessoa.sprite] ?? 0).setOrigin(0.5, 1);
+      const s = this.add.sprite(x, y, `npc-${pessoa.sprite}`, 0).setOrigin(0.5, 1);
       s.setDepth(y);
+      s.play(`npc-${pessoa.sprite}-parado-baixo`, true);
       const corpo = this.add.rectangle(x, y - 4, 10, 8);
       this.solidos.add(corpo);
       (corpo.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
       this.interagiveis.push({ x, y: y - 10, chave: pessoa.quem });
-      // respiracao, so pra ninguem parecer estatua
-      this.tweens.add({
-        targets: s,
-        scaleY: 1.03,
-        duration: 1400 + Math.random() * 600,
-        yoyo: true,
-        repeat: -1,
-      });
+      // a respiracao agora e quadro de animacao, nao tween de escala
     });
 
     // --------------------------------------------------------- heroi
-    const st = estado();
     this.heroi = new Heroi(
       this,
       mapa.entrada.x * TILE + TILE / 2,
       mapa.entrada.y * TILE + TILE,
-      st.heroi.corRoupa,
-      st.heroi.corCabelo
+      st0.heroi
     );
     this.physics.add.collider(this.heroi, camada);
     this.physics.add.collider(this.heroi, this.solidos);

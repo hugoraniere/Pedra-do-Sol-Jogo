@@ -60,6 +60,24 @@ const caixa = await pagina.locator("canvas").boundingBox();
 const escala = caixa.width / 320;
 const clicar = (x, y) => pagina.mouse.click(caixa.x + x * escala, caixa.y + y * escala);
 
+/** Clica num botao pelo rotulo, nao pela coordenada. Assim mexer no layout nao
+ *  quebra a auditoria, que e justamente quem deveria pegar o estrago do layout. */
+async function clicarBotao(rotulo) {
+  const ponto = await pagina.evaluate((alvo) => {
+    const achatar = (l) => l.flatMap((o) => (Array.isArray(o.list) ? [o, ...achatar(o.list)] : [o]));
+    for (const cena of window.jogo.scene.getScenes(true)) {
+      const b = achatar(cena.children.list).find(
+        (o) => o.getData?.("ui")?.tipo === "botao" && o.getData("ui").dono === alvo
+      );
+      if (b) return { x: b.x, y: b.y };
+    }
+    return null;
+  }, rotulo);
+  if (!ponto) throw new Error(`botao nao encontrado: ${rotulo}`);
+  await clicar(ponto.x, ponto.y);
+  await pagina.waitForTimeout(350);
+}
+
 const telas = [];
 
 async function olhar(nome) {
@@ -83,47 +101,35 @@ const problemas = [];
 // ----------------------------------------------------------- percurso
 problemas.push(...(await olhar("01-titulo")));
 
-await clicar(160, 164); // NOVO JOGO
+await clicarBotao("NOVO JOGO");
 problemas.push(...(await olhar("02-criacao-nome")));
 await clicar(160, 142); // sortear nome
-await clicar(280, 178);
+await clicarBotao("SEGUIR >");
 problemas.push(...(await olhar("03-criacao-raca")));
-await clicar(280, 178);
+await clicarBotao("SEGUIR >");
 problemas.push(...(await olhar("04-criacao-classe")));
-await clicar(280, 178);
-problemas.push(...(await olhar("05-criacao-cabelo")));
-await clicar(280, 178);
-problemas.push(...(await olhar("06-criacao-roupa")));
-await clicar(280, 178);
+await clicarBotao("SEGUIR >");
+problemas.push(...(await olhar("05-criacao-aparencia")));
+await clicarBotao("SEM EQUIPAMENTO");
+problemas.push(...(await olhar("06-criacao-sem-equipamento")));
+await clicarBotao("COM EQUIPAMENTO");
+await clicarBotao("SEGUIR >");
 problemas.push(...(await olhar("07-criacao-pronto")));
 
-await clicar(160, 176); // comecar
-await pagina.waitForTimeout(1400);
+await clicarBotao("COMECAR A AVENTURA");
+await pagina.waitForTimeout(1500);
 problemas.push(...(await olhar("08-mundo")));
 
-await clicar(310, 8); // pausa
-problemas.push(...(await olhar("09-pausa")));
-await clicar(160, 101); // configuracoes
-problemas.push(...(await olhar("10-configuracoes")));
-await pagina.keyboard.press("Escape");   // volta de config para o menu de pausa
+await clicar(310, 8); // botao de pausa no topo
 await pagina.waitForTimeout(500);
-// SAIR PARA O MENU e o quarto item da pilha; achamos pela posicao do botao
-const ySair = await pagina.evaluate(() => {
-  const cena = window.jogo.scene.getScene("Pausa");
-  const alvo = cena.children.list
-    .flatMap((o) => (Array.isArray(o.list) ? o.list : [o]))
-    .find((o) => o.getData?.("ui")?.dono === "SAIR PARA O MENU");
-  return alvo ? alvo.y : 150;
-});
-await clicar(160, ySair);
+problemas.push(...(await olhar("09-pausa")));
+await clicarBotao("CONFIGURACOES");
+problemas.push(...(await olhar("10-configuracoes")));
+await clicarBotao("< VOLTAR");            // volta de config para o menu de pausa
+await clicarBotao("SAIR PARA O MENU");
 await pagina.waitForTimeout(1400);
 problemas.push(...(await olhar("11-titulo-com-save")));
-const yCarregar = await pagina.evaluate(() => {
-  const cena = window.jogo.scene.getScene("Titulo");
-  const alvo = cena.children.list.find((o) => o.getData?.("ui")?.dono === "CARREGAR JOGO");
-  return alvo ? alvo.y : 168;
-});
-await clicar(160, yCarregar);
+await clicarBotao("CARREGAR JOGO");
 problemas.push(...(await olhar("12-carregar")));
 
 await navegador.close();

@@ -59,35 +59,37 @@ O objetivo e o Lele conseguir jogar a cena 1 inteira sozinho, sem ninguem explic
 
 ---
 
-## Fase 1.5, sprites e animacao
+## Fase 1.5, sprites e animacao . FEITO EM PARTE
 
-- [ ] **Animacao de caminhada para todo mundo.** Hoje so o heroi anda; NPC e goblin
-      tem um frame parado. Cada criatura precisa das 4 direcoes por 4 frames, no
-      mesmo formato do heroi (`arte/gente.py`, funcao `folha_heroi`).
-- [ ] **Animacao parada.** Um frame de respiracao a cada 2 segundos tira a cara de
-      estatua muito melhor que o tween de escala que esta la hoje.
+- [x] folha de 6 colunas por 4 linhas: parado, passo A, passo B, respirando,
+      conjurando e tonto, nas 4 direcoes
+- [x] ciclo de caminhada no padrao do Stardew (1,2,1,3 a 5 fps) com o corpo subindo
+      1 px no meio do passo
+- [x] animacao de respiracao para heroi e NPC, no lugar do tween de escala
+- [x] braco como camada de cima, o que permite arma na mao
+- [x] 10 NPCs com corpo, cabelo, roupa e chapeu proprios
+- [x] contorno seletivo, rampas de cor com deslocamento de matiz, silhueta com canto
+      arredondado
+- [x] guia de tecnica em `docs/08-guia-de-sprites.md`, com as referencias
 - [ ] **Um sprite proprio por criatura do bestiario.** Sao 9, e por enquanto so o
-      goblin existe.
+      goblin existe. Usar a mesma folha de 6 por 4.
+- [ ] **Quadros de acao de verdade**: ataque, pescar, colher. Hoje so existe
+      `conjurando`, que serve de quebra-galho para tudo.
 - [ ] **Sprites a mao onde mais aparece**, ver `docs/06-fluxo-de-sprites.md`.
 
 ---
 
-## Fase 1.6, criacao de personagem de verdade
+## Fase 1.6, criacao de personagem . FEITO EM PARTE
 
-Referencia que o Hugo pediu: Baldur's Gate para a apresentacao, Project Zomboid para
-a ideia de montar o personagem por partes, com a simplicidade de um jogo infantil.
-
-- [ ] **Boneco grande e vivo** no centro da tela, virando de lado quando o jogador
-      quiser, em vez do boneco pequeno parado de hoje.
-- [ ] **Mais camadas de sprite.** Hoje sao tres (base, roupa, cabelo). Faltam:
-      corte de cabelo (nao so a cor), rosto, chapeu, capa, arma na mao, mochila.
-      Cada camada e uma folha nova em `arte/gente.py`, no mesmo formato.
+- [x] tela de aparencia com boneco grande de um lado e as escolhas do outro
+- [x] escolher tom de pele, estilo e cor de cabelo, estilo e cor de roupa, chapeu
+- [x] botao COM EQUIPAMENTO / SEM EQUIPAMENTO
+- [x] ficha resumida ao lado do boneco no passo final
+- [ ] **Girar o boneco** com uma setinha, para ver os quatro angulos.
 - [ ] **Escolher a arma** entre as de `conteudo.ts`, com o preview mudando na hora.
+      Os sprites de arma ja existem, falta so a linha de escolha.
 - [ ] **Escolher as tres magias** entre as 13, para a classe Mago.
-- [ ] **Botao COM EQUIPAMENTO / SEM EQUIPAMENTO** que liga e desliga as camadas de
-      arma, chapeu e capa. So preview, nao muda a regra.
-- [ ] **Ficha resumida ao lado do boneco** com raca, classe, dom, atributos e as
-      magias, atualizando conforme ele escolhe.
+- [ ] **Rosto** como camada propria: sobrancelha, sardas, olhos de cores diferentes.
 
 Pronto quando: da para comecar do zero, achar as tres pistas e sair da vila sem
 nenhuma instrucao de fora.

@@ -1,31 +1,81 @@
-/** O heroi na tela.
- *  Sao tres sprites empilhados: base (pele, cajado, botas), roupa e cabelo.
- *  Roupa e cabelo vem em branco no PNG e recebem a cor escolhida na criacao,
- *  entao qualquer combinacao de cores funciona sem gerar arte nova. */
+/** O heroi na tela, montado em camadas.
+ *
+ * Camadas, na ordem em que sao desenhadas (a mesma do Stardew):
+ *   corpo -> roupa -> cabelo -> chapeu -> bracos -> arma
+ *
+ * O braco fica ACIMA da roupa de proposito. E isso que deixa o personagem segurar
+ * arma e levantar a mao sem quebrar o desenho da tunica.
+ *
+ * Roupa, cabelo e chapeu vem em branco no PNG e recebem a cor escolhida por tint,
+ * entao qualquer combinacao funciona sem gerar arte nova.
+ *
+ * Cada folha tem 6 colunas por 4 linhas. A ordem esta em dados/config.ts.
+ */
 import Phaser from "phaser";
-import { VELOCIDADE } from "../dados/config";
+import {
+  VELOCIDADE,
+  QUADRO,
+  LINHA_DIRECAO,
+  COLUNAS_FOLHA,
+  CICLO_CAMINHADA,
+  FPS_CAMINHADA,
+} from "../dados/config";
+import type { Heroi as FichaHeroi } from "./estado";
 
-const CAMADAS = ["heroi-base", "heroi-roupa", "heroi-cabelo"] as const;
 const DIRECOES = ["baixo", "esquerda", "direita", "cima"] as const;
 export type NomeDirecao = (typeof DIRECOES)[number];
 
-export function criarAnimacoes(cena: Phaser.Scene) {
-  CAMADAS.forEach((chave) => {
-    DIRECOES.forEach((dir, linha) => {
-      const base = linha * 4;
-      const chaveAnda = `${chave}-anda-${dir}`;
-      if (cena.anims.exists(chaveAnda)) return;
+/** Uma camada e uma textura mais a cor com que ela e pintada. */
+type Camada = { chave: string; tint?: number };
+
+export function camadasDoHeroi(ficha: FichaHeroi): Camada[] {
+  const lista: Camada[] = [
+    { chave: `heroi-corpo-${ficha.tomPele ?? 0}` },
+    { chave: `heroi-roupa-${ficha.estiloRoupa ?? "tunica"}`, tint: ficha.corRoupa },
+    { chave: `heroi-cabelo-${ficha.estiloCabelo ?? "curto"}`, tint: ficha.corCabelo },
+  ];
+  if (ficha.chapeu && ficha.chapeu !== "nenhum") {
+    lista.push({ chave: `heroi-chapeu-${ficha.chapeu}`, tint: ficha.corChapeu ?? 0xffffff });
+  }
+  lista.push({ chave: `heroi-bracos-${ficha.tomPele ?? 0}` });
+  if (ficha.armaSprite && ficha.armaSprite !== "nenhuma") {
+    lista.push({ chave: `heroi-arma-${ficha.armaSprite}` });
+  }
+  return lista;
+}
+
+const quadro = (dir: NomeDirecao, coluna: number) => LINHA_DIRECAO[dir] * COLUNAS_FOLHA + coluna;
+
+/** Cria, uma vez por cena, as animacoes de toda folha de personagem usada. */
+export function criarAnimacoes(cena: Phaser.Scene, chaves: string[]) {
+  chaves.forEach((chave) => {
+    if (!cena.textures.exists(chave)) return;
+    DIRECOES.forEach((dir) => {
+      const andar = `${chave}-anda-${dir}`;
+      if (cena.anims.exists(andar)) return;
       cena.anims.create({
-        key: chaveAnda,
-        frames: cena.anims.generateFrameNumbers(chave, {
-          frames: [base, base + 1, base + 2, base + 3],
-        }),
-        frameRate: 7,
+        key: andar,
+        frames: CICLO_CAMINHADA.map((c) => ({ key: chave, frame: quadro(dir, c) })),
+        frameRate: FPS_CAMINHADA,
+        repeat: -1,
+      });
+      // parado nao e um quadro so: respira devagar, senao vira estatua
+      cena.anims.create({
+        key: `${chave}-parado-${dir}`,
+        frames: [
+          { key: chave, frame: quadro(dir, QUADRO.parado), duration: 2200 },
+          { key: chave, frame: quadro(dir, QUADRO.respira), duration: 700 },
+        ],
         repeat: -1,
       });
       cena.anims.create({
-        key: `${chave}-parado-${dir}`,
-        frames: [{ key: chave, frame: base }],
+        key: `${chave}-conjura-${dir}`,
+        frames: [{ key: chave, frame: quadro(dir, QUADRO.conjura) }],
+        frameRate: 1,
+      });
+      cena.anims.create({
+        key: `${chave}-tonto-${dir}`,
+        frames: [{ key: chave, frame: quadro(dir, QUADRO.tonto) }],
         frameRate: 1,
       });
     });
@@ -34,54 +84,76 @@ export function criarAnimacoes(cena: Phaser.Scene) {
 
 export class Heroi extends Phaser.GameObjects.Container {
   declare body: Phaser.Physics.Arcade.Body;
-  private camadas: Phaser.GameObjects.Sprite[] = [];
+  private camadas: { sprite: Phaser.GameObjects.Sprite; chave: string }[] = [];
   private olhando: NomeDirecao = "baixo";
-  private andando = false;
+  private estado: "parado" | "anda" | "conjura" | "tonto" = "parado";
 
-  constructor(cena: Phaser.Scene, x: number, y: number, corRoupa: number, corCabelo: number) {
+  constructor(cena: Phaser.Scene, x: number, y: number, ficha: FichaHeroi) {
     super(cena, x, y);
-    CAMADAS.forEach((chave, i) => {
-      const s = cena.add.sprite(0, 0, chave, 0).setOrigin(0.5, 1);
-      if (i === 1) s.setTint(corRoupa);
-      if (i === 2) s.setTint(corCabelo);
-      this.camadas.push(s);
+    camadasDoHeroi(ficha).forEach((c) => {
+      const s = cena.add.sprite(0, 0, c.chave, 0).setOrigin(0.5, 1);
+      if (c.tint !== undefined) s.setTint(c.tint);
+      this.camadas.push({ sprite: s, chave: c.chave });
       this.add(s);
     });
     cena.add.existing(this);
     cena.physics.add.existing(this);
-    // corpo colide so com os pes, o resto do sprite passa por cima do cenario
+    // o corpo de fisica cobre so os pes: o resto passa por tras de telhado e copa
     this.body.setSize(10, 6);
     this.body.setOffset(-5, -6);
-    this.parar();
+    this.tocar("parado");
   }
 
-  /** move e escolhe a animacao. dx e dy vem de Controles.direcao() */
+  private tocar(novo: typeof this.estado) {
+    this.estado = novo;
+    const sufixo = novo === "anda" ? "anda" : novo;
+    this.camadas.forEach((c) => c.sprite.play(`${c.chave}-${sufixo}-${this.olhando}`, true));
+  }
+
   mover(dx: number, dy: number) {
+    if (this.estado === "conjura" || this.estado === "tonto") {
+      this.body.setVelocity(0, 0);
+      return;
+    }
     const v = new Phaser.Math.Vector2(dx, dy);
     if (v.lengthSq() > 0) v.normalize().scale(VELOCIDADE);
     this.body.setVelocity(v.x, v.y);
 
     if (v.lengthSq() === 0) {
-      if (this.andando) this.parar();
+      if (this.estado !== "parado") this.tocar("parado");
       return;
     }
     const dir: NomeDirecao =
       Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "esquerda" : "direita") : dy < 0 ? "cima" : "baixo";
-    if (!this.andando || dir !== this.olhando) {
+    if (this.estado !== "anda" || dir !== this.olhando) {
       this.olhando = dir;
-      this.andando = true;
-      this.camadas.forEach((s, i) => s.play(`${CAMADAS[i]}-anda-${dir}`));
+      this.tocar("anda");
     }
+  }
+
+  parar() {
+    this.body?.setVelocity(0, 0);
+    this.tocar("parado");
+  }
+
+  /** Pose de conjurar magia, volta sozinha ao normal. */
+  conjurar(duracao = 700) {
+    this.tocar("conjura");
+    this.scene.time.delayedCall(duracao, () => {
+      if (this.estado === "conjura") this.tocar("parado");
+    });
+  }
+
+  /** Levou um susto. Nao existe morte no jogo, so ficar tonto por um instante. */
+  ficarTonto(duracao = 900) {
+    this.tocar("tonto");
+    this.scene.time.delayedCall(duracao, () => {
+      if (this.estado === "tonto") this.tocar("parado");
+    });
   }
 
   atualizarProfundidade() {
     this.setDepth(this.y);
-  }
-
-  parar() {
-    this.andando = false;
-    this.body?.setVelocity(0, 0);
-    this.camadas.forEach((s, i) => s.play(`${CAMADAS[i]}-parado-${this.olhando}`));
   }
 
   /** ponto logo a frente do heroi, usado para saber com o que ele quer falar */
@@ -92,8 +164,22 @@ export class Heroi extends Phaser.GameObjects.Container {
     return new Phaser.Math.Vector2(this.x + d[0], this.y + d[1]);
   }
 
-  trocarCores(corRoupa: number, corCabelo: number) {
-    this.camadas[1].setTint(corRoupa);
-    this.camadas[2].setTint(corCabelo);
+  /** Troca a aparencia inteira sem recriar o objeto. Usado na tela de criacao. */
+  trocarAparencia(ficha: FichaHeroi) {
+    const novas = camadasDoHeroi(ficha);
+    this.camadas.forEach((c) => c.sprite.destroy());
+    this.camadas = [];
+    this.removeAll();
+    novas.forEach((c) => {
+      const s = this.scene.add.sprite(0, 0, c.chave, 0).setOrigin(0.5, 1);
+      if (c.tint !== undefined) s.setTint(c.tint);
+      this.camadas.push({ sprite: s, chave: c.chave });
+      this.add(s);
+    });
+    this.tocar(this.estado);
+  }
+
+  chavesDeTextura(): string[] {
+    return this.camadas.map((c) => c.chave);
   }
 }

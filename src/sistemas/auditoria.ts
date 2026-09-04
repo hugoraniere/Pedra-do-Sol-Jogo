@@ -16,7 +16,7 @@ import { LARGURA, ALTURA } from "../dados/config";
 
 export type Problema = {
   cena: string;
-  tipo: "sobreposicao" | "fora-da-tela" | "fora-do-painel" | "atras-do-painel";
+  tipo: "sobreposicao" | "fora-da-tela" | "fora-do-painel" | "atras-do-painel" | "rotulo-vaza";
   descricao: string;
   a: string;
   b?: string;
@@ -135,7 +135,26 @@ export function auditarCena(cena: Phaser.Scene): Problema[] {
     }
   }
 
-  // ------------------------------------------------- 4. um em cima do outro
+  // ----------------------------------- 4. rotulo maior que o proprio botao
+  for (const b of conteudo) {
+    if ((b.getData("ui") as Marca).tipo !== "botao") continue;
+    const c = b as unknown as { list?: Phaser.GameObjects.GameObject[]; width?: number };
+    const rot = (c.list ?? []).find((o) => (o.getData("ui") as Marca | undefined)?.tipo === "texto");
+    if (!rot) continue;
+    const rr = limites(rot);
+    const rb = limites(b);
+    if (!rr || !rb) continue;
+    if (rr.width > rb.width - 4) {
+      problemas.push({
+        cena: cena.scene.key,
+        tipo: "rotulo-vaza",
+        descricao: `rotulo tem ${Math.round(rr.width)} px e o botao ${Math.round(rb.width)} px`,
+        a: rotulo(b),
+      });
+    }
+  }
+
+  // ------------------------------------------------- 5. um em cima do outro
   for (let i = 0; i < conteudo.length; i++) {
     for (let j = i + 1; j < conteudo.length; j++) {
       const a = conteudo[i];
