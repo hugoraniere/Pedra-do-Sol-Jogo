@@ -14,7 +14,9 @@
     "app:mac": "npm run build && electron-builder --mac",
     "app:win": "npm run build && electron-builder --win",
     "app:linux": "npm run build && electron-builder --linux",
-    "auditar": "npm run build && node ferramentas/auditar-ui.mjs"
+    "auditar": "npm run build && node ferramentas/auditar-ui.mjs",
+    "conferir": "node ferramentas/conferir-personagens.mjs",
+    "folha": "python3 ferramentas/folha-de-personagens.py"
   },
   "dependencies": {
     "@fontsource/silkscreen": "^5.3.0",

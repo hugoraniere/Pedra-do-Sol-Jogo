@@ -6,13 +6,27 @@
  * O braco fica ACIMA da roupa de proposito. E isso que deixa o personagem segurar
  * arma e levantar a mao sem quebrar o desenho da tunica.
  *
+ * DOIS TIPOS DE CAMADA, e a diferenca importa.
+ *
+ * As camadas ANIMADAS (corpo, bracos, cabelo, chapeu) sao folhas de 24 quadros
+ * e tocam animacao normalmente.
+ *
+ * As camadas ENCAIXADAS (roupa e arma) nao. Elas sao pecas desenhadas fora do
+ * corpo, e o que as move e o PONTO DE ENCAIXE: a arte diz, quadro a quadro,
+ * onde esta o tronco e onde esta a mao, e a peca vai para la. Assim a espada
+ * acompanha o balanco do braco sem ninguem copiar coordenada na mao, e a mesma
+ * espada serve para o anao e para o elfo, que tem o braco em alturas
+ * diferentes. Ver arte/equipamento.py e sistemas/encaixes.ts.
+ *
  * Roupa, cabelo e chapeu vem em branco no PNG e recebem a cor escolhida por tint,
  * entao qualquer combinacao funciona sem gerar arte nova.
  *
- * Cada folha tem 6 colunas por 4 linhas. A ordem esta em dados/config.ts.
+ * Cada folha de corpo tem 6 colunas por 4 linhas. A ordem esta em dados/config.ts.
  */
 import Phaser from "phaser";
 import {
+  ALTURA_PERSONAGEM,
+  RACAS_SPRITE,
   VELOCIDADE,
   QUADRO,
   LINHA_DIRECAO,
@@ -21,27 +35,48 @@ import {
   FPS_CAMINHADA,
 } from "../dados/config";
 import type { Heroi as FichaHeroi } from "./estado";
+import { encaixes, quadroDaRoupa, FichaArma } from "./encaixes";
 
 const DIRECOES = ["baixo", "esquerda", "direita", "cima"] as const;
 export type NomeDirecao = (typeof DIRECOES)[number];
 
-/** Uma camada e uma textura mais a cor com que ela e pintada. */
-type Camada = { chave: string; tint?: number };
+/** Uma camada animada: a textura, a cor com que ela e pintada, e quantos pixels
+ *  ela desce. O deslocamento existe porque raca baixa tem perna curta: o corpo
+ *  inteiro fica mais perto do chao, e o cabelo desenhado na altura normal
+ *  ficaria flutuando acima da cabeca. Ver RACAS_SPRITE.desce. */
+type Camada = { chave: string; tint?: number; desce?: number };
 
+function racaValida(ficha: FichaHeroi) {
+  return RACAS_SPRITE[ficha.raca] ? ficha.raca : "vale";
+}
+
+/** As camadas que tocam animacao. Sao estas que precisam de anims criadas. */
 export function camadasDoHeroi(ficha: FichaHeroi): Camada[] {
-  const lista: Camada[] = [
-    { chave: `heroi-corpo-${ficha.tomPele ?? 0}` },
-    { chave: `heroi-roupa-${ficha.estiloRoupa ?? "tunica"}`, tint: ficha.corRoupa },
-    { chave: `heroi-cabelo-${ficha.estiloCabelo ?? "curto"}`, tint: ficha.corCabelo },
-  ];
+  const raca = racaValida(ficha);
+  const r = RACAS_SPRITE[raca];
+  const tom = Math.min(Math.max(ficha.tomPele ?? 0, 0), r.tons.length - 1);
+  const desce = r.desce;
+
+  const lista: Camada[] = [{ chave: `heroi-corpo-${raca}-${tom}` }];
+  lista.push({ chave: `heroi-cabelo-${ficha.estiloCabelo ?? "curto"}`, tint: ficha.corCabelo, desce });
   if (ficha.chapeu && ficha.chapeu !== "nenhum") {
-    lista.push({ chave: `heroi-chapeu-${ficha.chapeu}`, tint: ficha.corChapeu ?? 0xffffff });
+    lista.push({ chave: `heroi-chapeu-${ficha.chapeu}`, tint: ficha.corChapeu ?? 0xffffff, desce });
   }
-  lista.push({ chave: `heroi-bracos-${ficha.tomPele ?? 0}` });
-  if (ficha.armaSprite && ficha.armaSprite !== "nenhuma") {
-    lista.push({ chave: `heroi-arma-${ficha.armaSprite}` });
-  }
+  lista.push({ chave: `heroi-bracos-${raca}-${tom}` });
   return lista;
+}
+
+/** As pecas que vao por ponto de encaixe, nao por animacao. */
+export function pecasDoHeroi(ficha: FichaHeroi) {
+  const raca = racaValida(ficha);
+  const r = RACAS_SPRITE[raca];
+  const estilo = ficha.estiloRoupa ?? "tunica";
+  const arma = ficha.armaSprite && ficha.armaSprite !== "nenhuma" ? ficha.armaSprite : undefined;
+  return {
+    raca,
+    roupa: { chave: `roupa-${r.corpo}-${estilo}`, tint: ficha.corRoupa },
+    arma: arma ? { chave: `arma-${arma}`, nome: arma } : undefined,
+  };
 }
 
 const quadro = (dir: NomeDirecao, coluna: number) => LINHA_DIRECAO[dir] * COLUNAS_FOLHA + coluna;
@@ -85,17 +120,16 @@ export function criarAnimacoes(cena: Phaser.Scene, chaves: string[]) {
 export class Heroi extends Phaser.GameObjects.Container {
   declare body: Phaser.Physics.Arcade.Body;
   private camadas: { sprite: Phaser.GameObjects.Sprite; chave: string }[] = [];
+  private roupa?: Phaser.GameObjects.Sprite;
+  private arma?: Phaser.GameObjects.Image;
+  private fichaArma?: FichaArma;
+  private raca = "vale";
   private olhando: NomeDirecao = "baixo";
   private estado: "parado" | "anda" | "conjura" | "tonto" = "parado";
 
   constructor(cena: Phaser.Scene, x: number, y: number, ficha: FichaHeroi) {
     super(cena, x, y);
-    camadasDoHeroi(ficha).forEach((c) => {
-      const s = cena.add.sprite(0, 0, c.chave, 0).setOrigin(0.5, 1);
-      if (c.tint !== undefined) s.setTint(c.tint);
-      this.camadas.push({ sprite: s, chave: c.chave });
-      this.add(s);
-    });
+    this.montar(ficha);
     cena.add.existing(this);
     cena.physics.add.existing(this);
     // o corpo de fisica cobre so os pes: o resto passa por tras de telhado e copa
@@ -104,10 +138,107 @@ export class Heroi extends Phaser.GameObjects.Container {
     this.tocar("parado");
   }
 
+  /** Monta as camadas na ordem de desenho. Usado no inicio e a cada troca de
+   *  aparencia na tela de criacao. */
+  private montar(ficha: FichaHeroi) {
+    const cena = this.scene ?? (this as unknown as { scene: Phaser.Scene }).scene;
+    this.camadas.forEach((c) => c.sprite.destroy());
+    this.roupa?.destroy();
+    this.arma?.destroy();
+    this.camadas = [];
+    this.roupa = undefined;
+    this.arma = undefined;
+    this.removeAll();
+
+    const pecas = pecasDoHeroi(ficha);
+    this.raca = pecas.raca;
+    const animadas = camadasDoHeroi(ficha);
+
+    // corpo primeiro, depois a roupa por cima dele
+    const corpo = animadas[0];
+    const spriteCorpo = cena.add.sprite(0, 0, corpo.chave, 0).setOrigin(0.5, 1);
+    this.camadas.push({ sprite: spriteCorpo, chave: corpo.chave });
+    this.add(spriteCorpo);
+
+    if (cena.textures.exists(pecas.roupa.chave)) {
+      this.roupa = cena.add.sprite(0, 0, pecas.roupa.chave, 0).setOrigin(0, 0);
+      if (pecas.roupa.tint !== undefined) this.roupa.setTint(pecas.roupa.tint);
+      this.add(this.roupa);
+    }
+
+    // cabelo, chapeu e bracos por cima da roupa
+    animadas.slice(1).forEach((c) => {
+      const sp = cena.add.sprite(0, c.desce ?? 0, c.chave, 0).setOrigin(0.5, 1);
+      if (c.tint !== undefined) sp.setTint(c.tint);
+      this.camadas.push({ sprite: sp, chave: c.chave });
+      this.add(sp);
+    });
+
+    if (pecas.arma && cena.textures.exists(pecas.arma.chave)) {
+      this.arma = cena.add.image(0, 0, pecas.arma.chave).setOrigin(0, 0);
+      this.fichaArma = encaixes()?.armas[pecas.arma.nome];
+      this.add(this.arma);
+    }
+
+    // o quadro so muda de verdade quando a animacao vira, entao encaixamos ali
+    spriteCorpo.off(Phaser.Animations.Events.ANIMATION_UPDATE);
+    spriteCorpo.on(Phaser.Animations.Events.ANIMATION_UPDATE, () => this.encaixar());
+    this.encaixar();
+  }
+
+  /** Poe roupa e arma no lugar para o quadro que o corpo esta mostrando agora.
+   *
+   *  Roda a cada troca de quadro da caminhada. E barato: dois setPosition e um
+   *  setFrame, nenhuma conta de anatomia, porque a conta ja veio pronta da arte. */
+  private encaixar() {
+    const tabela = encaixes();
+    const corpo = this.camadas[0]?.sprite;
+    if (!tabela || !corpo) return;
+    const pontos = tabela.pontos[this.raca] ?? tabela.pontos.vale;
+    if (!pontos) return;
+    const q = Number(corpo.frame.name);
+    if (!Number.isFinite(q)) return;
+
+    if (this.roupa) {
+      const tronco = pontos.tronco[q];
+      if (tronco) {
+        this.roupa.setFrame(quadroDaRoupa(q));
+        // a peca e desenhada centrada em 16 px de largura, e a linha 0 dela e a
+        // linha de cima do tronco. o sprite do corpo tem origem no pe, entao o
+        // canto de cima e a esquerda do quadro fica em (-8, -32)
+        this.roupa.setPosition(-8, tronco[1] - ALTURA_PERSONAGEM);
+      }
+    }
+
+    if (this.arma && this.fichaArma) {
+      const mao = pontos.mao[q];
+      if (mao) {
+        const f = this.fichaArma;
+        const espelhado = f.espelha && this.olhando === "esquerda";
+        // espelhar vira a textura dentro do proprio retangulo, entao a pega
+        // muda de lado junto: e por isso que a conta nao e so trocar o sinal
+        const pegaX = espelhado ? f.largura - 1 - f.pega[0] : f.pega[0];
+        this.arma.setFlipX(espelhado);
+        this.arma.setPosition(mao[0] - pegaX - 8, mao[1] - f.pega[1] - ALTURA_PERSONAGEM);
+      }
+    }
+  }
+
+  /** A arma fica atras do corpo quando o personagem anda de costas: de costas a
+   *  mao esta do outro lado do tronco, e a arma na frente da barriga denuncia
+   *  que e um adesivo colado por cima. */
+  private ordenarArma() {
+    if (!this.arma || !this.fichaArma) return;
+    const atras = this.fichaArma.atras && this.olhando === "cima";
+    this.moveTo(this.arma, atras ? 0 : this.length - 1);
+  }
+
   private tocar(novo: typeof this.estado) {
     this.estado = novo;
     const sufixo = novo === "anda" ? "anda" : novo;
     this.camadas.forEach((c) => c.sprite.play(`${c.chave}-${sufixo}-${this.olhando}`, true));
+    this.ordenarArma();
+    this.encaixar();
   }
 
   mover(dx: number, dy: number) {
@@ -166,16 +297,7 @@ export class Heroi extends Phaser.GameObjects.Container {
 
   /** Troca a aparencia inteira sem recriar o objeto. Usado na tela de criacao. */
   trocarAparencia(ficha: FichaHeroi) {
-    const novas = camadasDoHeroi(ficha);
-    this.camadas.forEach((c) => c.sprite.destroy());
-    this.camadas = [];
-    this.removeAll();
-    novas.forEach((c) => {
-      const s = this.scene.add.sprite(0, 0, c.chave, 0).setOrigin(0.5, 1);
-      if (c.tint !== undefined) s.setTint(c.tint);
-      this.camadas.push({ sprite: s, chave: c.chave });
-      this.add(s);
-    });
+    this.montar(ficha);
     this.tocar(this.estado);
   }
 

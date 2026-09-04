@@ -56,9 +56,26 @@ pagina.on("console", (m) => {
 await pagina.goto(`http://localhost:${PORTA}/`, { waitUntil: "networkidle" });
 await pagina.waitForTimeout(2500);
 
-const caixa = await pagina.locator("canvas").boundingBox();
-const escala = caixa.width / 320;
-const clicar = (x, y) => pagina.mouse.click(caixa.x + x * escala, caixa.y + y * escala);
+/** A resolucao logica muda com a visao escolhida (256x160, 320x192, 400x240) e a
+ *  escala do canvas muda junto. Entao nada de guardar a escala numa constante:
+ *  cada clique pergunta de novo onde o canvas esta e de que tamanho o jogo se
+ *  considera. Foi assim que a auditoria continuou valendo depois que o zoom
+ *  deixou de ser zoom de camera e virou troca de resolucao. */
+async function clicar(x, y) {
+  const caixa = await pagina.locator("canvas").boundingBox();
+  const largura = await pagina.evaluate(() => window.jogo.scale.width);
+  const escala = caixa.width / largura;
+  await pagina.mouse.click(caixa.x + x * escala, caixa.y + y * escala);
+}
+
+/** ponto dado em fracao da tela, para o que nao e botao com rotulo */
+async function clicarRelativo(fx, fy) {
+  const t = await pagina.evaluate(() => ({
+    largura: window.jogo.scale.width,
+    altura: window.jogo.scale.height,
+  }));
+  await clicar(Math.round(t.largura * fx), Math.round(t.altura * fy));
+}
 
 /** Clica num botao pelo rotulo, nao pela coordenada. Assim mexer no layout nao
  *  quebra a auditoria, que e justamente quem deveria pegar o estrago do layout. */
@@ -103,7 +120,7 @@ problemas.push(...(await olhar("01-titulo")));
 
 await clicarBotao("NOVO JOGO");
 problemas.push(...(await olhar("02-criacao-nome")));
-await clicar(160, 142); // sortear nome
+await clicarRelativo(0.5, 0.74); // sortear nome
 await clicarBotao("SEGUIR >");
 problemas.push(...(await olhar("03-criacao-raca")));
 await clicarBotao("SEGUIR >");
@@ -120,7 +137,7 @@ await clicarBotao("COMECAR A AVENTURA");
 await pagina.waitForTimeout(1500);
 problemas.push(...(await olhar("08-mundo")));
 
-await clicar(310, 8); // botao de pausa no topo
+await clicarRelativo(0.97, 0.042); // engrenagem de pausa no topo
 await pagina.waitForTimeout(500);
 problemas.push(...(await olhar("09-pausa")));
 await clicarBotao("CONFIGURACOES");

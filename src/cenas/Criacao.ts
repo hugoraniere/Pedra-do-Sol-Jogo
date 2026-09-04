@@ -14,10 +14,16 @@ import {
   ROUPAS,
   RACAS,
   CLASSES,
-  TONS_PELE,
+  tonsDaRaca,
+  RACAS_SPRITE,
+  TIPOS_CORPO,
   CABELOS_ESTILO,
   ROUPAS_ESTILO,
   CHAPEUS,
+  ARMAS_SPRITE,
+  ROUPA_DA_CLASSE,
+  ARMA_DA_CLASSE,
+  CHAPEU_DA_CLASSE,
 } from "../dados/config";
 import { acharMagia } from "../dados/conteudo";
 import { novoJogo, VAZIO, Heroi as FichaHeroi } from "../sistemas/estado";
@@ -61,16 +67,24 @@ export class Criacao extends Phaser.Scene {
     this.desenharPasso();
   }
 
+  /** Aqui o jogador troca de raca e de classe a vontade, entao TODA folha que
+   *  ele possa fazer aparecer precisa de animacao pronta antes. Uma camada sem
+   *  animacao nao da erro visivel: ela simplesmente congela no primeiro quadro,
+   *  e o personagem anda com o cabelo parado no ar. */
   private todasAsChaves(): string[] {
     const chaves = new Set<string>();
-    TONS_PELE.forEach((t) => {
-      chaves.add(`heroi-corpo-${t.id}`);
-      chaves.add(`heroi-bracos-${t.id}`);
+    Object.entries(RACAS_SPRITE).forEach(([raca, r]) =>
+      r.tons.forEach((_, i) => {
+        chaves.add(`heroi-corpo-${raca}-${i}`);
+        chaves.add(`heroi-bracos-${raca}-${i}`);
+      })
+    );
+    TIPOS_CORPO.forEach((t) => {
+      ROUPAS_ESTILO.forEach((r) => chaves.add(`heroi-roupa-${t}-${r.id}`));
+      ARMAS_SPRITE.filter((a) => a !== "nenhuma").forEach((a) => chaves.add(`heroi-arma-${t}-${a}`));
     });
     CABELOS_ESTILO.forEach((c) => chaves.add(`heroi-cabelo-${c.id}`));
-    ROUPAS_ESTILO.forEach((r) => chaves.add(`heroi-roupa-${r.id}`));
     CHAPEUS.filter((c) => c.id !== "nenhum").forEach((c) => chaves.add(`heroi-chapeu-${c.id}`));
-    chaves.add("heroi-arma-cajado");
     return [...chaves];
   }
 
@@ -201,6 +215,10 @@ export class Criacao extends Phaser.Scene {
           Math.max(0, RACAS.findIndex((r) => r.id === this.rascunho.raca)),
           (k) => {
             this.rascunho.raca = RACAS[k].id;
+            // a lista de tons muda com a raca, entao um indice antigo pode
+            // apontar para fora dela
+            const tons = tonsDaRaca(this.rascunho.raca);
+            if (this.rascunho.tomPele >= tons.length) this.rascunho.tomPele = 0;
           }
         );
         this.navegacao();
@@ -212,9 +230,14 @@ export class Criacao extends Phaser.Scene {
           CLASSES.map((c) => c.nome),
           Math.max(0, CLASSES.findIndex((c) => c.id === this.rascunho.classe)),
           (k) => {
-            this.rascunho.classe = CLASSES[k].id;
-            this.rascunho.magias = [...CLASSES[k].magias];
-            this.rascunho.armaSprite = CLASSES[k].arma === "cajado" ? "cajado" : CLASSES[k].arma;
+            const c = CLASSES[k];
+            this.rascunho.classe = c.id;
+            this.rascunho.magias = [...c.magias];
+            // a classe ja veste e ja arma: ninguem sai daqui com um mago de
+            // avental porque esqueceu de passar pela tela de aparencia
+            this.rascunho.estiloRoupa = ROUPA_DA_CLASSE[c.id] ?? "tunica";
+            this.rascunho.armaSprite = ARMA_DA_CLASSE[c.id] ?? "nenhuma";
+            this.rascunho.chapeu = CHAPEU_DA_CLASSE[c.id] ?? "nenhum";
           }
         );
         this.navegacao();
@@ -280,10 +303,12 @@ export class Criacao extends Phaser.Scene {
 
     const linhas: [string, string, (d: number) => void][] = [
       [
-        "PELE",
-        TONS_PELE[this.rascunho.tomPele]?.nome ?? "Clara",
+        // na Cria de Dragao isto nao e pele, e escama, e o nome muda junto
+        RACAS_SPRITE[this.rascunho.raca]?.tons[0]?.startsWith("Escama") ? "ESCAMA" : "PELE",
+        tonsDaRaca(this.rascunho.raca)[this.rascunho.tomPele]?.nome ?? "Clara",
         (d) => {
-          this.rascunho.tomPele = this.ciclar(TONS_PELE, this.rascunho.tomPele, d);
+          const tons = tonsDaRaca(this.rascunho.raca);
+          this.rascunho.tomPele = this.ciclar(tons, this.rascunho.tomPele, d);
         },
       ],
       [

@@ -109,3 +109,33 @@ CABELO_TONS = {
     "branco": (232, 228, 220),
     "rosa": (238, 123, 166),
 }
+
+
+# ----------------------------------------------------- tons por raca
+# Cada raca tem a sua propria lista de tres tons. O jogador escolhe o indice
+# 0, 1 ou 2 e o significado muda com a raca: para gente e cor de pele, para a
+# Cria de Dragao e cor de escama. Assim o mesmo campo da ficha serve para todos.
+
+ESCAMA_TONS = [
+    rampa((122, 196, 128)),   # verde folha
+    rampa((214, 106, 92)),    # vermelho brasa
+    rampa((112, 158, 220)),   # azul ceu
+]
+
+TONS_POR_RACA = {
+    "vale": PELE_TONS,
+    "anao": PELE_TONS,
+    "elfo": PELE_TONS,
+    "pequenino": PELE_TONS,
+    "dragao": ESCAMA_TONS,
+}
+
+# Cor do chifre e da garra da Cria de Dragao, e da barba do Anao.
+CHIFRE = (238, 228, 206)
+CHIFRE_E = (186, 172, 148)
+BARBA_TONS = {
+    "castanho": (138, 90, 52),
+    "ruivo": (196, 96, 44),
+    "branco": (226, 222, 212),
+    "preto": (72, 64, 92),
+}

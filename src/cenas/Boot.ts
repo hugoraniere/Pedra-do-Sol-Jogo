@@ -2,9 +2,11 @@
 import Phaser from "phaser";
 import {
   LARGURA, ALTURA, COR, ALTURA_PERSONAGEM, OBJETOS,
-  TONS_PELE, CABELOS_ESTILO, ROUPAS_ESTILO, CHAPEUS, ARMAS_SPRITE, NPCS_SPRITE,
+  RACAS_SPRITE, TIPOS_CORPO, CABELOS_ESTILO, ROUPAS_ESTILO, CHAPEUS, ARMAS_SPRITE,
+  NPCS_SPRITE, GOBLINS_SPRITE, ARANHAS_SPRITE, PECA_ROUPA,
 } from "../dados/config";
 import { prepararArmazenamento } from "../sistemas/armazenamento";
+import { guardarEncaixes, Encaixes } from "../sistemas/encaixes";
 
 export class Boot extends Phaser.Scene {
   constructor() {
@@ -21,24 +23,40 @@ export class Boot extends Phaser.Scene {
 
     this.load.image("tileset", "assets/tileset.png");
     const P = { frameWidth: 16, frameHeight: ALTURA_PERSONAGEM };
-    // o heroi e montado em camadas, uma folha por peca
-    TONS_PELE.forEach((t) => {
-      this.load.spritesheet(`heroi-corpo-${t.id}`, `assets/heroi-corpo-${t.id}.png`, P);
-      this.load.spritesheet(`heroi-bracos-${t.id}`, `assets/heroi-bracos-${t.id}.png`, P);
+    // O heroi e montado em camadas, uma folha por peca. Corpo e bracos tem uma
+    // folha por raca e por tom, porque a anatomia e a cor estao no mesmo
+    // desenho. Roupa e arma tem uma por largura de tronco. Cabelo e chapeu tem
+    // uma so, porque a cabeca e igual em todas as racas de proposito.
+    Object.entries(RACAS_SPRITE).forEach(([raca, r]) => {
+      r.tons.forEach((_, i) => {
+        this.load.spritesheet(`heroi-corpo-${raca}-${i}`, `assets/heroi-corpo-${raca}-${i}.png`, P);
+        this.load.spritesheet(`heroi-bracos-${raca}-${i}`, `assets/heroi-bracos-${raca}-${i}.png`, P);
+      });
     });
+    // A roupa nao e uma folha de corpo: e a peca de roupa, em 4 vistas por 3
+    // posicoes de barra. O jogo a pendura no ponto do tronco. Uma folha por
+    // largura de tronco, porque tecido nao estica.
+    const R = { frameWidth: PECA_ROUPA.largura, frameHeight: PECA_ROUPA.altura };
+    TIPOS_CORPO.forEach((t) =>
+      ROUPAS_ESTILO.forEach((r) =>
+        this.load.spritesheet(`roupa-${t}-${r.id}`, `assets/roupa-${t}-${r.id}.png`, R)
+      )
+    );
+    // A arma e um desenho unico, do tamanho dela, encostado na mao pelo ponto
+    // de pega. Nao tem quadro nem animacao propria: quem anima e o braco.
+    ARMAS_SPRITE.filter((a) => a !== "nenhuma").forEach((a) =>
+      this.load.image(`arma-${a}`, `assets/arma-${a}.png`)
+    );
+    this.load.json("encaixes", "assets/encaixes.json");
     CABELOS_ESTILO.forEach((c) =>
       this.load.spritesheet(`heroi-cabelo-${c.id}`, `assets/heroi-cabelo-${c.id}.png`, P)
-    );
-    ROUPAS_ESTILO.forEach((r) =>
-      this.load.spritesheet(`heroi-roupa-${r.id}`, `assets/heroi-roupa-${r.id}.png`, P)
     );
     CHAPEUS.filter((c) => c.id !== "nenhum").forEach((c) =>
       this.load.spritesheet(`heroi-chapeu-${c.id}`, `assets/heroi-chapeu-${c.id}.png`, P)
     );
-    ARMAS_SPRITE.filter((a) => a !== "nenhuma").forEach((a) =>
-      this.load.spritesheet(`heroi-arma-${a}`, `assets/heroi-arma-${a}.png`, P)
-    );
     NPCS_SPRITE.forEach((n) => this.load.spritesheet(`npc-${n}`, `assets/npc-${n}.png`, P));
+    GOBLINS_SPRITE.forEach((g) => this.load.spritesheet(`goblin-${g}`, `assets/goblin-${g}.png`, P));
+    ARANHAS_SPRITE.forEach((a) => this.load.spritesheet(`aranha-${a}`, `assets/aranha-${a}.png`, P));
     this.load.spritesheet("goblin", "assets/goblin.png", P);
     this.load.image("titulo", "assets/titulo.png");
     this.load.image("logo", "assets/logo.png");
@@ -52,6 +70,7 @@ export class Boot extends Phaser.Scene {
   }
 
   async create() {
+    guardarEncaixes(this.cache.json.get("encaixes") as Encaixes);
     // no aplicativo os saves vem do disco, entao esperamos a leitura antes do menu
     await prepararArmazenamento();
     this.scene.start("Titulo");

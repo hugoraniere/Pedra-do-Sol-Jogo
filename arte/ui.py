@@ -3,7 +3,7 @@
 Tudo na mesma paleta e no mesmo tracado do resto do jogo."""
 import os
 import sys
-from PIL import Image
+from PIL import Image, ImageDraw
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from paleta import *  # noqa
@@ -256,3 +256,22 @@ def gerar(saida):
     painel(OURO, TINTA, (255, 214, 120)).save(os.path.join(saida, "painel-ouro.png"))
     painel(TINTA, TINTA_2, TINTA_2).save(os.path.join(saida, "painel-escuro.png"))
     return {nome: i for i, (nome, _) in enumerate(ICONES)}
+
+
+def favicon(caminho):
+    """Icone da aba do navegador, 32 x 32: o selo dourado do Reino de Aurora.
+
+    Existe por um motivo bobo e real: sem ele o navegador pede /favicon.ico em
+    toda carga, leva 404, e o 404 aparece no console junto com os erros de
+    verdade. Erro falso no console e pior que icone feio, porque treina a gente
+    a ignorar o console."""
+    im = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    d.ellipse((1, 1, 30, 30), fill=TINTA)
+    d.ellipse((3, 3, 28, 28), fill=OURO)
+    d.ellipse((5, 5, 26, 22), fill=(255, 214, 92))
+    # a estrela de quatro pontas, a mesma da tunica do mago
+    for (x0, y0, x1, y1) in ((14, 7, 17, 24), (7, 14, 24, 17)):
+        d.rectangle((x0, y0, x1, y1), fill=TINTA)
+    d.rectangle((13, 13, 18, 18), fill=TINTA)
+    im.save(caminho)

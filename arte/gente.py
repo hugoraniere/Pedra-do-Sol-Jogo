@@ -1,526 +1,171 @@
 # -*- coding: utf-8 -*-
-"""Personagens do jogo, 16 x 32.
+"""Todos os seres do jogo, montados e salvos em PNG.
 
-A estrutura segue a do Stardew Valley, que e a referencia do projeto:
+Este arquivo nao desenha nada. Ele so junta o que os outros desenham:
 
-  . sprite de 16 x 32, cabeca grande, proporcao chibi
-  . ciclo de caminhada de 3 quadros tocados na ordem 1, 2, 1, 3, a 5 quadros por
-    segundo. Com 4 quadros diferentes a perna "pisca"; com 3 na ordem certa o passo
-    fica natural e ainda economiza desenho
-  . BRACO E CAMADA DE CIMA, separada do tronco. E isso que permite o personagem
-    segurar arma e levantar a mao sem quebrar a roupa
-  . ordem de desenho: corpo, roupa, cabelo, chapeu, braco, arma
+  arte/base.py          ferramentas de desenho e a folha de 6 x 4
+  arte/pessoa.py        corpo e bracos por raca, e os pontos de encaixe
+  arte/roupa.py         as roupas, desenhadas fora do corpo
+  arte/cabelo.py        cortes de cabelo e chapeus
+  arte/equipamento.py   as armas, desenhadas sozinhas
+  arte/goblin.py        os quatro goblins
+  arte/aranha.py        as quatro aranhas da teia doce
 
-Cada folha tem 6 colunas por 4 linhas:
+Cada folha de personagem tem 6 colunas por 4 linhas de 16 x 32:
 
   colunas: 0 parado, 1 passo A, 2 passo B, 3 respirando, 4 conjurando, 5 tonto
   linhas:  0 baixo, 1 esquerda, 2 direita, 3 cima
 
-As camadas de roupa, cabelo e chapeu saem em BRANCO e recebem tint no jogo, entao
-qualquer cor funciona sem gerar arte nova. O corpo sai em tres tons de pele porque
-tint em pele fica sujo.
+POR QUE O HEROI VEM EM CAMADAS. Sao 5 racas e 5 classes, ou seja 25
+personagens. Desenhar 25 folhas seria burrice: o corpo vem da raca, a roupa vem
+da classe e o jogo empilha as duas na hora.
 
-Tecnica, resumida em docs/08-guia-de-sprites.md:
-  . tres tons por material (sombra, base, luz) com deslocamento de matiz
-  . contorno seletivo: escuro embaixo e do lado da sombra, tom medio em cima
-  . nada de sombra em aneis concentricos, a luz vem sempre de cima e da esquerda
+E POR QUE ROUPA E ARMA NAO SAO FOLHAS. Elas nao sao desenhadas dentro do quadro
+do corpo. Sao pecas proprias, e a arte publica em encaixes.json onde fica o
+tronco e onde fica a mao em cada um dos 24 quadros. O jogo pendura a peca no
+ponto. Duas coisas melhoram com isso: a peca acompanha o balanco do braco sem
+ninguem copiar coordenada na mao, e a mesma espada serve para o anao e para o
+elfo, que tem o braco em alturas diferentes.
+
+Sobra ainda uma folha por LARGURA DE TRONCO para a roupa (magro, normal,
+gordinho), porque tecido nao estica: uma tunica de anao em cima de um elfo
+ficaria larga. Cabelo e chapeu continuam folhas de 24 quadros, com uma folha so
+para todas as racas, porque a cabeca tem o mesmo tamanho em todas de proposito.
 """
 import os
 import sys
-from PIL import Image
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from paleta import *  # noqa
+from base import *  # noqa
+import pessoa
+import roupa as roupa_arte
+import cabelo as cabelo_arte
+import equipamento
+import goblin as goblin_arte
+import aranha as aranha_arte
 
-PW, PH = 16, 32
-COLUNAS = ["parado", "passo-a", "passo-b", "respira", "conjura", "tonto"]
-LINHAS = ["baixo", "esquerda", "direita", "cima"]
+from pessoa import ORDEM_RACAS
+from roupa import ESTILOS_ROUPA, ROUPA_DA_CLASSE
+from cabelo import ESTILOS as ESTILOS_CABELO, TIPOS_CHAPEU
+from equipamento import TIPOS_ARMA, ARMA_DA_CLASSE
 
-B = (255, 255, 255)      # base da camada que recebe tint
-BS = (196, 196, 196)     # sombra da camada que recebe tint
-BL = (255, 255, 255)     # luz
+#: as tres larguras de tronco que a roupa precisa conhecer
+TIPOS_CORPO = ["magro", "normal", "gordinho"]
 
-
-def nova():
-    return Image.new("RGBA", (PW, PH), (0, 0, 0, 0))
-
-
-def px(im, x, y, cor):
-    x, y = int(x), int(y)
-    if 0 <= x < PW and 0 <= y < PH:
-        im.putpixel((x, y), cor if len(cor) == 4 else tuple(cor) + (255,))
-
-
-def ret(im, x, y, w, h, cor):
-    for j in range(int(h)):
-        for i in range(int(w)):
-            px(im, x + i, y + j, cor)
-
-
-def pontos(im, lista, cor):
-    for (x, y) in lista:
-        px(im, x, y, cor)
-
-
-def contorno_seletivo(im, escuro=TINTA, medio=None):
-    """Contorno de 1 px em volta do que ja foi desenhado.
-    Embaixo e a direita usa o tom escuro; em cima e a esquerda, se um tom medio for
-    dado, usa ele. E o 'selout': o contorno some onde a luz bate."""
-    base = im.copy()
-    for j in range(PH):
-        for i in range(PW):
-            if base.getpixel((i, j))[3]:
-                continue
-            vizinhos = []
-            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                a, b = i + dx, j + dy
-                if 0 <= a < PW and 0 <= b < PH and base.getpixel((a, b))[3] > 200:
-                    vizinhos.append((dx, dy))
-            if not vizinhos:
-                continue
-            so_por_cima = all(dy == 1 for (_, dy) in vizinhos)
-            px(im, i, j, medio if (so_por_cima and medio) else escuro)
-    return im
-
-
-def sombra_chao(im, largura=6):
-    for i in range(8 - largura, 8 + largura):
-        for j in (30, 31):
-            if im.getpixel((i, j))[3] == 0:
-                borda = abs(i - 7.5) > largura - 1.5
-                if not (borda and j == 30):
-                    px(im, i, j, (36, 30, 52, 70 if j == 30 else 45))
-    return im
-
-
-# ------------------------------------------------------------- movimento
-def deslocamento(coluna):
-    """Devolve (balanco das pernas, sobe e desce do corpo, balanco do braco).
-
-    O corpo sobe 1 px no meio do passo. E o detalhe que separa um boneco andando
-    de um boneco deslizando pela tela."""
-    if coluna == "passo-a":
-        return 1, -1, 1
-    if coluna == "passo-b":
-        return -1, -1, -1
-    if coluna == "respira":
-        return 0, 1, 0
-    return 0, 0, 0
-
-
-# ------------------------------------------------------------------ corpo
-def corpo(direcao, coluna, tom=0, orelha_pontuda=True):
-    """Cabeca, tronco, pernas e botas. Sem braco: braco e camada de cima."""
-    im = nova()
-    sombra_pele, pele, luz_pele = PELE_TONS[tom]
-    perna, sobe, _ = deslocamento(coluna)
-    tonto = coluna == "tonto"
-
-    topo = 3 + sobe + (1 if tonto else 0)
-
-    # ------ cabeca. os cantos sao cortados: silhueta arredondada le muito melhor
-    # que um retangulo, e a 16 px a silhueta e quase tudo que o jogador enxerga
-    ret(im, 3, topo, 10, 13, pele)
-    for (cx, cy) in [(3, topo), (12, topo), (3, topo + 12), (12, topo + 12)]:
-        px(im, cx, cy, (0, 0, 0, 0))
-    ret(im, 4, topo, 8, 1, luz_pele)          # luz no alto
-    ret(im, 3, topo + 11, 10, 2, sombra_pele)  # queixo na sombra
-    ret(im, 12, topo + 2, 1, 10, sombra_pele)  # lado direito na sombra
-
-    # orelhas
-    if direcao != "cima":
-        if orelha_pontuda:
-            pontos(im, [(2, topo + 5), (2, topo + 6), (1, topo + 4),
-                        (13, topo + 5), (13, topo + 6), (14, topo + 4)], pele)
-            pontos(im, [(2, topo + 7), (13, topo + 7)], sombra_pele)
-        else:
-            pontos(im, [(2, topo + 6), (13, topo + 6)], pele)
-
-    # ------ rosto
-    olho_y = topo + 6
-    if tonto:
-        # olhinho em X, sem cara de dor
-        pontos(im, [(5, olho_y), (6, olho_y + 1), (5, olho_y + 2), (6, olho_y),
-                    (9, olho_y), (10, olho_y + 1), (9, olho_y + 2), (10, olho_y)], TINTA)
-    elif direcao == "baixo":
-        ret(im, 5, olho_y, 2, 3, PAPEL)
-        ret(im, 9, olho_y, 2, 3, PAPEL)
-        px(im, 6, olho_y + 1, TINTA); px(im, 6, olho_y + 2, TINTA)
-        px(im, 10, olho_y + 1, TINTA); px(im, 10, olho_y + 2, TINTA)
-        pontos(im, [(5, olho_y - 1), (6, olho_y - 1), (9, olho_y - 1), (10, olho_y - 1)], TINTA_2)
-        ret(im, 7, topo + 10, 2, 1, sombra_pele)
-        pontos(im, [(4, topo + 9), (11, topo + 9)], (216, 148, 138))
-    elif direcao in ("esquerda", "direita"):
-        # de perfil o rosto e estreito: olho grande, nariz saindo e boca curta
-        esq = direcao == "esquerda"
-        ox = 4 if esq else 9
-        ret(im, ox, olho_y, 3, 3, PAPEL)
-        ret(im, ox if esq else ox + 2, olho_y + 1, 1, 2, TINTA)
-        pontos(im, [(ox, olho_y - 1), (ox + 1, olho_y - 1), (ox + 2, olho_y - 1)], TINTA_2)
-        nx = 2 if esq else 13
-        px(im, nx, olho_y + 3, pele)
-        px(im, nx, olho_y + 4, sombra_pele)
-        ret(im, 3 if esq else 11, topo + 10, 2, 1, sombra_pele)
-        px(im, 4 if esq else 11, topo + 8, (216, 148, 138))
-
-    # ------ pescoco e tronco (a roupa cobre, aqui e so o volume)
-    ret(im, 6, topo + 13, 4, 1, sombra_pele)
-    ret(im, 4, topo + 14, 8, 9, pele)
-    ret(im, 11, topo + 14, 1, 9, sombra_pele)
-    px(im, 4, topo + 14, (0, 0, 0, 0))
-    px(im, 11, topo + 14, (0, 0, 0, 0))
-
-    # ------ pernas
-    base_perna = 25 + sobe
-    ret(im, 5, base_perna, 2, 3 + perna, pele)
-    ret(im, 9, base_perna, 2, 3 - perna, pele)
-    ret(im, 6, base_perna, 1, 3 + perna, sombra_pele)
-    ret(im, 10, base_perna, 1, 3 - perna, sombra_pele)
-
-    # ------ botas
-    for (bx, alt) in ((4, perna), (8, -perna)):
-        y = base_perna + 3 + alt
-        ret(im, bx, y, 4, 2, MADEIRA_E)
-        ret(im, bx, y, 4, 1, MADEIRA)
-        ret(im, bx, y + 1, 4, 1, TINTA_2)
-
-    contorno_seletivo(im, TINTA, TINTA_2)
-    sombra_chao(im)
-    return im
-
-
-# ------------------------------------------------------------------ braco
-def bracos(direcao, coluna, tom=0):
-    """Camada de cima. Fica por cima da roupa, igual ao Stardew."""
-    im = nova()
-    sombra_pele, pele, _ = PELE_TONS[tom]
-    _, sobe, balanco = deslocamento(coluna)
-    topo = 3 + sobe
-    ombro = topo + 15
-
-    if coluna == "conjura":
-        # um braco levantado, o outro em guarda. serve para magia e para acenar
-        ret(im, 12, topo + 4, 2, 8, pele)
-        ret(im, 13, topo + 4, 1, 8, sombra_pele)
-        ret(im, 2, ombro + 1, 2, 6, pele)
-        ret(im, 3, ombro + 1, 1, 6, sombra_pele)
-    elif direcao == "esquerda":
-        ret(im, 3, ombro + balanco, 3, 7, pele)
-        ret(im, 5, ombro + balanco, 1, 7, sombra_pele)
-    elif direcao == "direita":
-        ret(im, 10, ombro - balanco, 3, 7, pele)
-        ret(im, 12, ombro - balanco, 1, 7, sombra_pele)
-    else:
-        ret(im, 2, ombro + balanco, 2, 7, pele)
-        ret(im, 12, ombro - balanco, 2, 7, pele)
-        ret(im, 3, ombro + balanco, 1, 7, sombra_pele)
-        ret(im, 13, ombro - balanco, 1, 7, sombra_pele)
-
-    contorno_seletivo(im, TINTA, TINTA_2)
-    return im
-
-
-# ----------------------------------------------------------------- cabelo
-ESTILOS_CABELO = ["curto", "comprido", "cacheado", "rabo", "moicano"]
-
-
-def cabelo(direcao, coluna, estilo="curto"):
-    im = nova()
-    _, sobe, _ = deslocamento(coluna)
-    topo = 3 + sobe + (1 if coluna == "tonto" else 0)
-    de_costas = direcao == "cima"
-
-    if de_costas:
-        ret(im, 3, topo, 10, 12, B)
-        px(im, 3, topo, (0, 0, 0, 0))
-        px(im, 12, topo, (0, 0, 0, 0))
-        ret(im, 4, topo, 8, 1, BL)
-        ret(im, 7, topo + 2, 2, 8, BS)   # risca da nuca, senao as costas viram bloco
-        if estilo in ("comprido", "rabo"):
-            ret(im, 3, topo + 12, 10, 4, BS)
-        return contorno_seletivo(im, TINTA, TINTA_2)
-
-    # franja, comum a todos
-    ret(im, 3, topo, 10, 3, B)
-    px(im, 3, topo, (0, 0, 0, 0))
-    px(im, 12, topo, (0, 0, 0, 0))
-    ret(im, 4, topo - 1, 8, 1, B)
-    ret(im, 4, topo, 6, 1, BL)
-
-    perfil = direcao in ("esquerda", "direita")
-    # de perfil a nuca fica do lado oposto ao que o personagem olha
-    nuca_x = 9 if direcao == "esquerda" else 3
-    nuca_l = 4
-
-    if estilo == "curto":
-        if perfil:
-            ret(im, nuca_x, topo, nuca_l, 8, B)
-            ret(im, nuca_x, topo + 6, nuca_l, 2, BS)
-        else:
-            ret(im, 3, topo + 3, 1, 4, B)
-            ret(im, 12, topo + 3, 1, 4, B)
-            px(im, 12, topo + 6, BS)
-    elif estilo == "comprido":
-        if perfil:
-            ret(im, nuca_x, topo, nuca_l, 14, B)
-            ret(im, nuca_x + (2 if direcao == "esquerda" else 0), topo + 6, 2, 8, BS)
-        else:
-            ret(im, 2, topo + 2, 2, 12, B)
-            ret(im, 12, topo + 2, 2, 12, B)
-            ret(im, 13, topo + 8, 1, 6, BS)
-            ret(im, 2, topo + 12, 2, 2, BS)
-    elif estilo == "cacheado":
-        if perfil:
-            ret(im, nuca_x, topo, nuca_l, 9, B)
-            for k in range(3):
-                ret(im, nuca_x + (nuca_l - 1 if direcao == "esquerda" else -1), topo + 1 + k * 3, 2, 2, B)
-            ret(im, nuca_x, topo + 7, nuca_l, 2, BS)
-        else:
-            for (x, y) in [(2, topo + 2), (2, topo + 5), (13, topo + 2), (13, topo + 5),
-                           (3, topo - 1), (11, topo - 1), (7, topo - 2)]:
-                ret(im, x, y, 2, 2, B)
-            ret(im, 3, topo + 3, 1, 4, B)
-            ret(im, 12, topo + 3, 1, 4, B)
-    elif estilo == "rabo":
-        if perfil:
-            ret(im, nuca_x, topo, nuca_l, 7, B)
-            x = 13 if direcao == "direita" else 1
-            ret(im, x - (1 if direcao == "direita" else 0), topo + 3, 2, 9, B)
-            ret(im, x, topo + 7, 1, 5, BS)
-        else:
-            ret(im, 3, topo + 3, 1, 3, B)
-            ret(im, 12, topo + 3, 1, 3, B)
-            ret(im, 13, topo + 2, 2, 9, B)
-            ret(im, 14, topo + 6, 1, 5, BS)
-    elif estilo == "moicano":
-        ret(im, 6, topo - 3, 4, 4, B)
-        ret(im, 7, topo - 4, 2, 2, B)
-        if perfil:
-            ret(im, nuca_x, topo, nuca_l, 4, BS)
-        else:
-            ret(im, 3, topo + 3, 1, 2, BS)
-            ret(im, 12, topo + 3, 1, 2, BS)
-
-    return contorno_seletivo(im, TINTA, TINTA_2)
-
-
-# ------------------------------------------------------------------ roupa
-ESTILOS_ROUPA = ["tunica", "folhas", "capa"]
-
-
-def roupa(direcao, coluna, estilo="tunica"):
-    im = nova()
-    _, sobe, _ = deslocamento(coluna)
-    topo = 3 + sobe
-    peito = topo + 14
-
-    if estilo == "capa":
-        # a capa aparece atras dos ombros, entao e mais larga que o tronco
-        ret(im, 3, peito - 1, 10, 11, BS)
-        ret(im, 4, peito, 8, 9, B)
-        ret(im, 5, peito, 2, 4, BL)
-        ret(im, 4, peito + 9, 8, 2, BS)
-        return contorno_seletivo(im, TINTA, TINTA_2)
-
-    ret(im, 4, peito, 8, 9, B)
-    px(im, 4, peito, (0, 0, 0, 0))   # ombro arredondado
-    px(im, 11, peito, (0, 0, 0, 0))
-    ret(im, 5, peito, 2, 4, BL)     # luz no peito, vem de cima e da esquerda
-    ret(im, 11, peito, 1, 9, BS)    # lado direito na sombra
-    ret(im, 4, peito + 8, 8, 1, BS)
-
-    if estilo == "folhas":
-        # barra recortada, a tunica de folha do Elfo
-        for x in range(4, 12, 2):
-            px(im, x, peito + 9, B)
-            px(im, x + 1, peito + 9, BS)
-        ret(im, 5, peito - 1, 6, 1, B)   # gola de folhas
-        px(im, 7, peito + 4, BS); px(im, 8, peito + 4, BS)
-    else:
-        ret(im, 4, peito + 5, 8, 1, BS)  # cinto
-
-    return contorno_seletivo(im, TINTA, TINTA_2)
-
-
-# ----------------------------------------------------------------- chapeu
-TIPOS_CHAPEU = ["nenhum", "pontudo", "palha", "capuz", "coroa"]
-
-
-def chapeu(direcao, coluna, tipo="pontudo"):
-    im = nova()
-    if tipo == "nenhum":
-        return im
-    _, sobe, _ = deslocamento(coluna)
-    topo = 3 + sobe + (1 if coluna == "tonto" else 0)
-
-    if tipo == "pontudo":
-        ret(im, 2, topo - 1, 12, 3, B)
-        ret(im, 4, topo - 4, 8, 3, B)
-        ret(im, 6, topo - 6, 4, 2, B)
-        ret(im, 7, topo - 7, 2, 1, B)
-        ret(im, 2, topo + 1, 12, 1, BS)
-        ret(im, 4, topo - 4, 4, 1, BL)
-    elif tipo == "palha":
-        ret(im, 1, topo, 14, 2, B)
-        ret(im, 4, topo - 3, 8, 3, B)
-        ret(im, 1, topo + 1, 14, 1, BS)
-        ret(im, 5, topo - 3, 4, 1, BL)
-    elif tipo == "capuz":
-        ret(im, 2, topo - 1, 12, 4, B)
-        ret(im, 4, topo - 3, 8, 2, B)
-        ret(im, 6, topo - 5, 4, 2, B)
-        ret(im, 2, topo + 2, 2, 8, B)
-        ret(im, 12, topo + 2, 2, 8, B)
-        ret(im, 12, topo + 2, 2, 8, BS)
-    elif tipo == "coroa":
-        ret(im, 4, topo - 1, 8, 3, B)
-        for x in (4, 7, 10):
-            ret(im, x, topo - 3, 2, 2, B)
-        ret(im, 4, topo + 1, 8, 1, BS)
-
-    return contorno_seletivo(im, TINTA, TINTA_2)
-
-
-# ------------------------------------------------------------------- arma
-TIPOS_ARMA = ["nenhuma", "cajado", "espada", "arco", "martelo", "funda"]
-
-
-def arma(direcao, coluna, tipo="cajado"):
-    """Desenhada por cima do braco, na mao certa de cada angulo."""
-    im = nova()
-    if tipo == "nenhuma" or direcao == "cima":
-        return im
-    _, sobe, balanco = deslocamento(coluna)
-    topo = 3 + sobe
-    conjurando = coluna == "conjura"
-
-    # a mao muda de lado conforme o angulo
-    x = 14 if direcao != "esquerda" else 1
-    y_mao = topo + 16 - (balanco if x > 8 else -balanco)
-    if conjurando:
-        x, y_mao = 14, topo + 6
-
-    if tipo == "cajado":
-        for k in range(18):
-            y = y_mao - 10 + k
-            px(im, x, y, MADEIRA if k % 3 else MADEIRA_E)
-        px(im, x, y_mao - 11, ROXO)
-        px(im, x, y_mao - 12, ROXO_C)
-        px(im, x + (1 if x < 8 else -1), y_mao - 11, ROXO)
-    elif tipo == "espada":
-        for k in range(9):
-            px(im, x, y_mao - 8 + k, PEDRA_C if k < 7 else OURO)
-        px(im, x, y_mao - 9, PAPEL)
-        px(im, x + (1 if x < 8 else -1), y_mao + 1, OURO)
-        px(im, x - (1 if x < 8 else -1), y_mao + 1, OURO)
-    elif tipo == "arco":
-        for k, dx in enumerate([1, 0, 0, 0, 1]):
-            d = dx if x > 8 else -dx
-            px(im, x + d, y_mao - 6 + k * 3, MADEIRA)
-        for k in range(13):
-            px(im, x, y_mao - 6 + k, TINTA_2 if k % 6 else MADEIRA_E)
-    elif tipo == "martelo":
-        for k in range(10):
-            px(im, x, y_mao - 6 + k, MADEIRA)
-        ret(im, x - 1, y_mao - 9, 3, 3, PEDRA)
-        ret(im, x - 1, y_mao - 7, 3, 1, PEDRA_E)
-    elif tipo == "funda":
-        for k in range(6):
-            px(im, x, y_mao - 3 + k, MADEIRA_E)
-        px(im, x + (1 if x < 8 else -1), y_mao + 3, TERRA_C)
-
-    return contorno_seletivo(im, TINTA)
-
-
-# ---------------------------------------------------------------- montagem
-def folha(desenhar, **kw):
-    """Monta a folha de 6 colunas por 4 linhas chamando a funcao de desenho."""
-    im = Image.new("RGBA", (PW * len(COLUNAS), PH * len(LINHAS)), (0, 0, 0, 0))
-    for li, direcao in enumerate(LINHAS):
-        for ci, coluna in enumerate(COLUNAS):
-            im.paste(desenhar(direcao, coluna, **kw), (ci * PW, li * PH))
-    return im
+#: coluna da folha do corpo -> linha da folha de roupa
+LINHA_DA_ROUPA = {"parado": 0, "passo-a": 1, "passo-b": 2,
+                  "respira": 0, "conjura": 0, "tonto": 0}
+#: direcao -> coluna da folha de roupa
+VISTA_DA_DIRECAO = {"baixo": 0, "esquerda": 1, "direita": 2, "cima": 3}
 
 
 # ------------------------------------------------------------------- npcs
+# A vila fica sem graca se todo mundo tiver o mesmo tamanho. Cada NPC tem raca,
+# corpo e altura proprios, e alguns sao criancas.
 NPCS = [
-    ("vovo", dict(tom=0, cabelo="comprido", cor_cabelo="branco", roupa="tunica", cor_roupa=ROXO, chapeu="nenhum", orelha=False)),
-    ("ferreiro", dict(tom=1, cabelo="curto", cor_cabelo="castanho", roupa="tunica", cor_roupa=(150, 96, 60), chapeu="nenhum", orelha=False, barba=True)),
-    ("menina", dict(tom=0, cabelo="rabo", cor_cabelo="loiro", roupa="tunica", cor_roupa=ROSA, chapeu="nenhum", orelha=False)),
-    ("pescador", dict(tom=1, cabelo="curto", cor_cabelo="branco", roupa="tunica", cor_roupa=AZUL, chapeu="palha", orelha=False, barba=True)),
-    ("mercador", dict(tom=2, cabelo="cacheado", cor_cabelo="preto", roupa="tunica", cor_roupa=VERDE, chapeu="pontudo", orelha=False)),
-    ("menino", dict(tom=0, cabelo="curto", cor_cabelo="ruivo", roupa="tunica", cor_roupa=OURO, chapeu="nenhum", orelha=False)),
-    ("guarda", dict(tom=1, cabelo="curto", cor_cabelo="preto", roupa="tunica", cor_roupa=PEDRA, chapeu="capuz", orelha=False, barba=True)),
-    ("padeira", dict(tom=2, cabelo="comprido", cor_cabelo="castanho", roupa="tunica", cor_roupa=PAPEL_2, chapeu="nenhum", orelha=False)),
-    ("elfa", dict(tom=0, cabelo="comprido", cor_cabelo="verde", roupa="folhas", cor_roupa=VERDE, chapeu="nenhum", orelha=True)),
-    ("bruxo", dict(tom=0, cabelo="comprido", cor_cabelo="azul", roupa="capa", cor_roupa=ROXO, chapeu="pontudo", orelha=True)),
+    ("vovo", dict(raca="vale", tom=1, tipo="gordinho", altura="baixo",
+                  cabelo="coque", cor_cabelo="branco",
+                  roupa="tunica", cor_roupa=ROXO, chapeu="nenhum")),
+    ("ferreiro", dict(raca="anao", tom=1, cabelo="curto", cor_cabelo="castanho",
+                      roupa="ferreiro", cor_roupa=(150, 96, 60), chapeu="nenhum",
+                      arma="martelo")),
+    ("menina", dict(raca="vale", tom=0, altura="crianca", tipo="magro",
+                    cabelo="rabo", cor_cabelo="loiro",
+                    roupa="tunica", cor_roupa=ROSA, chapeu="nenhum")),
+    ("pescador", dict(raca="vale", tom=1, tipo="magro", cabelo="curto",
+                      cor_cabelo="branco", barba="branco",
+                      roupa="tunica", cor_roupa=AZUL, chapeu="palha")),
+    ("mercador", dict(raca="vale", tom=2, tipo="gordinho", cabelo="cacheado",
+                      cor_cabelo="preto", roupa="cacador", cor_roupa=VERDE,
+                      chapeu="pontudo")),
+    ("menino", dict(raca="pequenino", tom=0, cabelo="curto", cor_cabelo="ruivo",
+                    roupa="amigo", cor_roupa=OURO, chapeu="nenhum", arma="funda")),
+    ("guarda", dict(raca="vale", tom=1, tipo="gordinho", cabelo="curto",
+                    cor_cabelo="preto", barba="preto",
+                    roupa="cavaleiro", cor_roupa=PEDRA, chapeu="elmo", arma="espada")),
+    ("padeira", dict(raca="vale", tom=2, cabelo="chanel", cor_cabelo="castanho",
+                     roupa="ferreiro", cor_roupa=PAPEL_2, chapeu="nenhum")),
+    ("elfa", dict(raca="elfo", tom=0, cabelo="comprido", cor_cabelo="verde",
+                  roupa="folhas", cor_roupa=VERDE, chapeu="nenhum", arma="arco")),
+    ("bruxo", dict(raca="elfo", tom=0, cabelo="comprido", cor_cabelo="azul",
+                   roupa="mago", cor_roupa=ROXO, chapeu="pontudo", arma="cajado")),
 ]
 
 
-def pintar(im, cor):
-    saida = im.copy()
-    p = saida.load()
-    for y in range(saida.height):
-        for x in range(saida.width):
-            r, g, b, a = p[x, y]
-            if not a or (r, g, b) == TINTA or (r, g, b) == TINTA_2:
-                continue
-            k = r / 255
-            p[x, y] = (int(cor[0] * k), int(cor[1] * k), int(cor[2] * k), a)
+def _colar(destino, peca_im, quadro, x, y):
+    """Cola uma peca dentro de um quadro da folha, cortando o que passar dele.
+
+    O corte importa: sem ele o cabo de um cajado desenhado baixo demais escorre
+    para dentro do quadro de baixo, e a arma pisca no meio da caminhada."""
+    li, ci = divmod(quadro, len(COLUNAS))
+    li, ci = quadro // len(COLUNAS), quadro % len(COLUNAS)
+    base_x, base_y = ci * PW, li * PH
+    recorte = Image.new("RGBA", (PW, PH), VAZIO4)
+    recorte.alpha_composite(peca_im, (x, y)) if False else None
+    temp = Image.new("RGBA", (PW * 3, PH * 3), VAZIO4)
+    temp.alpha_composite(peca_im, (x + PW, y + PH))
+    recorte.alpha_composite(temp.crop((PW, PH, PW * 2, PH * 2)))
+    destino.alpha_composite(recorte, (base_x, base_y))
+
+
+def vestir(raca, tracos_extra, estilo_roupa, cor_roupa, arma, folha_base):
+    """Pendura roupa e arma numa folha de corpo, quadro a quadro, usando os
+    pontos de encaixe. E exatamente o que o jogo faz em tempo real: se o
+    resultado aqui e no jogo divergir, um dos dois esta lendo o ponto errado."""
+    saida = folha_base
+    tipo = pessoa.tracos(raca, **tracos_extra)["tipo"]
+    folha_roupa = roupa_arte.folha_de_roupa(estilo_roupa, tipo) if estilo_roupa else None
+    folha_roupa = pintar(folha_roupa, cor_roupa) if folha_roupa and cor_roupa else folha_roupa
+    desenho_arma = equipamento.DESENHOS[arma]() if arma and arma != "nenhuma" else None
+
+    for li, direcao in enumerate(LINHAS):
+        for ci, coluna in enumerate(COLUNAS):
+            quadro = li * len(COLUNAS) + ci
+            g = pessoa.geometria(direcao, coluna, raca, **tracos_extra)
+            if folha_roupa is not None:
+                vx = VISTA_DA_DIRECAO[direcao] * roupa_arte.LARGURA_PECA
+                vy = LINHA_DA_ROUPA[coluna] * roupa_arte.ALTURA_PECA
+                peca = folha_roupa.crop(
+                    (vx, vy, vx + roupa_arte.LARGURA_PECA, vy + roupa_arte.ALTURA_PECA)
+                )
+                _colar(saida, peca, quadro, 0, g["tronco"][1])
+            if desenho_arma is not None:
+                im_arma, pega = desenho_arma
+                mx, my = g["mao"]
+                _colar(saida, im_arma, quadro, mx - pega[0], my - pega[1])
     return saida
 
 
 def npc_pronto(**kw):
-    """Um NPC ja achatado numa folha so, porque NPC nao troca de roupa em runtime."""
+    """Um NPC ja achatado numa folha so, porque NPC nao troca de roupa em runtime.
+
+    O cabelo e o chapeu descem o tanto que a altura dele pedir, como o jogo faz
+    com o heroi. A roupa e a arma nao precisam disso: elas vao pelo ponto de
+    encaixe, que ja sai na altura certa."""
+    raca = kw.get("raca", "vale")
+    extra = {k: kw.get(k) for k in ("tipo", "altura", "barba") if kw.get(k) is not None}
+    t = pessoa.tracos(raca, **extra)
     tom = kw.get("tom", 0)
-    base = folha(corpo, tom=tom, orelha_pontuda=kw.get("orelha", False))
-    saida = Image.new("RGBA", base.size, (0, 0, 0, 0))
+    dy = pessoa.desloque(t["altura"])
+
+    base = folha(pessoa.corpo, tom=tom, raca=raca, **extra)
+    saida = Image.new("RGBA", base.size, VAZIO4)
     saida.alpha_composite(base)
-    saida.alpha_composite(pintar(folha(roupa, estilo=kw.get("roupa", "tunica")), kw.get("cor_roupa", VERDE)))
+
+    # corpo, roupa, cabelo, chapeu, bracos, arma. o braco por cima da roupa e o
+    # que deixa a manga funcionar; a arma por cima do braco e o que a poe na mao
+    vestir(raca, extra, kw.get("roupa", "tunica"), kw.get("cor_roupa", VERDE), None, saida)
     saida.alpha_composite(
-        pintar(folha(cabelo, estilo=kw.get("cabelo", "curto")), CABELO_TONS[kw.get("cor_cabelo", "castanho")])
+        pintar(descer(folha(cabelo_arte.cabelo, estilo=kw.get("cabelo", "curto")), dy),
+               CABELO_TONS[kw.get("cor_cabelo", "castanho")])
     )
     if kw.get("chapeu", "nenhum") != "nenhum":
-        saida.alpha_composite(pintar(folha(chapeu, tipo=kw["chapeu"]), kw.get("cor_chapeu", MADEIRA)))
-    saida.alpha_composite(folha(bracos, tom=tom))
-    return saida
-
-
-# ----------------------------------------------------------------- goblin
-def goblin_corpo(direcao, coluna):
-    im = nova()
-    perna, sobe, _ = deslocamento(coluna)
-    topo = 4 + sobe
-    ret(im, 3, topo, 10, 12, GOBLIN)
-    ret(im, 4, topo, 8, 1, GOBLIN_C)
-    ret(im, 3, topo + 10, 10, 2, GOBLIN_E)
-    ret(im, 12, topo + 2, 1, 9, GOBLIN_E)
-    if direcao != "cima":
-        pontos(im, [(2, topo + 5), (1, topo + 4), (2, topo + 6),
-                    (13, topo + 5), (14, topo + 4), (13, topo + 6)], GOBLIN_C)
-        ret(im, 5, topo + 6, 2, 3, PAPEL)
-        ret(im, 9, topo + 6, 2, 3, PAPEL)
-        px(im, 6, topo + 7, TINTA); px(im, 10, topo + 7, TINTA)
-        ret(im, 6, topo + 10, 4, 1, TINTA_2)
-        px(im, 6, topo + 9, PAPEL); px(im, 9, topo + 9, PAPEL)
-    ret(im, 4, topo + 13, 8, 8, GOBLIN_E)
-    ret(im, 5, topo + 13, 2, 4, GOBLIN)
-    base_perna = 25 + sobe
-    ret(im, 5, base_perna, 2, 3 + perna, GOBLIN)
-    ret(im, 9, base_perna, 2, 3 - perna, GOBLIN)
-    ret(im, 4, base_perna + 3 + perna, 4, 2, GOBLIN_E)
-    ret(im, 8, base_perna + 3 - perna, 4, 2, GOBLIN_E)
-    contorno_seletivo(im, TINTA, TINTA_2)
-    sombra_chao(im, 5)
-    return im
-
-
-def goblin_pronto():
-    base = folha(goblin_corpo)
-    saida = Image.new("RGBA", base.size, (0, 0, 0, 0))
-    saida.alpha_composite(base)
-    saida.alpha_composite(pintar(folha(chapeu, tipo="capuz"), PEDRA))
-    saida.alpha_composite(folha(bracos, tom=2))
+        saida.alpha_composite(
+            pintar(descer(folha(cabelo_arte.chapeu, tipo=kw["chapeu"]), dy),
+                   kw.get("cor_chapeu", MADEIRA))
+        )
+    saida.alpha_composite(folha(pessoa.bracos, tom=tom, raca=raca, **extra))
+    vestir(raca, extra, None, None, kw.get("arma", "nenhuma"), saida)
     return saida
 
 
@@ -529,31 +174,73 @@ def gerar(saida, a_mao=None):
     def guardar(nome, im):
         ((a_mao(nome) if a_mao else None) or im).save(os.path.join(saida, nome + ".png"))
 
-    # heroi em camadas, porque o jogador escolhe tudo
-    for i in range(len(PELE_TONS)):
-        guardar(f"heroi-corpo-{i}", folha(corpo, tom=i))
-        guardar(f"heroi-bracos-{i}", folha(bracos, tom=i))
-    for estilo in ESTILOS_CABELO:
-        guardar(f"heroi-cabelo-{estilo}", folha(cabelo, estilo=estilo))
-    for estilo in ESTILOS_ROUPA:
-        guardar(f"heroi-roupa-{estilo}", folha(roupa, estilo=estilo))
-    for tipo in TIPOS_CHAPEU[1:]:
-        guardar(f"heroi-chapeu-{tipo}", folha(chapeu, tipo=tipo))
-    for tipo in TIPOS_ARMA[1:]:
-        guardar(f"heroi-arma-{tipo}", folha(arma, tipo=tipo))
+    # ------ corpo e bracos: uma folha por raca e por tom
+    for raca in ORDEM_RACAS:
+        for i in range(len(TONS_POR_RACA.get(raca, PELE_TONS))):
+            guardar(f"heroi-corpo-{raca}-{i}", folha(pessoa.corpo, tom=i, raca=raca))
+            guardar(f"heroi-bracos-{raca}-{i}", folha(pessoa.bracos, tom=i, raca=raca))
 
-    # npcs ja prontos, um por folha
+    # ------ roupa: peca propria, uma folha por largura de tronco
+    for tipo in TIPOS_CORPO:
+        for estilo in ESTILOS_ROUPA:
+            guardar(f"roupa-{tipo}-{estilo}", roupa_arte.folha_de_roupa(estilo, tipo))
+
+    # ------ cabelo e chapeu: uma folha para todas as racas
+    for estilo in ESTILOS_CABELO:
+        if estilo == "careca":
+            continue
+        guardar(f"heroi-cabelo-{estilo}", folha(cabelo_arte.cabelo, estilo=estilo))
+    for tipo in TIPOS_CHAPEU[1:]:
+        guardar(f"heroi-chapeu-{tipo}", folha(cabelo_arte.chapeu, tipo=tipo))
+
+    # ------ armas: um desenho cada, com o ponto de pega
+    ficha_armas = equipamento.gerar(saida, guardar)
+    pontos = {r: pessoa.pontos_da_raca(r) for r in ORDEM_RACAS}
+    fora = equipamento.conferir(pontos)
+    if fora:
+        raise SystemExit(
+            "arma saindo do quadro (encurte o desenho ou mude o ponto de pega):\n  "
+            + "\n  ".join(fora)
+        )
+
+    # ------ npcs, goblins e aranhas, ja prontos, um por folha
     for nome, kw in NPCS:
         guardar(f"npc-{nome}", npc_pronto(**kw))
-    guardar("goblin", goblin_pronto())
+    for tipo in goblin_arte.TIPOS:
+        guardar(f"goblin-{tipo}", folha(goblin_arte.goblin, tipo=tipo))
+    guardar("goblin", folha(goblin_arte.goblin, tipo="magricela"))
+    for tipo in aranha_arte.TIPOS:
+        guardar(f"aranha-{tipo}", folha(aranha_arte.aranha, tipo=tipo))
 
-    return {
+    encaixes = {
         "colunas": COLUNAS,
         "linhas": LINHAS,
-        "tons_pele": len(PELE_TONS),
-        "cabelos": ESTILOS_CABELO,
+        "pontos": pontos,
+        "armas": ficha_armas,
+        "roupa": {
+            "largura": roupa_arte.LARGURA_PECA,
+            "altura": roupa_arte.ALTURA_PECA,
+            "vistas": roupa_arte.VISTAS,
+            "vistaDaDirecao": VISTA_DA_DIRECAO,
+            "linhaDoQuadro": [LINHA_DA_ROUPA[c] for c in COLUNAS],
+        },
+    }
+
+    indice = {
+        "colunas": COLUNAS,
+        "linhas": LINHAS,
+        "racas": ORDEM_RACAS,
+        "tipos_corpo": TIPOS_CORPO,
+        "tons": {r: len(TONS_POR_RACA.get(r, PELE_TONS)) for r in ORDEM_RACAS},
+        "desloque": {r: pessoa.desloque(pessoa.RACAS[r]["altura"]) for r in ORDEM_RACAS},
+        "cabelos": [e for e in ESTILOS_CABELO if e != "careca"],
         "roupas": ESTILOS_ROUPA,
+        "roupa_da_classe": ROUPA_DA_CLASSE,
+        "arma_da_classe": ARMA_DA_CLASSE,
         "chapeus": TIPOS_CHAPEU,
         "armas": TIPOS_ARMA,
         "npcs": [n for n, _ in NPCS],
+        "goblins": list(goblin_arte.TIPOS),
+        "aranhas": list(aranha_arte.TIPOS),
     }
+    return indice, encaixes

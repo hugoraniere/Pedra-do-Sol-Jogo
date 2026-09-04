@@ -119,3 +119,78 @@ Foi o que mais deu trabalho. Regras que valeram:
 Continua valendo: qualquer PNG em `arte/sprites/` com o nome da folha substitui a
 versao gerada. Ver `docs/06-fluxo-de-sprites.md`. O tamanho tem que bater: folha de
 personagem e 96 x 128 (6 colunas de 16 por 4 linhas de 32).
+
+
+## Duas familias de camada, e a diferenca importa
+
+A partir da reforma de setembro o heroi tem dois tipos de camada, e eles nao
+funcionam do mesmo jeito.
+
+**Camadas animadas.** Corpo, bracos, cabelo e chapeu. Sao folhas de 6 colunas
+por 4 linhas de 16 x 32, e tocam animacao normalmente.
+
+**Camadas encaixadas.** Roupa e arma. Nao sao folhas de corpo: sao pecas
+desenhadas fora dele. A arte publica em `public/assets/encaixes.json`, quadro a
+quadro, onde esta o tronco e onde esta a mao, e o jogo pendura a peca no ponto.
+
+Por que isso importa:
+
+- A arma acompanha o balanco do braco sozinha. Antes cada arma era desenhada
+  dentro do quadro do corpo com as coordenadas da mao copiadas na mao, e
+  qualquer mexida no braco deixava a espada flutuando ao lado dela sem ninguem
+  perceber ate olhar de perto.
+- A mesma espada serve para o anao e para o elfo, que tem o braco em alturas
+  diferentes. Antes era uma folha de arma por tipo de corpo.
+- A roupa vira uma peca de roupa de verdade: um desenho pequeno que da para
+  olhar sozinho e reconhecer como avental ou como armadura, em vez de tinta
+  espalhada dentro de 24 quadros de corpo.
+
+O que continua exigindo uma folha por tipo de corpo e so a roupa, e por um
+motivo fisico: tecido nao estica. Uma tunica de anao em cima de um elfo ficaria
+larga.
+
+### A regra que mantem a arma dentro do quadro
+
+O NPC e achatado numa folha so, entao o que passar da borda do quadro dele
+some, e some SO em algumas poses: a ponta do arco aparece parada e desaparece
+quando ele respira. Defeito assim ninguem acha olhando, porque nao esta errado
+o tempo todo.
+
+Por isso `arte/equipamento.py` tem a funcao `conferir()`, que a geracao chama
+sempre: ela testa cada arma contra cada ponto de mao de cada raca e para a
+geracao com o nome de quem estourou. Se voce desenhar uma arma nova e ela nao
+couber, o `npm run arte` te diz na hora, com quadro e raca.
+
+## Racas: a silhueta antes da cor
+
+Cinco racas, e a diferenca entre elas e ANATOMICA, nao de paleta. O teste e
+apagar todas as cores: se der para dizer quem e quem so pela silhueta, esta
+certo.
+
+| Raca | Corpo | Perna | O que marca |
+|---|---|---|---|
+| Gente do Vale | normal | normal | a referencia, sem traco extra |
+| Anao da Fornalha | gordinho | curta | barba grande e ombro largo |
+| Elfo da Folha | magro | longa | orelha de folha, subindo em diagonal |
+| Pequenino do Trigo | normal | bem curta | pe grande e descalco |
+| Cria de Dragao | normal | normal | chifre, escama na bochecha e cauda |
+
+A orelha e o traco que mais identifica, porque e o unico que aparece na
+silhueta a 16 px de largura.
+
+**A cabeca tem o mesmo tamanho em todas as racas de proposito.** E o que permite
+um unico conjunto de cabelos e chapeus servir para todo mundo. A diferenca de
+altura mora na perna, e as camadas de cima descem o tanto que
+`pessoa.desloque()` mandar.
+
+**Todo mundo pisa na mesma linha**, a linha 30 do quadro. Quem e mais baixo tem
+a perna mais curta, nao o desenho inteiro empurrado para baixo. Sem isso um
+personagem baixinho pareceria afundado no chao.
+
+## O ceu acima da cabeca
+
+Existem exatamente 3 px livres acima da cabeca do personagem mais alto, e e
+onde cabe a copa de um chapeu. E por isso que o chapeu de mago e tombado para o
+lado em vez de reto para cima: reto ele nao cabe, e a copa sai pela borda de
+cima do quadro. Foi o primeiro erro da reforma de sprites, e demorou a aparecer
+porque so acontecia com o elfo.

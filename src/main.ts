@@ -11,6 +11,7 @@ import { Interface } from "./cenas/Interface";
 import { Pausa } from "./cenas/Pausa";
 import { instalarAuditor } from "./sistemas/auditoria";
 import { vigiarJanela } from "./sistemas/visao";
+import { instalarBancada } from "./sistemas/bancada";
 
 function comecar() {
   // a visao escolhida define a resolucao logica antes de qualquer cena montar
@@ -37,6 +38,7 @@ function comecar() {
   // gancho de depuracao: no console do navegador da para fazer
   //   jogo.scene.getScene("Interface").events.emit("falar", {...})
   (window as unknown as { jogo: Phaser.Game }).jogo = jogo;
+  instalarBancada(jogo);
   vigiarJanela(jogo);
   instalarAuditor(jogo);
 }

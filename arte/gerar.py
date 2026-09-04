@@ -26,6 +26,7 @@ Regras de arte:
 import json
 import os
 import sys
+import time
 from PIL import Image
 
 RAIZ = os.path.dirname(os.path.abspath(__file__))
@@ -51,25 +52,59 @@ def a_mao(nome):
     return None
 
 
+#: arte que NAO sai daqui e nao pode ser apagada na limpeza
+INTOCAVEIS = {"logo.png"}
+
+
+def limpar_orfaos(comeco):
+    """Apaga PNG antigo que esta gerao nao reescreveu.
+
+    Sem isto o jogo carrega arte fantasma: quando os sprites do heroi passaram a
+    ter raca no nome, os arquivos do formato velho continuaram em public/assets
+    e foram parar no build, ocupando espaco e confundindo quem abre a pasta. O
+    criterio e a hora do arquivo: quem nao foi tocado nesta rodada, saiu de cena."""
+    apagados = []
+    for pasta, _, arquivos in os.walk(SAIDA):
+        for nome in arquivos:
+            if not nome.endswith(".png") or nome in INTOCAVEIS:
+                continue
+            caminho = os.path.join(pasta, nome)
+            if os.path.getmtime(caminho) < comeco:
+                os.remove(caminho)
+                apagados.append(os.path.relpath(caminho, SAIDA))
+    return apagados
+
+
 def main():
     os.makedirs(SAIDA, exist_ok=True)
+    comeco = time.time()
     indice_tiles = tiles.gerar(SAIDA, a_mao)
     ficha_objetos = mundo.gerar(SAIDA, a_mao)
-    indice_npcs = gente.gerar(SAIDA, a_mao)
+    indice_npcs, encaixes = gente.gerar(SAIDA, a_mao)
     indice_ui = ui_arte.gerar(SAIDA)
     titulo_arte.gerar(SAIDA, a_mao)
     ficha_fonte = fonte_arte.gerar(SAIDA, a_mao)
+    ui_arte.favicon(os.path.join(RAIZ, "..", "public", "favicon.png"))
 
     # o jogo le este arquivo para saber o tamanho e a colisao de cada objeto,
     # entao adicionar um objeto novo nao exige mexer em nenhum .ts
     with open(os.path.join(SAIDA, "objetos.json"), "w", encoding="utf-8") as f:
         json.dump(ficha_objetos, f, indent=2, ensure_ascii=False)
 
+    # onde fica a mao e o tronco em cada quadro, e como cada arma se pendura.
+    # e por este arquivo que a arma para de ser copiada dentro do desenho do
+    # corpo: o jogo le o ponto e encosta a peca nele
+    with open(os.path.join(SAIDA, "encaixes.json"), "w", encoding="utf-8") as f:
+        json.dump(encaixes, f, indent=1, ensure_ascii=False)
+
     print("tiles: ", indice_tiles)
     print("npcs:  ", indice_npcs)
     print("ui:    ", indice_ui)
     print("objetos:", ", ".join(ficha_objetos))
     print("fonte: ", ficha_fonte)
+    orfaos = limpar_orfaos(comeco)
+    if orfaos:
+        print("apagados:", ", ".join(sorted(orfaos)))
     print("arte gerada em", os.path.normpath(SAIDA))
 
 

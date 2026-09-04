@@ -24,6 +24,9 @@ Ja funciona:
 - mapa da Vila Semente com colisao, camera que segue o heroi
 - NPCs e objetos com caixa de fala
 - direcional na tela e botao de acao, mais teclado (setas ou WASD, espaco)
+- 5 racas por 5 classes: o corpo vem da raca, a roupa e a arma vem da classe
+- roupa e arma penduradas por ponto de encaixe, nao desenhadas dentro do corpo
+- tres niveis de visao (perto, normal, longe), que trocam a resolucao logica
 - estado salvo em localStorage
 
 ## Como rodar
@@ -34,6 +37,8 @@ npm run dev      # abre em http://localhost:5173
 npm run build    # checa os tipos e gera dist/
 npm run arte     # regera toda a pixel art em public/assets (precisa de python3 e Pillow)
 npm run auditar  # percorre as telas procurando sobreposicao e transbordo de UI
+npm run conferir # confere as 25 combinacoes de raca e classe, peca por peca
+npm run folha    # monta a folha com as 25 combinacoes, para olhar
 npm run app      # abre o jogo como aplicativo de desktop (Electron)
 npm run app:build# empacota o aplicativo para instalar
 ```
@@ -41,6 +46,8 @@ npm run app:build# empacota o aplicativo para instalar
 ## Regras deste projeto
 
 **Portugues em tudo.** Nomes de arquivo, variaveis, funcoes, comentarios, commits. Sem acento em identificador de codigo, com acento em texto que aparece na tela.
+
+**Nenhuma coordenada de encaixe na mao.** Onde fica a mao e onde fica o tronco em cada quadro sai de `arte/pessoa.py`, vai para `public/assets/encaixes.json` e o jogo le de la. Se voce copiar uma coordenada para dentro de um `.ts`, ela vai divergir da arte na primeira mexida no braco. Ver `docs/08-guia-de-sprites.md`.
 
 **Nada de arte solta.** Todo pixel do jogo sai de `arte/gerar.py` e `arte/ui.py`. Se precisar de um sprite novo, escreva a funcao que o desenha e rode `npm run arte`. Nunca cole um PNG na mao em `public/assets`, porque ele seria apagado na proxima geracao. Sprite desenhado a mao entra por `arte/sprites/`, que tem prioridade sobre o gerado. Ver `docs/06-fluxo-de-sprites.md`.
 
@@ -55,7 +62,7 @@ npm run app:build# empacota o aplicativo para instalar
 
 **Nenhuma coordenada Y na mao.** Toda UI usa `caixa()` e `pilha()` de `src/sistemas/design.ts`. Se voce somou dois numeros para achar onde vai um botao, esta errado. Ver `docs/07-design-system.md`.
 
-**Verifique antes de dizer que terminou.** `npm run build` tem que passar limpo, `npm run auditar` tem que sair com zero problemas, e o jogo tem que abrir sem erro no console. A auditoria salva um screenshot de cada tela em `ferramentas/telas/`, olhe eles.
+**Verifique antes de dizer que terminou.** `npm run build` tem que passar limpo, `npm run auditar` e `npm run conferir` tem que sair com zero problemas, e o jogo tem que abrir sem erro no console. A auditoria salva um screenshot de cada tela em `ferramentas/telas/`, e `npm run folha` monta as 25 combinacoes de raca e classe em `ferramentas/telas/personagens.png`. Olhe as duas coisas.
 
 ## Estrutura
 
@@ -71,7 +78,11 @@ src/dados/conteudo.ts  racas, classes, magias, armas, loja e bestiario do RPG de
 app/                   o aplicativo de desktop, Electron
 ferramentas/           auditoria de UI e os screenshots que ela tira
 src/cenas/             Boot, Criacao, Mundo, Interface
-arte/gente.py          heroi em camadas, npcs e goblin. folha 6x4, ver docs/08
+arte/gente.py          junta tudo e salva: heroi em camadas, npcs, goblins, aranhas
+arte/pessoa.py         corpo e bracos por raca, e os pontos de encaixe
+arte/roupa.py          as roupas, desenhadas fora do corpo
+arte/cabelo.py         cortes de cabelo e chapeus
+arte/equipamento.py    as armas, desenhadas sozinhas, com ponto de pega
 arte/ui.py             painel de 9 fatias e icones da interface
 arte/sprites/          desenhos a mao que substituem os gerados
 docs/                  conceito, roteiro, arquitetura, arte, roadmap, sprites, design
