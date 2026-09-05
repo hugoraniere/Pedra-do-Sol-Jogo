@@ -9,6 +9,7 @@ import { noPeriodo, etapaFeita } from "../sistemas/condicoes-de-fala";
 import { concluirEtapa } from "../sistemas/missoes";
 import { estado, equipar, guardar, mudarAfinidade, salvar } from "../sistemas/estado";
 import { tocar } from "../sistemas/som";
+import { LIMIAR_ALERTA } from "../sistemas/moodles";
 import { ARMA_DA_CLASSE } from "./config";
 import { PEIXES } from "./peixes";
 
@@ -282,15 +283,16 @@ export const DIALOGOS: Record<string, Fala> = {
     variantes: [
       {
         id: "ja-cheio",
-        condicao: () => estado().coracoes >= estado().coracoesMax,
+        condicao: () => estado().coracoes >= estado().coracoesMax && estado().sono < LIMIAR_ALERTA,
         linhas: ["Voce nem esta cansado.", "Melhor guardar o sono pra depois."],
       },
       {
         id: "padrao",
-        linhas: ["Voce deita um pouco.", "Acorda com os coracoes cheios de novo."],
+        linhas: ["Voce deita um pouco.", "Acorda com os coracoes cheios e a cabeca leve de novo."],
         efeito: () => {
           const st = estado();
           st.coracoes = st.coracoesMax;
+          st.sono = 0;
           salvar();
           tocar("coracao-novo");
         },
