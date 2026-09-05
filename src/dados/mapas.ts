@@ -19,6 +19,7 @@
  * Objeto e ancorado pelo PE: a base encosta na linha de baixo do tile indicado.
  */
 import { T } from "./config";
+import type { Periodo } from "./tempo";
 
 const LETRA_TILE: Record<string, number[]> = {
   ".": [T.grama, T.grama2, T.grama3],
@@ -28,7 +29,7 @@ const LETRA_TILE: Record<string, number[]> = {
   p: [T.caminho],
   "~": [T.agua, T.agua2],
   P: [T.pedra],
-  a: [T.areia],
+  a: [T.areia, T.areia2, T.areia3],
   c: [T.chaoCaverna],
   C: [T.paredeCaverna],
   m: [T.madeiraChao],
@@ -38,10 +39,27 @@ const LETRA_TILE: Record<string, number[]> = {
   "=": [T.barranco],
   s: [T.aguaRasa],
   g: [T.gramaMata],
+  // detalhe raro: o autor planta a mao, letra por letra, nunca escondido
+  // dentro do "." comum (ver arte/tiles.py)
+  "'": [T.gramaPequena],
+  _: [T.gramaFalha],
+  "*": [T.gramaOrvalho],
+  r: [T.areiaPedra],
+  d: [T.areiaMancha],
+  k: [T.areiaPegada],
 };
 
 export type Peca = { nome: string; x: number; y: number; solido?: boolean };
-export type Pessoa = { quem: string; sprite: string; x: number; y: number };
+
+/** Onde uma pessoa fica em cada periodo do dia (ver dados/tempo.ts).
+ *  "escondido" e pra quem passa o periodo dentro de casa, fora de cena: hoje
+ *  so as criancas, que somem a noite em vez de ganhar uma cama pra andar ate. */
+export type RotinaDeNpc = Record<Periodo, { x: number; y: number } | "escondido">;
+
+/** `rotina` e opcional: sem ela a pessoa fica sempre no `x,y` de baixo, igual
+ *  sempre foi. Com ela, `x,y` continua sendo onde a pessoa NASCE na cena (por
+ *  isso os dois costumam bater com o periodo em que o save comeca). */
+export type Pessoa = { quem: string; sprite: string; x: number; y: number; rotina?: RotinaDeNpc };
 
 /** Uma criatura POSTA no mapa. So diz quem e e onde fica: o que ela FAZ vem do
  *  comportamento da ficha em conteudo.ts, e quem executa isso e o sistema de
@@ -87,11 +105,11 @@ export const VILA: Mapa = {
     "\".........................pp.......\"",
     "\"..,......................pp.......\"",
     "\".........................pp.......\"",
+    "\"..~~~~~...........................\"",
+    "\".~~~~~~~~~...,....................\"",
+    "\".~~~~~~~~~........................\"",
     "\".~~~~~~~..........................\"",
-    "\"~~~~~~~~~....,....................\"",
-    "\"~~~~~~~~~.........................\"",
-    "\".~~~~~~~..........................\"",
-    "\"..aaaaa...........................\"",
+    "\"..aaaaaaa.........................\"",
     "\"..................................\"",
     "\".,........................,.......\"",
     "\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"",
@@ -126,15 +144,44 @@ export const VILA: Mapa = {
     { nome: "arbusto", x: 11, y: 20 },
     { nome: "arbusto", x: 29, y: 13 },
   ],
+  // As rotinas colocam cada um perto da propria casa (ver `objetos` acima) de
+  // madrugada e de noite, e no lugar de sempre de dia. O guarda fica no posto
+  // o dia inteiro — vigia nao larga a trilha por causa da hora — e o pescador
+  // troca o rio pela fogueira da praca a noite, o mesmo fogo que o dialogo da
+  // fogueira ja descreve como "alguem que passou a noite acordado aqui".
   pessoas: [
-    { quem: "vovo", sprite: "vovo", x: 4, y: 8 },
-    { quem: "ferreiro", sprite: "ferreiro", x: 22, y: 8 },
-    { quem: "menina", sprite: "menina", x: 9, y: 14 },
-    { quem: "pescador", sprite: "pescador", x: 6, y: 19 },
-    { quem: "mercador", sprite: "mercador", x: 19, y: 10 },
-    { quem: "menino", sprite: "menino", x: 25, y: 13 },
-    { quem: "padeira", sprite: "padeira", x: 11, y: 8 },
-    { quem: "guarda", sprite: "guarda", x: 29, y: 11 },
+    {
+      quem: "vovo", sprite: "vovo", x: 4, y: 8,
+      rotina: { madrugada: { x: 3, y: 6 }, manha: { x: 4, y: 8 }, tarde: { x: 4, y: 8 }, noite: { x: 3, y: 6 } },
+    },
+    {
+      quem: "ferreiro", sprite: "ferreiro", x: 22, y: 8,
+      rotina: { madrugada: { x: 22, y: 6 }, manha: { x: 22, y: 8 }, tarde: { x: 22, y: 8 }, noite: { x: 22, y: 6 } },
+    },
+    {
+      quem: "menina", sprite: "menina", x: 9, y: 14,
+      rotina: { madrugada: "escondido", manha: { x: 9, y: 14 }, tarde: { x: 9, y: 14 }, noite: "escondido" },
+    },
+    {
+      quem: "pescador", sprite: "pescador", x: 6, y: 19,
+      rotina: { madrugada: { x: 16, y: 11 }, manha: { x: 6, y: 19 }, tarde: { x: 6, y: 19 }, noite: { x: 16, y: 11 } },
+    },
+    {
+      quem: "mercador", sprite: "mercador", x: 19, y: 10,
+      rotina: { madrugada: { x: 15, y: 6 }, manha: { x: 19, y: 10 }, tarde: { x: 19, y: 10 }, noite: { x: 15, y: 6 } },
+    },
+    {
+      quem: "menino", sprite: "menino", x: 25, y: 13,
+      rotina: { madrugada: "escondido", manha: { x: 25, y: 13 }, tarde: { x: 25, y: 13 }, noite: "escondido" },
+    },
+    {
+      quem: "padeira", sprite: "padeira", x: 11, y: 8,
+      rotina: { madrugada: { x: 10, y: 6 }, manha: { x: 11, y: 8 }, tarde: { x: 11, y: 8 }, noite: { x: 10, y: 6 } },
+    },
+    {
+      quem: "guarda", sprite: "guarda", x: 29, y: 11,
+      rotina: { madrugada: { x: 30, y: 11 }, manha: { x: 29, y: 11 }, tarde: { x: 29, y: 11 }, noite: { x: 29, y: 11 } },
+    },
   ],
   entrada: { x: 15, y: 13 },
   lugar: "Vila Semente",
@@ -308,7 +355,13 @@ export function montarChao(desenho: string[]): ChaoPronto {
   return desenho.map((linha, y) =>
     [...linha].map((ch, x) => {
       const opcoes = LETRA_TILE[ch] ?? LETRA_TILE["."];
-      // variacao estavel: a mesma posicao sempre recebe o mesmo tile
+      // variacao estavel: a mesma posicao sempre recebe o mesmo tile.
+      // Aumentar o bloco do hash (tentado antes) so troca xadrez miudo por
+      // xadrez grande -- a borda entre uma opcao e outra continua reta e
+      // geometrica de qualquer jeito, porque e uma troca de TILE inteiro.
+      // Regiao de tom de verdade (borda organica, tipo a beira ou a
+      // clareira) exige uma peca propria desenhada para isso, nao um hash
+      // de posicao escolhendo entre tiles prontos -- ver arte/tiles.py.
       return opcoes[(x * 7 + y * 13) % opcoes.length];
     })
   );
@@ -316,12 +369,28 @@ export function montarChao(desenho: string[]): ChaoPronto {
 
 /** Todo tile que conta como GRAMA para fins de beira: e ele que "avanca"
  *  sobre o vizinho, nunca o contrario. */
-const GRAMAS = new Set<number>([T.grama, T.grama2, T.grama3, T.flores, T.gramaAlta, T.gramaMata]);
+const GRAMAS = new Set<number>([
+  T.grama, T.grama2, T.grama3, T.flores, T.gramaAlta, T.gramaMata,
+  T.gramaPequena, T.gramaFalha, T.gramaOrvalho,
+]);
 
 const BEIRA_POR_LADOS: Record<string, number> = {
   n: T.beiraN, s: T.beiraS, o: T.beiraO, l: T.beiraL,
   no: T.beiraNO, nl: T.beiraNL, so: T.beiraSO, sl: T.beiraSL,
 };
+
+/** A mesma beira, com o bojo pequeno: para quando o chao medido no lugar e
+ *  estreito demais para o bojo grande caber sem virar bolha. */
+const BEIRA_FINA_POR_LADOS: Record<string, number> = {
+  n: T.beiraNFina, s: T.beiraSFina, o: T.beiraOFina, l: T.beiraLFina,
+  no: T.beiraNOFina, nl: T.beiraNLFina, so: T.beiraSOFina, sl: T.beiraSLFina,
+};
+
+/** Chao mais estreito que isso (em tiles) usa o bojo pequeno. Um bojo grande
+ *  chega a meio tile de fundo; num corredor de 3 tiles ou menos, dois bojos
+ *  vindo de lados opostos quase se tocam e o corredor lê como uma bolha, nao
+ *  como uma borda. */
+const LARGURA_ESTREITA = 3;
 
 /** As 15 combinacoes possiveis de vizinho-com-grama, reduzidas as 8 beiras
  *  que existem desenhadas (arte/tiles.py). Grama nos quatro lados, em lados
@@ -348,6 +417,21 @@ const APROXIMA: Record<string, string> = {
  *  nao sabe nem precisa saber o que tem debaixo dela. */
 export function bordasDeGrama(chao: ChaoPronto): ChaoPronto {
   const ehGrama = (x: number, y: number) => GRAMAS.has(chao[y]?.[x] ?? -1);
+  // conta quantos tiles seguidos sem grama existem a partir de (x, y), andando
+  // em (dx, dy), incluindo o proprio (x, y). Usado nos dois sentidos de um
+  // eixo para medir a largura de verdade do chao naquele ponto -- e essa
+  // largura, nao o tipo do tile, que decide o tamanho do bojo.
+  const alcance = (x: number, y: number, dx: number, dy: number) => {
+    let n = 0;
+    let cx = x;
+    let cy = y;
+    while (chao[cy]?.[cx] !== undefined && !ehGrama(cx, cy)) {
+      n++;
+      cx += dx;
+      cy += dy;
+    }
+    return n;
+  };
   return chao.map((linha, y) =>
     linha.map((_tile, x) => {
       if (ehGrama(x, y)) return -1;
@@ -357,7 +441,19 @@ export function bordasDeGrama(chao: ChaoPronto): ChaoPronto {
       if (ehGrama(x - 1, y)) chave += "o";
       if (ehGrama(x + 1, y)) chave += "l";
       const usar = APROXIMA[chave];
-      return usar ? BEIRA_POR_LADOS[usar] : -1;
+      if (!usar) return -1;
+      // largura medida no eixo em que a grama empurra: vertical quando vem de
+      // cima/baixo, horizontal quando vem dos lados. Lado com grama dos dois
+      // lados (corredor estreito, "no") mede os dois eixos e fica com o menor.
+      let largura = Infinity;
+      if (usar.includes("n") || usar.includes("s")) {
+        largura = Math.min(largura, alcance(x, y, 0, -1) + alcance(x, y, 0, 1) - 1);
+      }
+      if (usar.includes("o") || usar.includes("l")) {
+        largura = Math.min(largura, alcance(x, y, -1, 0) + alcance(x, y, 1, 0) - 1);
+      }
+      const mapa = largura <= LARGURA_ESTREITA ? BEIRA_FINA_POR_LADOS : BEIRA_POR_LADOS;
+      return mapa[usar];
     })
   );
 }

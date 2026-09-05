@@ -36,7 +36,7 @@ export const DIALOGOS: Record<string, Fala> = {
     ],
   },
   mercador: {
-    quem: "Barnabe",
+    quem: "Seu Cominho",
     linhas: ["Fruta fresca, heroi! Hoje nao, ne.", "Vai atras do sino primeiro."],
   },
   menino: {

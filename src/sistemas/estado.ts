@@ -40,6 +40,8 @@ export type Estado = {
   cena: string;
   lugar: string;
   minutos: number;
+  /** minuto do dia simulado, 0 a 1439 — ver sistemas/tempo.ts */
+  relogio: number;
   criadoEm: number;
   atualizadoEm: number;
   /** quantas vezes cada acao de escopo "porAventura" (magia, dom de raca) ja
@@ -79,6 +81,8 @@ export const VAZIO: Estado = {
   cena: "vila",
   lugar: "Vila Semente",
   minutos: 0,
+  // 480 = 8h, o heroi chega de manha
+  relogio: 480,
   criadoEm: 0,
   atualizadoEm: 0,
   usosDeAventura: {},

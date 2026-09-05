@@ -189,6 +189,28 @@ function linhaLivre(malha: Malha, a: Celula, b: Celula): boolean {
   }
 }
 
+export type Ponto = { x: number; y: number };
+
+/** Um passo de alguem andando ate um ponto, em pixel, capado pela velocidade
+ *  do quadro. Mesma conta que Mundo.ts ja faz pro heroi ao seguir um caminho
+ *  (checar distancia, chegar quando fica bem perto) — aqui generica pra
+ *  qualquer sprite, nao so o heroi, entao a rotina dos NPCs reusa a mesma
+ *  matematica em vez de reinventar. */
+export function avancarPonto(
+  atual: Ponto,
+  alvo: Ponto,
+  velocidadePxPorMs: number,
+  deltaMs: number
+): { x: number; y: number; chegou: boolean } {
+  const dx = alvo.x - atual.x;
+  const dy = alvo.y - atual.y;
+  const dist = Math.hypot(dx, dy);
+  if (dist < 1) return { x: alvo.x, y: alvo.y, chegou: true };
+  const passo = velocidadePxPorMs * deltaMs;
+  if (passo >= dist) return { x: alvo.x, y: alvo.y, chegou: true };
+  return { x: atual.x + (dx / dist) * passo, y: atual.y + (dy / dist) * passo, chegou: false };
+}
+
 /** Puxa a corda: descarta o ponto do meio quando o proximo ja esta em linha
  *  livre. Sem isto o heroi anda em escadinha, porque o A* devolve casa por
  *  casa e cada uma vira uma parada. */

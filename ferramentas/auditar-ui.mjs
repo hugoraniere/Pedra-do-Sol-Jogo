@@ -192,6 +192,12 @@ const telas = [];
  *  animacao nao avanca no meio de um bloco sincrono. */
 async function congelar() {
   return pagina.evaluate(() => {
+    // o relogio de jogo tambem precisa parar pro screenshot: sem isto, o
+    // ceu da Vila Semente muda de tom a cada rodada de auditoria por causa
+    // da hora, nao da UI, e ferramentas/telas/10-mundo.png nunca fica igual
+    // de uma rodada pra outra. Meio-dia = ceu limpo, sem overlay nenhum.
+    const mundo = window.jogo.scene.getScene("Mundo");
+    mundo?.travarRelogioParaAuditoria?.(720);
     const achatar = (l) => l.flatMap((o) => (Array.isArray(o.list) ? [o, ...achatar(o.list)] : [o]));
     const parados = [];
     for (const cena of window.jogo.scene.getScenes(true)) {

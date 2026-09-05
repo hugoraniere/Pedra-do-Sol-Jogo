@@ -76,6 +76,27 @@ em mapa novo.
 Pronto quando: da para tomar um susto na vila, perder, acordar na fogueira, e
 entender exatamente o que custou.
 
+**Decisao, 2026-09-05: dois itens da Fase 1.2 foram adiantados antes desta fase
+fechar.** A pedido direto (aprofundar os NPCs da Vila Semente e dar um ciclo de
+dia/noite ao jogo), entraram fora de ordem:
+
+- Os 8 NPCs nomeados da vila ganharam idade, papel, personalidade, historia,
+  relacoes e afinidades (`src/dados/npcs.ts`). O mercador deixou de se chamar
+  "Barnabe" — a referencia de mesa ja usa esse nome para o mercador de
+  Portomares — e virou "Seu Cominho".
+- Um relogio de jogo de verdade (`src/dados/tempo.ts` + `src/sistemas/tempo.ts`,
+  persistido em `estado().relogio`), com o ceu escurecendo por cima da Vila
+  Semente e cada um dos 8 indo pro lugar certo conforme o periodo do dia
+  (`Pessoa.rotina` em `mapas.ts`, andado de verdade pelo mesmo A* do clique do
+  heroi).
+
+O motivo: dar vida ao elenco antes de repetir o metodo em outro lugar, em vez de
+esperar o sistema de dado/combate fechar primeiro. **O que isso NAO adianta:**
+falas condicionadas por estado continuam pendentes — item de baixo, ainda em
+aberto — porque a estrutura de "falas com estado" vai nascer junto do sistema
+de pistas, e uma versao paralela so pra hora do dia arriscava contradizer esse
+design antes dele existir.
+
 ---
 
 ## Fase 1.2, a vila deixa de ser cenario
