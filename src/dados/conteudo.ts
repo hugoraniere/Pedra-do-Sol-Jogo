@@ -9,6 +9,7 @@
  */
 import type { Marca } from "../sistemas/marcas";
 import type { AlvoDeAcao } from "../sistemas/alvo";
+import type { IdCondicao } from "../sistemas/condicoes";
 
 /** Revisao de 2026-09-04 (CLAUDE.md): os tres da mesa (FORCA, ESPERTEZA,
  *  CORACAO) viraram cinco. "Esperteza" fazia tres trabalhos escondidos - agora
@@ -16,6 +17,30 @@ import type { AlvoDeAcao } from "../sistemas/alvo";
  *  Destreza, iniciativa e defesa viram Agilidade. "Coracao" vira Vitalidade
  *  porque a mesma palavra fazia dois trabalhos (o atributo E os coracoes/vida). */
 export type Atributo = "forca" | "destreza" | "agilidade" | "inteligencia" | "vitalidade";
+
+/** Escala unica pra preco e chance de drop de item (nao de magia/habilidade).
+ *  Quanto mais raro, mais caro E mais dificil de cair no chao — ver
+ *  docs/plano-de-itens-e-equipamento.md, secao 5. */
+export type Raridade = "comum" | "incomum" | "raro" | "epico" | "lendario";
+
+/** Como o bonus de um equipamento se pluga no jogo — pensado depois de achar
+ *  o motor real de condicoes (`sistemas/condicoes.ts`, MOLHADO/QUEIMANDO/
+ *  PRESO/ASSUSTADO/ESCONDIDO/ILUMINADO etc.) e ver que a primeira leva deste
+ *  arquivo tinha inventado categorias soltas (ex.: "veneno") sem base
+ *  nenhuma no jogo. Duas formas, nenhuma terceira:
+ *  - `"teste"`: modificador contextual de dado, a mesma ideia que a arma ja
+ *    usa ("+1 de perto"). `contexto` e livre, mas so vale a pena inventar um
+ *    novo quando nao existe uma `IdCondicao` real que já diga a mesma coisa.
+ *  - `"condicao"`: interage com uma condicao que JA EXISTE em
+ *    `sistemas/condicoes.ts` — concede ela, encurta a duracao, ou da
+ *    resistencia. Nunca inventa uma condicao nova aqui; se o efeito
+ *    desejado nao tem `IdCondicao` correspondente, o item usa `"teste"` com
+ *    um `contexto` nomeando a criatura/situacao real, nao uma categoria
+ *    generica (ver secao 6 e correcao da rodada 3 em
+ *    docs/plano-de-itens-e-equipamento.md). */
+export type BonusDeEquipamento =
+  | { tipo: "teste"; contexto: string }
+  | { tipo: "condicao"; id: IdCondicao; efeito: "concede" | "resiste" | "encurta" };
 
 /** Que pedaco do mundo uma acao de combate atinge. */
 export type FormaDeAcao = "casa" | "linha" | "aoRedor";
@@ -246,7 +271,21 @@ export const MAGIAS: Magia[] = [
 ];
 
 // ----------------------------------------------------------------- armas
-export type Arma = { id: string; nome: string; preco: number; bonus: string; lendaria?: boolean };
+export type Arma = {
+  id: string;
+  nome: string;
+  preco: number;
+  bonus: string;
+  lendaria?: boolean;
+  /** so nas armas "encontradas" (ver abaixo) — as 11 originais nao tem, e
+   *  contam como "comum" (ou "lendario" via `lendaria` acima). */
+  raridade?: Raridade;
+  /** como o bonus se pluga no jogo (Fase D, ainda por escrever) — ver
+   *  `BonusDeEquipamento` acima. So nas armas encontradas. */
+  mecanica?: BonusDeEquipamento;
+  /** de onde ela vem, pra ficha/hover explicar (lugar ou vitoria) */
+  origem?: string;
+};
 
 export const ARMAS: Arma[] = [
   { id: "espada-curta", nome: "Espada Curta", preco: 5, bonus: "+1 de perto" },
@@ -260,6 +299,60 @@ export const ARMAS: Arma[] = [
   { id: "lamina-aurora", nome: "Lamina Aurora", preco: 0, bonus: "so na historia", lendaria: true },
   { id: "escudo-espelho", nome: "Escudo Espelho", preco: 0, bonus: "so na historia", lendaria: true },
   { id: "arco-lua", nome: "Arco da Lua Cheia", preco: 0, bonus: "so na historia", lendaria: true },
+
+  // ------- encontradas: progressao por cima das armas base, presas a um
+  // lugar ou a uma vitoria de verdade, nao um nome bonito solto — ver
+  // docs/plano-de-itens-e-equipamento.md, secao 9. Nao substituem a base,
+  // sao um achado alternativo.
+  {
+    id: "lamina-guarda-vila", nome: "Lamina do Guarda-Vila", preco: 0,
+    bonus: "+1 de perto, +1 pra impressionar guarda",
+    raridade: "incomum", mecanica: { tipo: "teste", contexto: "perto" },
+    origem: "recompensa de missao secundaria na Vila Semente",
+  },
+  {
+    id: "arco-trancado-teia", nome: "Arco Trancado de Teia", preco: 10,
+    bonus: "+1 de longe, nunca erra contra bicho pequeno (porte pequeno)",
+    raridade: "incomum", mecanica: { tipo: "teste", contexto: "longe" },
+    origem: "comprado depois de trazer 3x Fio de Teia Doce",
+  },
+  {
+    // era "+1 contra criatura de nevoa" — categoria que nao existe em
+    // nenhum lugar do jogo. Nomeia o bicho de verdade em vez de inventar
+    // uma familia elemental.
+    id: "funda-de-presa", nome: "Funda de Presa", preco: 13,
+    bonus: "+1 de longe, nunca passa de QUASE, +1 contra o Lobo de Nevoa",
+    raridade: "incomum", mecanica: { tipo: "teste", contexto: "longe" },
+    origem: "comprada depois de trazer 2x Presa de Nevoa",
+  },
+  {
+    // era "+1 contra armadura" (generico) — o cavaleiro-cinzas E a armadura
+    // ("Armadura vazia por dentro, cheia de cinza", BESTIARIO), entao nomear
+    // ele e mais honesto que inventar uma categoria "criatura com armadura".
+    id: "martelo-de-cinza", nome: "Martelo de Cinza", preco: 16,
+    bonus: "+1 para quebrar e consertar, +1 contra o Cavaleiro de Cinzas",
+    raridade: "raro", mecanica: { tipo: "teste", contexto: "consertar" },
+    origem: "comprado depois de trazer 4x Cinza de Armadura",
+  },
+  {
+    // era "+1 contra veneno" — veneno nao existe como condicao nem como
+    // dano no jogo (bestiario nao tem nenhum bicho venenoso). Nomeia a
+    // serpente de verdade.
+    id: "adaga-da-serpente", nome: "Adaga da Serpente", preco: 0,
+    bonus: "+1 escondido, +1 contra a Serpente do Pantano",
+    raridade: "epico", mecanica: { tipo: "teste", contexto: "escondido" },
+    origem: "vencer a Serpente no Pantano",
+  },
+  {
+    // era "+1 contra criatura de espinho" (inventado) — o proprio telegrafo
+    // dela em BESTIARIO ("o espinho racha o chao antes de subir") e uma
+    // prisao pelo chao, que e exatamente o que PRESO ja significa em
+    // sistemas/condicoes.ts. Usa a condicao real em vez de uma nova.
+    id: "cajado-bruxa-espinho", nome: "Cajado da Bruxa Espinho", preco: 0,
+    bonus: "+1 em magia, resiste a ficar PRESO pelo espinho dela",
+    raridade: "epico", mecanica: { tipo: "condicao", id: "preso", efeito: "resiste" },
+    origem: "vencer a Bruxa Espinho na Torre",
+  },
 ];
 
 // ------------------------------------------------------------------ loja
@@ -278,6 +371,133 @@ export const LOJA: Item[] = [
   { id: "mapa-que-fala", nome: "Mapa Que Fala", preco: 4, texto: "Ele diz em voz alta pra onde voce deve ir." },
   { id: "saco-sem-fundo", nome: "Saco Sem Fundo", preco: 7, texto: "Cabe tudo. Achar de novo e outra historia." },
   { id: "chave-mestra", nome: "Chave Mestra", preco: 5, texto: "Abre qualquer fechadura comum. Uma vez." },
+];
+
+// --------------------------------------------------------- materiais
+//
+// Trofeu/insumo que cai de bicho comum: nao equipavel, so guardado, vendido
+// ou trocado com Seu Cominho por uma Armadura/Acessorio/Arma que usa ele
+// como insumo (nao e crafting — e um degrau a mais na loja, ver
+// docs/plano-de-itens-e-equipamento.md, secao 7). `origem` e o id da
+// criatura em BESTIARIO que larga este material.
+//
+// Preco segue a mesma escala de Raridade das demais categorias, mas pela
+// metade: material nao tem clausula de bonus pra justificar o preco cheio
+// (comum 2, incomum 4, raro 6 — a formula inteira esta na secao 5 do plano).
+export type Material = { id: string; nome: string; preco: number; raridade: Raridade; origem: string; texto: string };
+
+export const MATERIAIS: Material[] = [
+  { id: "teia-doce", nome: "Fio de Teia Doce", preco: 2, raridade: "comum", origem: "aranha", texto: "O mesmo fio que a aranha usa pra fugir. Comestivel, gosto doce." },
+  { id: "palha", nome: "Palha de Espantalho", preco: 2, raridade: "comum", origem: "espantalho", texto: "Recheio seco do proprio espantalho. So serve pra vender." },
+  { id: "presa-de-nevoa", nome: "Presa de Nevoa", preco: 4, raridade: "incomum", origem: "lobo-nevoa", texto: "Ainda fria ao toque, mesmo longe da neblina." },
+  { id: "cinza", nome: "Cinza de Armadura", preco: 6, raridade: "raro", origem: "cavaleiro-cinzas", texto: "Cinza que nunca esfria de verdade." },
+];
+
+// --------------------------------------------------------- armaduras
+export type Armadura = {
+  id: string;
+  nome: string;
+  preco: number;
+  raridade: Raridade;
+  bonus: string;
+  /** como o bonus se pluga no jogo — ver `BonusDeEquipamento`. Sempre
+   *  presente aqui (diferente da arma): armadura so existe nesta segunda
+   *  leva, entao nasce ja com a mecanica pensada, nunca solta. */
+  mecanica: BonusDeEquipamento;
+  origem?: string;
+};
+
+export const ARMADURAS: Armadura[] = [
+  {
+    id: "colete-vila", nome: "Colete de Couro da Vila", preco: 3, raridade: "comum",
+    bonus: "resiste a ficar ASSUSTADO perto da Vila Semente",
+    mecanica: { tipo: "condicao", id: "assustado", efeito: "resiste" },
+  },
+  {
+    // era "+1 pra resistir veneno e picada" — veneno nao existe no jogo. A
+    // teia de verdade PRENDE, entao a condicao real e PRESO, nao um
+    // elemento inventado. Versao comum: encurta, nao imuniza (isso fica
+    // pro Manto do Pantano, epico, abaixo).
+    id: "manto-teia", nome: "Manto de Teia", preco: 3, raridade: "comum",
+    bonus: "some de PRESO um turno mais cedo",
+    mecanica: { tipo: "condicao", id: "preso", efeito: "encurta" },
+    origem: "comprado depois de trazer 2x Fio de Teia Doce",
+  },
+  {
+    id: "capuz-nevoa", nome: "Capuz de Nevoa", preco: 7, raridade: "incomum",
+    bonus: "fica ESCONDIDO com mais facilidade de noite ou na neblina",
+    mecanica: { tipo: "condicao", id: "escondido", efeito: "concede" },
+    origem: "comprado depois de trazer 2x Presa de Nevoa",
+  },
+  {
+    // era "+1 pra aguentar golpe de fogo" — vago. QUEIMANDO ja existe como
+    // condicao real (2 turnos, 1 coracao por turno) — a couraca encurta
+    // pra 1, nao inventa uma resistencia a "fogo" generico.
+    id: "couraca-cinza", nome: "Couraca de Cinza", preco: 13, raridade: "raro",
+    bonus: "QUEIMANDO dura 1 turno em vez de 2",
+    mecanica: { tipo: "condicao", id: "queimando", efeito: "encurta" },
+    origem: "comprada depois de trazer 4x Cinza de Armadura",
+  },
+  {
+    // era "+1 contra veneno de pantano" — mesma correcao do Manto de Teia,
+    // so que a versao epica IMUNIZA (resiste) em vez de so encurtar.
+    id: "manto-pantano", nome: "Manto do Pantano", preco: 0, raridade: "epico",
+    bonus: "nunca fica PRESO na lama do Pantano",
+    mecanica: { tipo: "condicao", id: "preso", efeito: "resiste" },
+    origem: "vencer a Serpente no Pantano",
+  },
+];
+
+// --------------------------------------------------------- acessorios
+export type Acessorio = {
+  id: string;
+  nome: string;
+  preco: number;
+  raridade: Raridade;
+  bonus: string;
+  mecanica: BonusDeEquipamento;
+  origem?: string;
+};
+
+export const ACESSORIOS: Acessorio[] = [
+  {
+    id: "bracelete-palha", nome: "Bracelete de Palha Trancada", preco: 3, raridade: "comum",
+    bonus: "fica ESCONDIDO com mais facilidade no campo aberto",
+    mecanica: { tipo: "condicao", id: "escondido", efeito: "concede" },
+    origem: "comprado depois de trazer 3x Palha de Espantalho",
+  },
+  {
+    // era "+1 pra escapar de emboscada" — vago. "Escapar" de uma armadilha
+    // e exatamente o que PRESO ja modela; o anel e feito da propria teia
+    // que prende a aranha, entao "encurtar PRESO" e o eco tematico certo.
+    id: "anel-teia", nome: "Anel da Teia", preco: 12, raridade: "raro",
+    bonus: "sai de PRESO em 1 turno, nao importa a causa",
+    mecanica: { tipo: "condicao", id: "preso", efeito: "encurta" },
+    origem: "drop raro da aranha, ou comprado",
+  },
+  {
+    // era "+1 contra criatura de nevoa ou neblina" — nomeia o bicho de
+    // verdade em vez de uma familia elemental inventada.
+    id: "presa-lapidada", nome: "Presa de Nevoa Lapidada", preco: 14, raridade: "raro",
+    bonus: "+1 contra o Lobo de Nevoa",
+    mecanica: { tipo: "teste", contexto: "longe" },
+    origem: "drop raro do lobo-de-nevoa, ou comprado",
+  },
+  {
+    // era "+1 de coragem" solto — CORACAO e o atributo de verdade, e o
+    // bonus so vale num lugar (a Vila), entao continua contextual, nao um
+    // "+1 em CORACAO" liso que a segunda rodada do plano ja rejeitou.
+    id: "pingente-sino", nome: "Pingente do Sino da Vila", preco: 0, raridade: "incomum",
+    bonus: "+1 em teste de CORACAO, so na Vila Semente",
+    mecanica: { tipo: "teste", contexto: "coracao-vila" },
+    origem: "recompensa de 'A missao do sino'",
+  },
+  {
+    id: "broche-troll", nome: "Broche do Troll", preco: 0, raridade: "epico",
+    bonus: "+1 pra fazer rir e evitar briga",
+    mecanica: { tipo: "teste", contexto: "riso" },
+    origem: "resolver o Grulo fazendo ele rir",
+  },
 ];
 
 // ------------------------------------------------------------- bestiario
@@ -348,8 +568,17 @@ export type Criatura = {
    *  quem decide o resultado, isto so filtra por cima dele. 0 = nunca
    *  esquiva (o goblin, por exemplo, nao muda em nada). */
   esquivaChance: number;
-  /** o que fica no chao quando ela e vencida */
-  larga: string[];
+  /** o que fica no chao quando ela e vencida, e a chance de cada coisa cair
+   *  (0 a 1). Guardiao unico (`unico: true`) ignora a chance na pratica: o
+   *  item de historia sempre cai (chance 1), senao a missao principal
+   *  travaria por azar de dado — ver docs/plano-de-itens-e-equipamento.md,
+   *  secao 8. */
+  larga: { id: string; chance: number }[];
+  /** true pros guardioes de historia (uma luta so na vida do save: serpente,
+   *  grulo, bruxa, brasanegra). Sem isso, um sistema de drop por
+   *  porcentagem nao sabe diferenciar "pode lutar de novo, entao vale
+   *  chance" de "so existe esta vez, entao o item tem que cair sempre". */
+  unico?: boolean;
   /** em que lugares ela aparece */
   onde: string[];
 };
@@ -362,7 +591,7 @@ export const BESTIARIO: Criatura[] = [
     sprite: "goblin", porte: "pequeno", comportamento: "foge",
     velocidade: 70, alcance: 12, dano: 1, esquivaChance: 0,
     telegrafo: "levanta o pau acima da cabeca e fecha os olhos",
-    larga: ["moeda"], onde: ["floresta", "caverna"],
+    larga: [{ id: "moeda", chance: 0.7 }], onde: ["floresta", "caverna"],
   },
   {
     id: "aranha", nome: "Aranha da Teia Doce", coracoes: 2,
@@ -371,7 +600,7 @@ export const BESTIARIO: Criatura[] = [
     sprite: "aranha", porte: "pequeno", comportamento: "ronda",
     velocidade: 34, alcance: 14, dano: 1, esquivaChance: 0.2,
     telegrafo: "encolhe as oito pernas antes do bote",
-    larga: ["teia-doce"], onde: ["floresta"],
+    larga: [{ id: "teia-doce", chance: 0.55 }, { id: "anel-teia", chance: 0.04 }], onde: ["floresta"],
   },
   {
     id: "espantalho", nome: "Espantalho Andarilho", coracoes: 2,
@@ -380,7 +609,7 @@ export const BESTIARIO: Criatura[] = [
     sprite: "espantalho", porte: "medio", comportamento: "ronda",
     velocidade: 28, alcance: 16, dano: 1, esquivaChance: 0,
     telegrafo: "gira os bracos como cata-vento",
-    larga: ["palha", "moeda"], onde: ["campo", "vila"],
+    larga: [{ id: "palha", chance: 0.6 }, { id: "moeda", chance: 0.25 }], onde: ["campo", "vila"],
   },
   {
     id: "lobo-nevoa", nome: "Lobo de Nevoa", coracoes: 2,
@@ -389,7 +618,7 @@ export const BESTIARIO: Criatura[] = [
     sprite: "lobo-nevoa", porte: "medio", comportamento: "espreita",
     velocidade: 78, alcance: 14, dano: 1, esquivaChance: 0.3,
     telegrafo: "a nevoa se junta num ponto antes de ele sair dela",
-    larga: ["presa-de-nevoa"], onde: ["floresta"],
+    larga: [{ id: "presa-de-nevoa", chance: 0.35 }, { id: "presa-lapidada", chance: 0.05 }], onde: ["floresta"],
   },
   {
     id: "serpente", nome: "Serpente do Pantano", coracoes: 3,
@@ -398,7 +627,8 @@ export const BESTIARIO: Criatura[] = [
     sprite: "serpente", porte: "grande", comportamento: "guarda",
     velocidade: 40, alcance: 20, dano: 1, esquivaChance: 0,
     telegrafo: "recolhe o pescoco em S e fica quieta demais",
-    larga: ["cristal-meio-dia"], onde: ["pantano"],
+    larga: [{ id: "cristal-meio-dia", chance: 1 }, { id: "manto-pantano", chance: 1 }],
+    unico: true, onde: ["pantano"],
   },
   {
     id: "grulo", nome: "Grulo, o Troll", coracoes: 4,
@@ -407,7 +637,13 @@ export const BESTIARIO: Criatura[] = [
     sprite: "grulo", porte: "grande", comportamento: "guarda",
     velocidade: 30, alcance: 20, dano: 1, esquivaChance: 0,
     telegrafo: "bate o porrete no chao duas vezes",
-    larga: ["pedagio"], onde: ["ponte"],
+    // as tres saidas da Fase 3 sao todas pacificas (pagar, charada, fazer
+    // rir) — nao ha final "vencer na luta" no roadmap, so o troco de
+    // resolver rindo ganha item aqui. Se o combate contra ele acontecer de
+    // qualquer jeito (BESTIARIO permite), o pedagio ainda cai, mas o broche
+    // fica reservado pra quem resolver pelo riso.
+    larga: [{ id: "pedagio", chance: 1 }, { id: "broche-troll", chance: 1 }],
+    unico: true, onde: ["ponte"],
   },
   {
     id: "bruxa", nome: "Bruxa Espinho", coracoes: 3,
@@ -416,7 +652,8 @@ export const BESTIARIO: Criatura[] = [
     sprite: "bruxa", porte: "medio", comportamento: "chefe",
     velocidade: 55, alcance: 60, dano: 1, esquivaChance: 0,
     telegrafo: "o espinho racha o chao antes de subir",
-    larga: ["cristal-anoitecer"], onde: ["torre"],
+    larga: [{ id: "cristal-anoitecer", chance: 1 }, { id: "cajado-bruxa-espinho", chance: 1 }],
+    unico: true, onde: ["torre"],
   },
   {
     id: "cavaleiro-cinzas", nome: "Cavaleiro de Cinzas", coracoes: 5,
@@ -425,7 +662,7 @@ export const BESTIARIO: Criatura[] = [
     sprite: "cavaleiro-cinzas", porte: "grande", comportamento: "encara",
     velocidade: 36, alcance: 18, dano: 2, esquivaChance: 0,
     telegrafo: "a viseira acende por dentro",
-    larga: ["cinza"], onde: ["torre", "pico"],
+    larga: [{ id: "cinza", chance: 0.45 }], onde: ["torre", "pico"],
   },
   {
     id: "brasanegra", nome: "Brasanegra", coracoes: 10,
@@ -434,7 +671,7 @@ export const BESTIARIO: Criatura[] = [
     sprite: "brasanegra", porte: "enorme", comportamento: "chefe",
     velocidade: 45, alcance: 90, dano: 2, esquivaChance: 0,
     telegrafo: "o peito acende de dentro para fora antes do sopro",
-    larga: ["pedra-do-sol"], onde: ["pico"],
+    larga: [{ id: "pedra-do-sol", chance: 1 }], unico: true, onde: ["pico"],
   },
 ];
 
@@ -444,6 +681,9 @@ export const acharClasse = (id: string) => CLASSES.find((c) => c.id === id) ?? C
 export const acharMagia = (id: string) => MAGIAS.find((m) => m.id === id);
 export const acharArma = (id: string) => ARMAS.find((a) => a.id === id);
 export const acharItem = (id: string) => LOJA.find((i) => i.id === id);
+export const acharMaterial = (id: string) => MATERIAIS.find((m) => m.id === id);
+export const acharArmadura = (id: string) => ARMADURAS.find((a) => a.id === id);
+export const acharAcessorio = (id: string) => ACESSORIOS.find((a) => a.id === id);
 export const acharCriatura = (id: string) => BESTIARIO.find((c) => c.id === id);
 
 /** O nome legivel de qualquer id que possa acabar na mochila - comprado na
@@ -459,6 +699,45 @@ export function nomeDoItem(id: string): string {
     .split("-")
     .map((p, i) => (i > 0 && PREPOSICOES_MINUSCULAS.has(p) ? p : p[0]?.toUpperCase() + p.slice(1)))
     .join(" ");
+}
+
+/** Qualquer coisa que a mochila possa guardar, com o suficiente pra
+ *  desenhar uma linha nela: nome, descricao, e a categoria que decide qual
+ *  acao mostrar (usar/vender/equipar/so examinar). Ver `Ficha.ts`,
+ *  `paginaMochila()`. */
+export type ItemPossuido =
+  | { categoria: "consumivel"; nome: string; texto: string; preco: number }
+  | { categoria: "material"; nome: string; texto: string; preco: number; raridade: Raridade }
+  | { categoria: "armadura"; nome: string; bonus: string; raridade: Raridade; origem?: string }
+  | { categoria: "acessorio"; nome: string; bonus: string; raridade: Raridade; origem?: string }
+  | { categoria: "arma"; nome: string; bonus: string; raridade?: Raridade; origem?: string }
+  /** id sem ficha em catalogo nenhum: item de historia/missao (pano-goblin,
+   *  cristal-meio-dia, pedagio...) que sempre foi so uma string solta em
+   *  `dialogos.ts`/`BESTIARIO.larga`, nunca ganhou nome bonito. Mostra o id
+   *  humanizado em vez de fingir que tem descricao. */
+  | { categoria: "historia"; nome: string };
+
+const humanizarId = (id: string): string =>
+  id.split("-").map((p) => (p ? p[0].toUpperCase() + p.slice(1) : p)).join(" ");
+
+export function acharQualquerItem(id: string): ItemPossuido {
+  const item = acharItem(id);
+  if (item) return { categoria: "consumivel", nome: item.nome, texto: item.texto, preco: item.preco };
+  const material = acharMaterial(id);
+  if (material) {
+    return { categoria: "material", nome: material.nome, texto: material.texto, preco: material.preco, raridade: material.raridade };
+  }
+  const armadura = acharArmadura(id);
+  if (armadura) {
+    return { categoria: "armadura", nome: armadura.nome, bonus: armadura.bonus, raridade: armadura.raridade, origem: armadura.origem };
+  }
+  const acessorio = acharAcessorio(id);
+  if (acessorio) {
+    return { categoria: "acessorio", nome: acessorio.nome, bonus: acessorio.bonus, raridade: acessorio.raridade, origem: acessorio.origem };
+  }
+  const arma = acharArma(id);
+  if (arma) return { categoria: "arma", nome: arma.nome, bonus: arma.bonus, raridade: arma.raridade, origem: arma.origem };
+  return { categoria: "historia", nome: humanizarId(id) };
 }
 
 /** O Goblin da Fumaca e UMA criatura no bestiario (mesma vida, mesma

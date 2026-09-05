@@ -42,39 +42,64 @@ esbocadas.
 
 ## Fase 1, o sistema . AGORA
 
-**O maior buraco do projeto.** O RPG de mesa em `docs/referencia/` ja e um jogo
-completo no papel, e nada dele existe em codigo: nao ha dado, atributo, coracao,
-combate, derrota, fogueira nem selo. Sem isso o jogo e um passeio com dialogo, e
-nenhuma area nova conserta isso.
+**O maior buraco do projeto ja tem chao.** O combate joga de verdade, os
+atributos vem da raca/classe/escolha, dom e magia gastam uso de aventura. Falta
+o que fecha o risco de verdade: derrota, fogueira e selo ainda nao existem.
 
 Tudo estreia **na Vila Semente**, que ja existe e e pequena. Nao se estreia sistema
 em mapa novo.
 
-- [ ] **`src/sistemas/dado.ts`.** 1d6 + atributo, tres faixas, modificadores (+1 com
-      ajuda, +1 com o item certo, -1 se dificil). Puro, sem Phaser, testavel sozinho.
-- [ ] **Atributos no estado.** FORCA, ESPERTEZA e CORACAO em `estado().heroi`, vindos
-      da raca e da classe, mais o +1 que o jogador escolhe.
-- [ ] **A cena do dado.** O 1d6 na tela com as tres faixas de cor do material
-      impresso. E o momento de tensao do jogo inteiro: merece animacao propria, nao
-      um numero aparecendo.
-- [ ] **Coracoes.** Tres, quatro para o Anao. Perder, encher comendo e dormindo.
-- [ ] **Derrota e fogueira.** Zero coracoes: o heroi cai, acorda na ultima fogueira
-      acesa e perde o que carregava. Conhecimento nunca se perde. Acender fogueira e
-      permanente e entra no save.
-- [ ] **Combate, o laco inteiro.** Escolher a habilidade, mirar vendo alcance e area
-      de impacto, confirmar, e o dado decidir. Tempo real, com o tempo desacelerando
-      durante a mira. So o heroi rola; a criatura reage. Um inimigo de teste na vila
-      basta para provar o laco. Modelo em `docs/modelo-de-combate.md`.
-- [ ] **O modo de alvo.** Anel de alcance, previa da area no chao, alvo destacado,
-      cancelamento, e a confirmacao em dois passos no toque. E o maior pedaco de UI
-      que o projeto ja teve, e por isso estreia na vila.
-- [ ] **Barra de habilidades**, com recarga visivel e atalho de teclado.
-- [ ] **Selos de Heroi.** A cada 3, o jogador escolhe +1 coracao, +1 atributo ou uma
-      habilidade nova.
-- [ ] **Dom de raca e as tres magias**, com 1 uso por aventura cada.
+- [ ] **O dado, como sistema proprio.** A conta (1d6 + atributo, tres faixas) existe
+      espalhada — `rolar()` em `sistemas/turnos.ts`, `faixaDoDado()` em
+      `dados/sons.ts` — mas nunca juntou num `sistemas/dado.ts` puro e testavel.
+      Os modificadores do material impresso (+1 com ajuda, +1 com o item certo,
+      -1 se dificil) **nao existem em lugar nenhum do codigo ainda**.
+- [x] **Atributos no estado.** `poderesDoHeroi()` (`sistemas/poderes.ts`) soma
+      raca (+1) + classe (+1) + a escolha do jogador (`heroi.poderEscolhido`),
+      igual o manual pede.
+- [ ] **A cena do dado.** Existe `mostrarDado()` dentro de `Combate.ts`: um cartao
+      que aparece na propria tela de combate com a face, o bonus e a palavra da
+      faixa. Funciona, mas e um popup embutido, nao "o momento de tensao do jogo
+      inteiro" com cena e animacao propria que este item pedia — fica em aberto
+      se vale a pena separar.
+- [ ] **Coracoes.** Perder funciona de verdade em combate (`Combate.ts`, desconta
+      e salva no estado). Falta o resto: comer e dormir nao enchem nada ainda, e o
+      Anao continua nascendo com 3 coracoes em vez de 4 (`coracoesMax` e fixo em
+      `novoJogo()`, o dom dele nao esta ligado).
+- [ ] **Derrota e fogueira.** Ainda nao existe nenhuma das duas. Comentario no
+      proprio codigo (`Combate.ts`, `heroiApanha()`) admite: com zero coracoes o
+      heroi so fica tonto 1.2s e volta com 1 coracao — nunca cai, nunca acorda em
+      fogueira, nunca perde o que carregava. E o proprio "risco de verdade" do
+      CLAUDE.md que ainda falta.
+- [x] **Combate, o laco inteiro** — mas **o modelo mudou**. Ver a decisao logo
+      abaixo: nao e mais tempo real com mira, e por turnos.
+- [ ] **O modo de alvo.** A fase de mira existe de verdade (`Combate.ts`): anel de
+      alcance, alvos piscando, cancelamento por ESC ou reclique. Falta a
+      confirmacao em dois passos (hoje um toque dentro do alcance ja executa) e
+      a previa de area para acoes "ao redor", que hoje executam na hora sem
+      passar pela mira.
+- [x] **Barra de habilidades**, com recarga visivel (pontinhos) e atalho 1-6 no
+      teclado. `Combate.ts`.
+- [ ] **Selos de Heroi.** Existe so a conta pura (`selosParaProximaEscolha()` em
+      `sistemas/poderes.ts`), **nunca chamada**. `estado().selos` nunca e
+      incrementado em lugar nenhum do jogo — nao ha fluxo que gere selo, nem
+      tela de escolha.
+- [x] **Dom de raca e as tres magias**, 1 uso por aventura cada, de verdade
+      (`estado().usosDeAventura`, `registrarUso()` chamado ao executar em
+      `Combate.ts`).
 
 Pronto quando: da para tomar um susto na vila, perder, acordar na fogueira, e
-entender exatamente o que custou.
+entender exatamente o que custou. **Ainda nao esta pronto** — falta justamente
+a derrota e a fogueira, o coracao do "risco de verdade".
+
+**Decisao, registrada em `docs/plano-do-combate.md`: o combate deixou de ser
+tempo real com mira e virou por turnos** (estilo mesa, decidido e construido
+direto no Provador antes deste roadmap ser atualizado). Duas consequencias que
+o texto antigo deste roadmap ainda nao refletia: o modelo de mira/alcance em
+pixel/tempo real saiu do jogo, e a regra da mesa "so o heroi rola, o monstro
+reage" tambem foi revista — no jogo os dois lados rolam, com o mesmo cartao de
+dado pros dois. Ver tambem `docs/mundo-que-reage.md` e `docs/11-combate-e-
+magias.md`, que ja assumem turno como modelo vigente.
 
 **Decisao, 2026-09-05: dois itens da Fase 1.2 foram adiantados antes desta fase
 fechar.** A pedido direto (aprofundar os NPCs da Vila Semente e dar um ciclo de
@@ -91,34 +116,45 @@ dia/noite ao jogo), entraram fora de ordem:
   heroi).
 
 O motivo: dar vida ao elenco antes de repetir o metodo em outro lugar, em vez de
-esperar o sistema de dado/combate fechar primeiro. **O que isso NAO adianta:**
-falas condicionadas por estado continuam pendentes — item de baixo, ainda em
-aberto — porque a estrutura de "falas com estado" vai nascer junto do sistema
-de pistas, e uma versao paralela so pra hora do dia arriscava contradizer esse
-design antes dele existir.
+esperar o sistema de dado/combate fechar primeiro.
+
+**Decisao, 2026-09-05: o resto da Fase 1.2 tambem foi adiantado**, a pedido
+direto (falas condicionadas + missoes + opcoes de dialogo). Ver os itens
+marcados abaixo — o unico que ficou de proposito pra depois foi ramificacao de
+dialogo em mais de um nivel, pra nao inventar mecanismo demais antes da hora.
 
 ---
 
 ## Fase 1.2, a vila deixa de ser cenario
 
-- [ ] **Sistema de pistas.** Achar uma pista guarda na mochila e muda a fala dos
-      NPCs. Estrutura em `src/dados/pistas.ts`, estado em `estado().mochila`.
-- [ ] **Falas com estado.** Hoje cada NPC tem uma fala fixa em `dialogos.ts`. Precisa
-      de variantes: antes de achar a pista, depois de achar, depois de resolver.
-      Estrutura sugerida: `{ id, condicao, linhas }[]`, e a primeira condicao que bate
-      e a que toca.
-- [ ] **Diario.** A lista do que ja se descobriu e do que esta em aberto. E o registro
-      do jogador, nao um guia que aponta para onde ir.
-- [ ] **Fala com retrato**, 32x32, para a chapinha da caixa de dialogo.
-- [ ] **O varal com o pano cinza** como objeto interagivel.
-- [ ] **Som.** Passo, abrir fala, achar pista, rolar dado.
+- [x] **Sistema de pistas** — implementado como sistema de missoes, nao como
+      `pistas.ts` separado: `dados/missoes.ts` (catalogo, principal e
+      secundaria, em etapas) + `sistemas/missoes.ts` (progresso, reusando
+      `estado().visitados` em vez de um array novo). O varal ja guarda um item
+      de verdade na mochila e avanca a missao do sino.
+- [x] **Falas com estado.** `dados/dialogos.ts`: `Fala` agora e uma lista de
+      `variantes` com `condicao?: () => boolean`, checadas em ordem — exatamente
+      a estrutura `{ id, condicao, linhas }[]` que este item sugeria. Ja tem
+      variante por periodo do dia (pescador de noite) e por etapa de missao
+      (vovo antes/depois da pista).
+- [x] **Diario.** Aba de verdade na ficha (`Ficha.ts`, `paginaDiario()`): so
+      mostra missao ja aceita, com a etapa atual ou "Concluida!".
+- [ ] **Fala com retrato**, 32x32, para a chapinha da caixa de dialogo. Ainda so
+      texto (`Interface.ts`).
+- [x] **O varal com o pano cinza** como objeto interagivel, com escolha de
+      dialogo: examinar guarda o pano e avanca a missao, deixar pra la e so sabor.
+- [ ] **Som.** Passo, abrir fala e rolar dado tocam de verdade. "Achar pista" esta
+      cadastrado (`dados/sons.ts`, com o comentario "o roadmap pede pista na
+      fase 1") mas **nenhuma cena toca esse som ainda** — nem o varal, que era o
+      lugar obvio.
 - [ ] **Sprites a mao onde mais aparece.** O heroi, os quatro NPCs principais e a copa
       da arvore sao os que mais pesam na primeira impressao. Estender `a_mao()` para
       personagens e icones, hoje ele so cobre os tiles. Ver `docs/06-fluxo-de-sprites.md`.
+      `arte/sprites/` hoje so tem tile — nenhum personagem a mao ainda.
 
 ---
 
-## Fase 1.5, sprites e animacao . FEITO EM PARTE
+## Fase 1.5, sprites e animacao . FEITO
 
 - [x] folha de 6 colunas por 4 linhas: parado, passo A, passo B, respirando,
       conjurando e tonto, nas 4 direcoes
@@ -130,10 +166,18 @@ design antes dele existir.
 - [x] contorno seletivo, rampas de cor com deslocamento de matiz, silhueta com canto
       arredondado
 - [x] guia de tecnica em `docs/08-guia-de-sprites.md`, com as referencias
-- [ ] **Quadros de acao de verdade**: atacar, ser atingido, cair. Hoje so existe
-      `conjurando`, que serve de quebra-galho para tudo. A Fase 1 precisa deles.
-- [ ] **Um sprite proprio por criatura do bestiario.** Sao 9, e por enquanto so o
-      goblin existe. Usar a mesma folha de 6 por 4.
+- [x] **Quadros de acao de verdade**: `QUADRO` em `config.ts` ja tem ataque,
+      machucado, tonto, fuga e derrota — nao e mais so `conjurando` pra tudo.
+- [x] **Um sprite proprio por criatura do bestiario.** As 9 criaturas tem PNG
+      proprio hoje (aranha, espantalho, lobo-nevoa, serpente, grulo, bruxa,
+      cavaleiro-cinzas, brasanegra, + as variacoes de goblin).
+
+**Em aberto, sem decisao ainda:** o goblin foi pro dobro da resolucao (48x96,
+`docs/estudo-de-resolucao.md`) como excecao isolada, antes de qualquer decisao
+de resolucao pro resto do jogo — que continua em conflito nao resolvido com a
+recomendacao antiga de 32x64 em `docs/09-plano-de-resolucao-e-contraste.md`.
+Quanto mais criatura/NPC ganhar sprite proprio, mais caro fica adiar essa
+escolha.
 
 ---
 
@@ -143,11 +187,13 @@ design antes dele existir.
 - [x] escolher tom de pele, estilo e cor de cabelo, estilo e cor de roupa, chapeu
 - [x] botao COM EQUIPAMENTO / SEM EQUIPAMENTO
 - [x] ficha resumida ao lado do boneco no passo final
-- [ ] **O +1 de atributo escolhido pelo jogador.** Depende da Fase 1 e e a escolha
-      mais importante da criacao.
+- [x] **O +1 de atributo escolhido pelo jogador.** `Criacao.ts`, passo "Escolha
+      seu ponto forte", grava em `poderEscolhido`.
 - [ ] **Escolher a arma** entre as de `conteudo.ts`, com o preview mudando na hora.
-      Os sprites ja existem, falta a linha de escolha.
-- [ ] **Escolher as tres magias** entre as 13, para o Mago da Torre.
+      Os sprites ja existem, falta a linha de escolha — hoje a arma vem fixa da
+      classe (`equipamentoDaClasse()`), sem escolha nenhuma.
+- [ ] **Escolher as tres magias** entre as 13, para o Mago da Torre. Hoje o Mago
+      recebe TODAS as magias da classe de uma vez, sem escolher.
 - [ ] **Girar o boneco** com uma setinha, para ver os quatro angulos.
 - [ ] **Rosto** como camada propria: sobrancelha, sardas, olhos de cores diferentes.
 

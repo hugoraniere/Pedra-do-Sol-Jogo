@@ -62,11 +62,17 @@ def aranha(direcao, coluna, tipo="media"):
     # (atacarComoCriatura em Combate.ts so move a POSICAO, nao troca de
     # quadro), entao "agachada" tem que ler tanto parada quanto em salto.
     ataca = coluna == "ataque"
+    # pulo de lado, rapido -- o corpo INTEIRO desloca (pernas incluidas, elas
+    # sao relativas a cx), nao so a cara. E o mesmo truque do goblin.
+    esquiva = coluna == "esquiva"
+    # pernas para cima e para dentro, feito inseto morto de barriga pra cima
+    # -- e a leitura universal de "aranha vencida", sem precisar de sangue.
+    derrota = coluna == "derrota"
 
     rx, ry = t["rx"], t["ry"]
     cor, escura, clara = t["corpo"], ROXO_ARANHA_E, ROXO_ARANHA_C
-    cy = PES - ry - 2 + sobe + (2 if ataca else 0)
-    cx = 8
+    cy = PES - ry - 2 + sobe + (2 if ataca else 0) + (3 if derrota else 0)
+    cx = 8 + (4 if esquiva else 0)
 
     # ------------------------------------------------------------ pernas
     # dois grupos alternados: e assim que aranha anda
@@ -83,9 +89,14 @@ def aranha(direcao, coluna, tipo="media"):
             fase = 1 if (grupo == 1 and impar) or (grupo == 2 and not impar) else 0
             # as pernas da frente sao mais altas e mais curtas que as de tras
             ombro = (cx + lado * (rx - 1), cy - ry + 2 + k)
-            joelho = (cx + lado * max(1, rx + 1 + k // 2 - recolhe), cy - ry - 2 + k + (recolhe if ataca else 0))
-            pe = (cx + lado * max(2, rx + 2 + (n - 1 - k) - recolhe * 2), PES - 1)
-            _perna(im, ombro, joelho, pe, lado, escura, t["meia"], fase)
+            if derrota:
+                # curva para CIMA e para DENTRO em vez de descer ao chao
+                joelho = (cx + lado * max(1, rx - 1), cy - ry - 1 - k // 2)
+                pe = (cx + lado * max(1, rx - 3), cy - ry - 4 - k // 2)
+            else:
+                joelho = (cx + lado * max(1, rx + 1 + k // 2 - recolhe), cy - ry - 2 + k + (recolhe if ataca else 0))
+                pe = (cx + lado * max(2, rx + 2 + (n - 1 - k) - recolhe * 2), PES - 1)
+            _perna(im, ombro, joelho, pe, lado, escura, t["meia"], 0 if derrota else fase)
 
     # ------------------------------------------------------------- corpo
     elipse(im, cx, cy, rx, ry, cor)
@@ -105,7 +116,12 @@ def aranha(direcao, coluna, tipo="media"):
     # ------------------------------------------------------------- rosto
     if direcao != "cima":
         oy = cy - ry + 2
-        if tonto:
+        if derrota:
+            # oito olhos fechados viram duas linhas so -- fechados, nao "x"
+            # de tonto: ela nao esta zonza, desistiu.
+            ret(im, cx - 4, oy + 1, 3, 1, TINTA)
+            ret(im, cx + 1, oy + 1, 3, 1, TINTA)
+        elif tonto:
             for ex in (cx - 3, cx + 1):
                 pontos(im, [(ex, oy), (ex + 1, oy + 1), (ex, oy + 2), (ex + 1, oy)], TINTA)
         else:

@@ -6,7 +6,10 @@ import { MAPAS, VILA, montarChao, bordasDeGrama, plantarMata, Mapa, Saida, type 
 import { acharCriatura, nomeDoItem, spriteDoGoblin } from "../dados/conteudo";
 import { DIALOGOS, type Escolha } from "../dados/dialogos";
 import { concluirEtapa } from "../sistemas/missoes";
-import { estado, salvar, marcarVisitado, foiDerrotado } from "../sistemas/estado";
+import {
+  estado, salvar, marcarVisitado, foiDerrotado,
+  foiAcesa, acenderFogueira, ultimaFogueiraAcesa,
+} from "../sistemas/estado";
 import type { Encontro } from "./Combate";
 import { Controles } from "../sistemas/controles";
 import { camadasDoHeroi, criarAnimacoes, Heroi } from "../sistemas/heroi";
@@ -39,6 +42,11 @@ type Interagivel = {
   /** o sprite de verdade, para o destaque copiar textura, quadro e origem
    *  dele — nunca desenhar um retangulo generico por cima. */
   obj: Phaser.GameObjects.Image | Phaser.GameObjects.Sprite;
+  /** posicao em TILE (nao pixel), so preenchida pra objetos do mapa. Existe
+   *  pra distinguir instancias do mesmo `nome` (varias fogueiras no mesmo
+   *  mapa sao indistinguiveis so pelo `chave`) sem precisar de indice de
+   *  array, que nao e estavel entre `mapa.objetos` e o array plantado. */
+  tileX?: number; tileY?: number;
 };
 type Ponto = { x: number; y: number };
 
@@ -247,12 +255,16 @@ export class Mundo extends Phaser.Scene {
         this.solidos.add(corpo);
         (corpo.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
       }
-      if (DIALOGOS[peca.nome]) {
+      // fogueira nao tem entrada em DIALOGOS: a fala dela depende de QUAL
+      // instancia e se ja foi acesa, decidido em tentarInteragir() antes do
+      // lookup generico — ver o caso especial la
+      if (DIALOGOS[peca.nome] || peca.nome === "fogueira") {
         // a caixa de verdade: centro (x, y - h/2) porque a origem do sprite
         // e (0.5, 1), o pe dele, e o desenho sobe `ficha.h` px a partir dali
         this.interagiveis.push({
           x, y: y - ficha.h / 2, chave: peca.nome, tipo: "objeto",
           largura: ficha.w, altura: ficha.h, obj: s,
+          tileX: peca.x, tileY: peca.y,
         });
       }
     });
@@ -480,6 +492,29 @@ export class Mundo extends Phaser.Scene {
       );
     }
     if (!alvo) return;
+    // a fogueira e caso especial, antes do lookup generico: a fala dela
+    // depende de QUAL instancia e se ja foi acesa, e o sistema de
+    // variantes/condicao de dialogos.ts nao da conta disso (condicao e uma
+    // closure sem argumento, fixada quando o modulo carrega — nao sabe em
+    // tempo de carregamento qual fogueira vai ser tocada em tempo de jogo).
+    if (alvo.chave === "fogueira" && alvo.tileX !== undefined && alvo.tileY !== undefined) {
+      const chave = `${estado().cena}:${alvo.tileX},${alvo.tileY}`;
+      const primeiraVez = !foiAcesa(chave);
+      if (primeiraVez) tocar("salvou");
+      // sempre, nao so na primeira vez: descansar aqui agora e o que faz
+      // desta a fogueira de retorno, mesmo se outra ja tinha sido acesa antes
+      acenderFogueira(chave);
+      estado().coracoes = estado().coracoesMax;
+      salvar();
+      this.abrirFala(
+        "A fogueira",
+        primeiraVez
+          ? ["Voce acende a fogueira.", "Se cair, e aqui que vai acordar agora."]
+          : ["Ainda esta quentinha.", "O calor enche seus coracoes de novo."],
+        "fogueira"
+      );
+      return;
+    }
     const fala = DIALOGOS[alvo.chave];
     if (!fala) return;
     // a primeira variante cuja condicao falta ou bate e a que toca — ver o
@@ -791,6 +826,29 @@ export class Mundo extends Phaser.Scene {
     this.emCombate = false;
     this.scene.setVisible(true, "Interface");
     this.scene.resume("Interface");
+  }
+
+  /** Chamado pelo Combate quando os coracoes chegam a zero. Fecha a luta e
+   *  acorda o heroi na ultima fogueira acesa — que pode estar num mapa
+   *  diferente de onde ele caiu, entao troca `estado().cena` como qualquer
+   *  saida de mapa (`conferirSaida()`) e reusa o mesmo `entradaForcada`. So
+   *  as moedas se perdem; missao, pista, afinidade e selo sao conhecimento e
+   *  nunca somem. */
+  acordarNaFogueira() {
+    this.sairDeCombate();
+    const chave = ultimaFogueiraAcesa();
+    const [cenaAlvo, coords] = chave.split(":");
+    const [tx, ty] = coords.split(",").map(Number);
+    const st = estado();
+    st.moedas = 0;
+    st.coracoes = st.coracoesMax;
+    st.cena = cenaAlvo;
+    st.lugar = MAPAS[cenaAlvo]?.lugar ?? st.lugar;
+    salvar();
+    this.cameras.main.fadeOut(500, 0, 0, 0);
+    this.cameras.main.once("camerafadeoutcomplete", () => {
+      this.scene.restart({ entrada: { x: tx, y: ty } });
+    });
   }
 
   // ----------------------------------------------------------- o clique

@@ -695,10 +695,13 @@ export class Combate extends Phaser.Scene {
 
   /** Fase 13 (docs/plano-de-implementacao.md, CLAUDE.md "Divergencia
    *  deliberada"): zero coracoes nunca apaga o heroi nem o save - so custa
-   *  dinheiro e parte da mochila, e acorda no Hospital da Vila Semente. O
-   *  Hospital cura os coracoes pro maximo: punir a mesma derrota duas vezes
-   *  (ferido E sem dinheiro) seria demais. O resumo do prejuizo (13.4) viaja
-   *  junto pro Mundo mostrar assim que a tela acender de novo la. */
+   *  dinheiro e parte da mochila, e acorda no Hospital da Vila Semente, NUNCA
+   *  mais na ultima fogueira acesa (isso e o que a mesa fazia, e o jogo
+   *  diverge dela de proposito aqui - ver CLAUDE.md). A fogueira continua
+   *  sendo checkpoint pra DESCANSAR, so deixou de ser tambem o ponto de
+   *  resgate. O Hospital cura os coracoes pro maximo: punir a mesma derrota
+   *  duas vezes (ferido E sem dinheiro) seria demais. O resumo do prejuizo
+   *  (13.4) viaja junto pro Mundo mostrar assim que a tela acender de novo la. */
   private derrota() {
     const derrota = aplicarDerrota();
     this.coracoes = this.coracoesMax;
@@ -1153,9 +1156,13 @@ export class Combate extends Phaser.Scene {
         // precisa esperar Mundo recarregar o mapa pra ela sumir de vez.
         this.mundo.removerCriatura(b.chave);
         const ficha = acharCriatura(b.bicharioId);
-        ficha?.larga.forEach((item) => {
-          if (item === "moeda") estado().moedas += 1;
-          else guardar(item);
+        // guardiao unico (serpente, grulo, bruxa, brasanegra) larga sempre —
+        // chance so vale pra bicho comum, que pode ser encontrado de novo.
+        // Ver docs/plano-de-itens-e-equipamento.md, secao 8.
+        ficha?.larga.forEach(({ id, chance }) => {
+          if (!ficha.unico && Math.random() > chance) return;
+          if (id === "moeda") estado().moedas += 1;
+          else guardar(id);
         });
         salvar();
       }

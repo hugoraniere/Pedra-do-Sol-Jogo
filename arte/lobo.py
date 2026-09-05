@@ -29,25 +29,36 @@ def lobo(direcao, coluna, tipo="nevoa"):
     tonto = coluna == "tonto"
     # o quadro "conjura" e o que ele usa para sumir: quase todo desfeito
     sumindo = coluna == "conjura"
+    # agachado, pronto pro bote: nao precisa de dente novo, so postura --
+    # "dar medo sem precisar de dente nenhum" e a propria regra do desenho.
+    ataca = coluna == "ataque"
+    # esquiva de lado: o corpo inteiro desloca, pernas e cabeca incluidas.
+    esquiva = coluna == "esquiva"
+    # derrota: agacha ao chao e os olhos apagam -- ele "e" a nevoa, entao
+    # vencido nao e ferido, e a forma que se desfaz e nao acende mais.
+    derrota = coluna == "derrota"
 
-    base = 29 + sobe
+    base = 29 + sobe + (2 if derrota else 0)
     de_lado = direcao in ("esquerda", "direita")
     virado = -1 if direcao == "esquerda" else 1
+    cx0 = 8 + (4 if esquiva else 0)
 
     if de_lado:
         # ---------------------------------------------------- vista de lado
-        corpo_y = base - 9
-        elipse(im, 8, corpo_y, 6, 3, NEVOA_M)
-        elipse(im, 8, corpo_y - 1, 5, 2, NEVOA_C)
+        corpo_y = base - 9 + (2 if ataca else 0)
+        elipse(im, cx0, corpo_y, 6, 3, NEVOA_M)
+        elipse(im, cx0, corpo_y - 1, 5, 2, NEVOA_C)
         # quatro patas: as de tras e as da frente em oposicao, e o que faz trote
         for (dx, fase) in ((-4, 1), (-2, -1), (3, -1), (5, 1)):
-            comp = 5 + fase * bal
-            x = 8 + dx * virado
+            comp = (5 + fase * bal) if not derrota else 2
+            x = cx0 + dx * virado
             for k in range(comp):
                 px(im, x, corpo_y + 2 + k, NEVOA_M if k < comp - 2 else NEVOA_E)
-        # pescoco e cabeca, baixos: lobo caca de cabeca abaixada
-        cx = 8 + 6 * virado
-        cy = corpo_y - (1 if not tonto else -1)
+        # pescoco e cabeca, baixos: lobo caca de cabeca abaixada. No bote a
+        # cabeca joga ainda mais pra frente e mais baixo -- e o musculo que
+        # avisa o bote, nao o dente.
+        cx = cx0 + (6 + (2 if ataca else 0)) * virado
+        cy = corpo_y - (1 if not tonto else -1) + (1 if ataca else 0)
         elipse(im, cx, cy, 3, 2, NEVOA_C)
         # focinho comprido saindo da silhueta
         for k in range(1, 4):
@@ -59,45 +70,46 @@ def lobo(direcao, coluna, tipo="nevoa"):
         px(im, cx + 1 * virado, cy - 3, NEVOA_M)
         # rabo: sobe e se desfaz
         for k in range(4):
-            px(im, 8 - (6 + k) * virado, corpo_y - k, NEVOA_M if k < 2 else NEVOA_E)
-        olhos = [(cx + 2 * virado, cy)]
+            px(im, cx0 - (6 + k) * virado, corpo_y - k, NEVOA_M if k < 2 else NEVOA_E)
+        olhos = [] if derrota else [(cx + 2 * virado, cy)]
     else:
         # ------------------------------------------- vista de frente e de costas
         # Ele estava pequeno demais: no meio da mata virava um borrao claro de
         # doze pixels e ninguem lia "lobo". Um quadrupede de frente precisa de
         # PEITO LARGO, quase da largura do quadro, com a cabeca baixa entre os
         # ombros e as quatro patas visiveis por baixo. Largura e o que da porte.
-        corpo_y = base - 8
-        elipse(im, 8, corpo_y, 7, 4, NEVOA_M)          # peito, bem largo
-        elipse(im, 8, corpo_y - 1, 6, 3, NEVOA_C)
-        elipse(im, 8, corpo_y - 4, 4, 3, NEVOA_E if direcao == "baixo" else NEVOA_M)
+        corpo_y = base - 8 + (2 if ataca else 0)
+        elipse(im, cx0, corpo_y, 7, 4, NEVOA_M)          # peito, bem largo
+        elipse(im, cx0, corpo_y - 1, 6, 3, NEVOA_C)
+        elipse(im, cx0, corpo_y - 4, 4, 3, NEVOA_E if direcao == "baixo" else NEVOA_M)
         # ombros salientes, um de cada lado da cabeca
         for dx in (-5, 5):
-            elipse(im, 8 + dx, corpo_y - 2, 2, 2, NEVOA_C)
-        # quatro patas, as de dentro mais longas
+            elipse(im, cx0 + dx, corpo_y - 2, 2, 2, NEVOA_C)
+        # quatro patas, as de dentro mais longas -- na derrota, so tocos curtos
         for (dx, dentro) in ((-6, False), (-2, True), (3, True), (6, False)):
             fase = bal if dx < 0 else -bal
-            comp = (7 if dentro else 5) + fase
+            comp = 2 if derrota else (7 if dentro else 5) + fase
             for k in range(comp):
-                px(im, 8 + dx, corpo_y + 3 + k,
+                px(im, cx0 + dx, corpo_y + 3 + k,
                    (NEVOA_M if dentro else NEVOA_E) if k < comp - 2 else NEVOA_E)
                 if dentro:
-                    px(im, 8 + dx + 1, corpo_y + 3 + k, NEVOA_M if k < comp - 2 else NEVOA_E)
+                    px(im, cx0 + dx + 1, corpo_y + 3 + k, NEVOA_M if k < comp - 2 else NEVOA_E)
         cy = corpo_y - 6
-        elipse(im, 8, cy, 4, 3, NEVOA_C)               # cabeca, maior
-        # orelhas em triangulo, bem separadas e altas
+        elipse(im, cx0, cy, 4, 3, NEVOA_C)               # cabeca, maior
+        # orelhas em triangulo, bem separadas e altas -- deitadas na derrota
+        alt_orelha = 1 if derrota else 3
         for dx in (-4, 4):
-            for k in range(3):
-                px(im, 8 + dx + (k // 2) * (1 if dx < 0 else -1), cy - 2 - k,
+            for k in range(alt_orelha):
+                px(im, cx0 + dx + (k // 2) * (1 if dx < 0 else -1), cy - 2 - k,
                    NEVOA_C if k < 2 else NEVOA_M)
         if direcao == "baixo":
-            elipse(im, 8, cy + 3, 3, 2, NEVOA_M)       # focinho
-            px(im, 8, cy + 4, TINTA_2)
-            olhos = [(6, cy), (10, cy)]
+            elipse(im, cx0, cy + 3, 3, 2, NEVOA_M)       # focinho
+            px(im, cx0, cy + 4, TINTA_2)
+            olhos = [] if derrota else [(cx0 - 2, cy), (cx0 + 2, cy)]
         else:
             for k in range(6):
-                px(im, 8, cy - 1 - k, NEVOA_M if k < 4 else NEVOA_E)
-                px(im, 9, cy - 1 - k, NEVOA_E)
+                px(im, cx0, cy - 1 - k, NEVOA_M if k < 4 else NEVOA_E)
+                px(im, cx0 + 1, cy - 1 - k, NEVOA_E)
             olhos = []
 
     # ------------------------------------------------- a nevoa se desfazendo
