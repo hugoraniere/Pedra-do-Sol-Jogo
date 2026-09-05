@@ -57,8 +57,9 @@ pagina.on("console", (m) => {
 await pagina.goto(`http://localhost:${PORTA}/`, { waitUntil: "networkidle" });
 await pagina.waitForTimeout(2500);
 
-/** A resolucao logica muda com a visao escolhida (256x160, 320x192, 400x240) e a
- *  escala do canvas muda junto. Entao nada de guardar a escala numa constante:
+/** A resolucao logica nao e mais uma de tres opcoes: o canvas enche a janela e o
+ *  tamanho logico e o que sobra da divisao pela escala inteira, entao ele muda
+ *  com o tamanho da janela E com a visao escolhida. Nada de guardar a escala:
  *  cada clique pergunta de novo onde o canvas esta e de que tamanho o jogo se
  *  considera. Foi assim que a auditoria continuou valendo depois que o zoom
  *  deixou de ser zoom de camera e virou troca de resolucao. */
@@ -191,6 +192,12 @@ const telas = [];
  *  animacao nao avanca no meio de um bloco sincrono. */
 async function congelar() {
   return pagina.evaluate(() => {
+    // o relogio de jogo tambem precisa parar pro screenshot: sem isto, o
+    // ceu da Vila Semente muda de tom a cada rodada de auditoria por causa
+    // da hora, nao da UI, e ferramentas/telas/10-mundo.png nunca fica igual
+    // de uma rodada pra outra. Meio-dia = ceu limpo, sem overlay nenhum.
+    const mundo = window.jogo.scene.getScene("Mundo");
+    mundo?.travarRelogioParaAuditoria?.(720);
     const achatar = (l) => l.flatMap((o) => (Array.isArray(o.list) ? [o, ...achatar(o.list)] : [o]));
     const parados = [];
     for (const cena of window.jogo.scene.getScenes(true)) {
@@ -287,11 +294,12 @@ await clicarBotao("CARREGAR JOGO");
 problemas.push(...(await olhar("15-carregar")));
 
 // ------------------------------------- a criacao nas outras duas visoes
-/** A visao escolhida nao e zoom de camera, e resolucao logica: 256x160, 320x192
- *  ou 400x240. O percurso de cima roda na do meio, e por isso passou anos verde
- *  enquanto a tela de criacao se quebrava em 256x160, onde a grade de botoes
- *  subia por cima do palco do boneco. Aqui a criacao inteira roda de novo nas
- *  outras duas, que e onde a conta de altura aperta. */
+/** A visao escolhida nao e zoom de camera nem resolucao fixa: e um degrau na
+ *  escala inteira, e cada degrau da uma resolucao logica diferente nesta janela.
+ *  O percurso de cima roda na visao do meio, e por isso passou anos verde
+ *  enquanto a tela de criacao se quebrava na visao mais apertada, onde a grade
+ *  de botoes subia por cima do palco do boneco. Aqui a criacao inteira roda de
+ *  novo nas outras duas, que e onde a conta de altura aperta. */
 async function criacaoNaVisao(zoom) {
   await pagina.evaluate(
     (z) => localStorage.setItem("aurora-preferencias", JSON.stringify({ zoom: z, som: true })),

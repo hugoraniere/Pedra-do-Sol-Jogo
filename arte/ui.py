@@ -258,20 +258,69 @@ def gerar(saida):
     return {nome: i for i, (nome, _) in enumerate(ICONES)}
 
 
+def _selo(tamanho, fundo=None):
+    """O selo dourado do Reino de Aurora, na medida pedida.
+
+    E O MESMO DESENHO da moeda de 32x32 de sempre, so que as coordenadas viram
+    fracao do tamanho em vez de pixel fixo: assim o favicon da aba, o icone de
+    instalar no celular e o icone grande da tela de carregamento do PWA saem
+    do mesmo traco, sem redesenhar nada a mao em resolucoes diferentes.
+
+    `fundo`, quando vem, pinta o quadrado inteiro antes do selo. O favicon da
+    aba fica transparente por fora do circulo; o icone que vira app no celular
+    NAO PODE: o iOS ignora a transparencia e poe uma cor dele mesmo atras, e o
+    Android, no icone adaptavel, corta o quadrado num formato que ele escolhe
+    (circulo, quadrado arredondado...) e o que sobrar fora vaza a cor de tras
+    da bandeja do sistema. Um fundo solido da mesma tinta do jogo garante que a
+    beirada nunca aparece errada, em nenhum dos dois."""
+    im = Image.new("RGBA", (tamanho, tamanho), fundo + (255,) if fundo else (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    e = lambda a, b: tuple(round(v * tamanho / 32) for v in (a, a, b, b))
+    r = lambda x0, y0, x1, y1: tuple(round(v * tamanho / 32) for v in (x0, y0, x1, y1))
+    d.ellipse(e(1, 30), fill=TINTA)
+    d.ellipse(e(3, 28), fill=OURO)
+    d.ellipse(r(5, 5, 26, 22), fill=(255, 214, 92))
+    # a estrela de quatro pontas, a mesma da tunica do mago
+    for (x0, y0, x1, y1) in ((14, 7, 17, 24), (7, 14, 24, 17)):
+        d.rectangle(r(x0, y0, x1, y1), fill=TINTA)
+    d.rectangle(r(13, 13, 18, 18), fill=TINTA)
+    return im
+
+
 def favicon(caminho):
-    """Icone da aba do navegador, 32 x 32: o selo dourado do Reino de Aurora.
+    """Icone da aba do navegador, 32 x 32.
 
     Existe por um motivo bobo e real: sem ele o navegador pede /favicon.ico em
     toda carga, leva 404, e o 404 aparece no console junto com os erros de
     verdade. Erro falso no console e pior que icone feio, porque treina a gente
     a ignorar o console."""
-    im = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
-    d = ImageDraw.Draw(im)
-    d.ellipse((1, 1, 30, 30), fill=TINTA)
-    d.ellipse((3, 3, 28, 28), fill=OURO)
-    d.ellipse((5, 5, 26, 22), fill=(255, 214, 92))
-    # a estrela de quatro pontas, a mesma da tunica do mago
-    for (x0, y0, x1, y1) in ((14, 7, 17, 24), (7, 14, 24, 17)):
-        d.rectangle((x0, y0, x1, y1), fill=TINTA)
-    d.rectangle((13, 13, 18, 18), fill=TINTA)
-    im.save(caminho)
+    _selo(32).save(caminho)
+
+
+def icones_do_app(pasta):
+    """Os icones de quando o jogo vira um icone na tela do celular (PWA).
+
+    Tres tamanhos, dois estilos:
+
+      icone-192.png, icone-512.png    fundo solido, para o Android normal e
+                                       para a tela de splash enquanto carrega
+      icone-mascara-512.png           o selo ENCOLHIDO para dentro da zona
+                                       segura (65% do quadrado), com fundo
+                                       solido ate a borda. O Android adaptavel
+                                       corta esta imagem num formato que ele
+                                       escolhe; se o selo fosse desenhado ate a
+                                       beirada, a pontinha da estrela sairia
+                                       cortada em quem usa icone circular.
+      icone-apple-180.png             o iOS arredonda a esquina sozinho e nao
+                                       aceita transparencia: fundo solido ate a
+                                       beirada, sem encolher, porque a Apple
+                                       nao corta em formato nenhum alem do dele.
+    """
+    for nome, tamanho in (("icone-192", 192), ("icone-512", 512), ("icone-apple-180", 180)):
+        _selo(tamanho, fundo=TINTA).save(os.path.join(pasta, f"{nome}.png"))
+
+    mascara = Image.new("RGBA", (512, 512), TINTA + (255,))
+    miolo = int(512 * 0.65)
+    selo = _selo(miolo)
+    mascara.paste(selo, ((512 - miolo) // 2, (512 - miolo) // 2), selo)
+    mascara.save(os.path.join(pasta, "icone-mascara-512.png"))

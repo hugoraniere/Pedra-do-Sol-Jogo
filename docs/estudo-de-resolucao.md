@@ -245,8 +245,17 @@ Cada funcao precisa de decisao humana, e e por isso que 48 e a recomendacao e
 
 ## 9. O que este estudo nao resolveu
 
-- **O corpo do goblin.** O esboco convergiu no rosto, nas maos e no torso; a
-  perna e o pe ficaram fracos. E execucao, e fica para quando for pra valer.
+- ~~**O corpo do goblin.** O esboco convergiu no rosto, nas maos e no torso; a
+  perna e o pe ficaram fracos. E execucao, e fica para quando for pra valer.~~
+  **Executado em 2026-09-05**, e so ele: o Hugo decidiu ir direto para a
+  resolucao maior (48, a recomendacao daqui) **so no goblin**, sem esperar a
+  decisao de resolucao do resto do jogo (secao 8 continua em aberto para
+  tudo mais). `arte/goblin.py` foi reescrito em 48 x 96, com perna arqueada e
+  pe com dedos de verdade, resolvendo o que faltava. Como o resto do jogo
+  continua em 16 x 32, isso exigiu uma escala de exibicao nova (o goblin tem
+  3x mais pixel na arte mas o MESMO tamanho no mundo) — ver `escalaDoSprite()`
+  em `src/dados/config.ts`, usada em `Boot.ts`, `Mundo.ts` e `Combate.ts`.
+  Primeira vez que o jogo separa "pixels da arte" de "tamanho no mundo".
 - **A fonte.** `arte/fonte.py` gera a fonte de bitmap. Ela dobra junto, e nao
   olhei o que isso faz com o design system.
 - **Se o jogo continua sendo pixel art.** Em escala 1 e tile 48, num monitor

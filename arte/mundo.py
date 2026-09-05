@@ -117,8 +117,42 @@ def ferraria():
     return im
 
 
+def _ramo_ervas(im, x, y):
+    """Maco de ervas secando, pendurado por um barbante. E o detalhe que marca
+    uma casa como casa de curandeira sem precisar de porta nova nem cartaz:
+    quem ja viu erva secando pendurada reconhece na hora."""
+    px(im, x + 1, y, MADEIRA_E)
+    linha_v(im, x + 1, y + 1, 3, TINTA_2)
+    for (dx, dy, cor) in [
+        (0, 4, FOLHA_E), (1, 4, FOLHA), (2, 4, FOLHA_E),
+        (0, 5, FOLHA), (1, 5, FOLHA_C), (2, 5, FOLHA),
+        (0, 6, FOLHA_E), (1, 6, FOLHA), (2, 6, FOLHA_E),
+        (1, 7, FOLHA_E),
+    ]:
+        px(im, x + dx, y + dy, cor)
+    px(im, x, y + 4, ROXO_C)
+    px(im, x + 2, y + 6, ROSA)
+
+
+def _vaso_erva(im, x, y):
+    """Vasinho de erva no parapeito da janela."""
+    ret(im, x, y, 5, 3, TERRA)
+    ret(im, x, y, 5, 1, TERRA_C)
+    ret(im, x, y + 2, 5, 1, TERRA_E)
+    for (dx, dy, cor) in [(1, -2, FOLHA), (2, -3, FOLHA_C), (3, -2, FOLHA)]:
+        px(im, x + dx, y + dy, cor)
+
+
 def casa_vovo():
+    """A Casa de Cura: casa da Vovo Aurora, com o detalhe de curandeira que a
+    distingue das outras por fora. Ver docs/14-casa-de-cura.md -- o interior
+    ainda nao existe, entao por enquanto a casa so PARECE o que e."""
     im = casa(4, 68, (ROXO, ROXO_C, (86, 60, 148)))
+    w, h = im.width, im.height
+    topo_parede = h - 4 - 34  # mesma conta de `casa()`, que nao devolve as posicoes
+    _ramo_ervas(im, w // 2 + 7, topo_parede + 1)
+    _vaso_erva(im, w - 16 + 1, topo_parede + 6 + 7 + 1)
+    contorno_alfa(im)
     return im
 
 
@@ -312,6 +346,19 @@ def poste_sino(com_sino=False):
     return im
 
 
+def pedra_solta():
+    """Placeholder: um monte pequeno de pedrinhas soltas. Existe so para
+    OBJETOS ter uma fabrica caso arte/sprites/pedra-solta.png suma -- o
+    desenho de producao vem de la (ver LEIA.md)."""
+    im = nova(16, 12)
+    sombra(im, 7, 3, 8, 11)
+    for (x, y, w, h, cor) in [
+        (3, 6, 5, 4, PEDRA), (7, 7, 5, 4, PEDRA_C), (2, 8, 4, 3, PEDRA_E),
+    ]:
+        ret(im, x, y, w, h, cor)
+    return im
+
+
 def poco():
     im = nova(28, 30)
     sombra(im, 12, 4, 14, 27)
@@ -438,6 +485,7 @@ OBJETOS = [
     ("poste-sino", lambda: poste_sino(False), (0.25, 0.14)),
     ("poste-com-sino", lambda: poste_sino(True), (0.25, 0.14)),
     ("poco", poco, (0.40, 0.45)),
+    ("pedra-solta", pedra_solta, (0.45, 0.40)),
     ("barraca", barraca_feira, (0.45, 0.40)),
     ("cerca", cerca, (0.50, 0.40)),
     ("fogueira", fogueira, (0.40, 0.40)),

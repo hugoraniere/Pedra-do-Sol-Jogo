@@ -15,6 +15,11 @@ TERRA_C    = (222, 190, 142)
 TERRA      = (198, 160, 108)
 TERRA_E    = (158, 118, 76)
 
+#: casada com arte/sprites/tile-areia.png, mesma razao do GRAMA acima
+AREIA_C    = (253, 212, 175)
+AREIA      = (241, 194, 147)
+AREIA_E    = (213, 162, 119)
+
 AGUA_C     = (166, 220, 250)
 AGUA       = (112, 190, 240)
 AGUA_E     = (64, 148, 210)
@@ -86,9 +91,20 @@ PELE_C     = (250, 218, 186)
 PELE       = (228, 186, 148)
 PELE_E     = (188, 142, 108)
 
+GOBLIN_L   = (214, 244, 184)   # luz alta, so na borda que pega sol
 GOBLIN_C   = (176, 224, 140)
 GOBLIN     = (140, 196, 104)
 GOBLIN_E   = (96, 152, 70)
+GOBLIN_S   = (58, 100, 48)     # sombra profunda, so em vinco e vao
+
+COURO_C    = (156, 112, 72)
+COURO      = (124, 86, 54)
+COURO_E    = (86, 58, 38)
+
+ESCLERA    = (240, 236, 206)
+OLHO_IRIS   = (206, 130, 52)
+OLHO_IRIS_E = (150, 84, 34)
+DENTE      = (238, 234, 214)
 
 BRANCO     = (255, 255, 255)
 VAZIO      = (0, 0, 0, 0)

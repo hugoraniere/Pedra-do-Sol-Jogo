@@ -62,25 +62,34 @@ def _ancoras(qtd, semente, distancia=5):
     return pontos
 
 
+def _mistura(a, b, t):
+    return tuple(round(a[i] * (1 - t) + b[i] * t) for i in range(3))
+
+
 # ------------------------------------------------------------------- grama
-def _tufo_grama(im, x, y, r):
-    """Uma touceira: sombra no pe, 2 a 3 laminas inclinadas para o mesmo lado.
-    O pe em sombra e o que ancora a touceira no chao; sem ele ela flutua."""
-    lado = 1 if r.random() < 0.5 else -1
-    px(im, x, y, GRAMA_E)
-    px(im, x + lado, y - 1, GRAMA_C)
-    if r.random() < 0.7:
-        px(im, x + lado * 2, y - 2, GRAMA_C)
-    px(im, x - lado, y, GRAMA_C)
+#: grama/grama2/grama3 nao sao mais o MESMO verde repetido: cada um e um
+#: tom levemente diferente (a mesma cor puxada 20% para a luz ou para a
+#: sombra ja existentes). Tile continua liso, sem UM PIXEL de ruido dentro
+#: dele -- mas bordasDeGrama() ja escolhe entre os tres pela posicao
+#: (x*7+y*13), entao o MAPA ganha uma mancha suave de tom sem que nenhum
+#: tile individual pare de ser cor solida. Foi tentar "vida" com ruido
+#: dentro do tile que virou estatica; a vida mora entre tiles, nao dentro
+#: de um so.
+_TONS_GRAMA = [GRAMA, _mistura(GRAMA, GRAMA_C, 0.2), _mistura(GRAMA, GRAMA_E, 0.2)]
 
 
 def grama(v=0):
+    """Lisa, mas nao mais a MESMA cor solida nos tres quadros -- ver
+    _TONS_GRAMA acima. Ainda zero pixel de textura dentro do tile: quem
+    varia e o tom entre tiles vizinhos, nao o interior de cada um.
+
+    Chao e o que mais se repete na tela inteira, entao qualquer informacao
+    aqui e multiplicada por centena de tiles. O detalhe (touceira, flor,
+    capim alto) mora nos tiles SEPARADOS que ja existem pra isso --
+    grama-alta, flores -- que o autor do mapa planta a mao, raro de
+    proposito, em vez de nascerem escondidos dentro do "." comum."""
     im = nova()
-    ret(im, 0, 0, T, T, GRAMA)
-    # 5 touceiras soltas -- ESPACO NEGATIVO entre elas e o que separa "textura
-    # rica" de "borrao". Cada variante planta em posicoes diferentes.
-    for (x, y, r) in _ancoras(4, 100 + v * 37, distancia=4.5):
-        _tufo_grama(im, x, y, r)
+    ret(im, 0, 0, T, T, _TONS_GRAMA[v % 3])
     return im
 
 
@@ -107,6 +116,48 @@ def flores():
     return im
 
 
+def grama_pequena():
+    """Um brotinho, nao uma touceira: 3 laminas de 1-2 px, bem mais
+    discreto que grama_alta(). E o tile que quebra o "." liso de vez em
+    quando sem virar uma zona de capim de verdade."""
+    im = grama(0)
+    cx, cy = T // 2, T // 2 + 2
+    px(im, cx, cy, GRAMA_E)
+    px(im, cx - 1, cy - 1, GRAMA_C)
+    px(im, cx + 1, cy - 1, GRAMA_C)
+    px(im, cx, cy - 1, GRAMA_C)
+    px(im, cx, cy - 2, GRAMA_C)
+    return im
+
+
+def grama_falha():
+    """Grama gasta, areia aparecendo por baixo -- pisoteio, nao buraco.
+    Mancha pequena e organica (nao circulo perfeito), sombra so no lado
+    que a luz nao bate (embaixo-direita), luz de cima-esquerda igual
+    todo o resto do jogo."""
+    im = grama(0)
+    cx, cy = T // 2, T // 2
+    corpo = [(0, 0), (1, 0), (-1, 0), (2, 0), (0, -1), (1, -1), (-1, 1), (0, 1)]
+    for dx, dy in corpo:
+        px(im, cx + dx, cy + dy, AREIA)
+    for dx, dy in [(1, 1), (2, 1), (0, 1)]:
+        px(im, cx + dx, cy + dy, AREIA_E)
+    px(im, cx - 1, cy - 1, AREIA_C)
+    return im
+
+
+def grama_orvalho():
+    """Um brilho pontual, gota de orvalho pegando luz -- so 1 px bem claro
+    em cima de uma laminazinha, pra nao virar pixel de erro solto no
+    verde."""
+    im = grama(0)
+    cx, cy = T // 2, T // 2
+    px(im, cx, cy, GRAMA_E)
+    px(im, cx, cy - 1, GRAMA_C)
+    px(im, cx, cy - 2, (232, 248, 224))
+    return im
+
+
 # -------------------------------------------------------------------- terra
 def _seixo(im, x, y, r, cor_clara, cor_escura):
     """Uma pedrinha: um L de 3 px com luz de um lado e sombra do outro.
@@ -123,22 +174,14 @@ def _seixo(im, x, y, r, cor_clara, cor_escura):
     px(im, x + pontas[1][0], y + pontas[1][1], cor_escura)
 
 
-def _rachadura(im, x, y, cor, comprimento, r):
-    """Uma linha organica curta: anda, e a cada passo pode desviar 1 px.
-    E o que da a terra um VEIO em vez de estatica."""
-    for _ in range(comprimento):
-        px(im, x, y, cor)
-        x += r.choice([-1, 0, 0, 1])
-        y += r.choice([0, 1])
-
-
 def terra():
+    """100% lisa. So existe uma terra() na producao -- qualquer marca
+    desenhada aqui e a MESMA marca repetida tile apos tile, o que le pior
+    do que nenhuma marca nenhuma. Se um dia terra ganhar variedade de
+    verdade, e um seixo-tile SEPARADO e raro, do jeito que grama-alta e
+    separado de grama() -- nao mais textura dentro do tile comum."""
     im = nova()
     ret(im, 0, 0, T, T, TERRA)
-    for (x, y, r) in _ancoras(3, 11, distancia=5):
-        _seixo(im, x, y, r, TERRA_C, TERRA_E)
-    r = random.Random(12)
-    _rachadura(im, r.randrange(2, 6), r.randrange(2, 6), TERRA_E, 6, r)
     return im
 
 
@@ -159,27 +202,56 @@ def caminho():
 
 
 def agua(v=0):
+    """100% lisa, mesma razao de grama()/terra()/areia(): o dither diagonal
+    de antes (a cada ~3 pixels) e as 3 listras eram informacao demais pra
+    um tile que se repete centenas de vezes na tela."""
     im = nova()
     ret(im, 0, 0, T, T, AGUA)
-    for j in range(T):
-        for i in range(T):
-            if (i * 3 + j * 5 + v * 7) % 17 < 3:
-                px(im, i, j, AGUA_E)
-    r = random.Random(31 + v)
-    for _ in range(3):
-        x, y = r.randrange(T), r.randrange(T)
-        px(im, x, y, AGUA_C); px(im, x + 1, y, AGUA_C); px(im, x + 2, y, AGUA_C)
     return im
 
 
-def areia():
-    """Ondulacao de vento: tracos curtos e horizontais, nao poeira solta."""
+#: mesma ideia de _TONS_GRAMA: tres tons solidos, nao um so.
+_TONS_AREIA = [AREIA, _mistura(AREIA, AREIA_C, 0.2), _mistura(AREIA, AREIA_E, 0.2)]
+
+
+def areia(v=0):
+    """Lisa, com o mesmo truque de tres tons entre tiles que grama() usa
+    agora -- antes so existia UM tom, entao qualquer trecho grande de areia
+    era literalmente a mesma cor solida, sem mancha nenhuma entre tiles."""
     im = nova()
-    ret(im, 0, 0, T, T, (234, 214, 166))
-    for (x, y, r) in _ancoras(3, 41, distancia=5):
-        larg = 2 if r.random() < 0.6 else 3
-        ret(im, x, y, larg, 1, (246, 232, 194))
-        px(im, x, y + 1, (206, 182, 138))
+    ret(im, 0, 0, T, T, _TONS_AREIA[v % 3])
+    return im
+
+
+def areia_pedra():
+    """Uma pedrinha solta, o MESMO desenho de _seixo() que ja serve
+    caminho() e pedra() -- reaproveitar a linguagem existente, nao inventar
+    seixo novo so porque o chao embaixo mudou de cor."""
+    im = areia()
+    r = random.Random(61)
+    _seixo(im, T // 2, T // 2, r, PEDRA_C, PEDRA_E)
+    return im
+
+
+def areia_mancha():
+    """Um pedaco escuro, tipo areia molhada ou uma reentrancia -- mancha
+    lisa, sem seixo, pra nao competir com areia_pedra()."""
+    im = areia()
+    cx, cy = T // 2, T // 2
+    for dx, dy in [(0, 0), (1, 0), (-1, 0), (0, 1), (1, 1), (-1, -1), (0, -1)]:
+        px(im, cx + dx, cy + dy, AREIA_E)
+    return im
+
+
+def areia_pegada():
+    """Uma pegada pequena de bicho -- o sinal de que algo passou por ali,
+    nao decoracao pura. Duas marcas ovais, tom unico."""
+    im = areia()
+    cx, cy = T // 2 - 2, T // 2
+    for dx, dy in [(0, 0), (1, 0), (0, 1)]:
+        px(im, cx + dx, cy + dy, AREIA_E)
+    for dx, dy in [(3, 2), (4, 2), (3, 3)]:
+        px(im, cx + dx, cy + dy, AREIA_E)
     return im
 
 
@@ -370,26 +442,52 @@ def barranco():
 _LADOS = ["n", "s", "l", "o"]
 
 
-def _franja(k, semente):
+#: o perfil de UM LOBO REDONDO, do tamanho do tile inteiro (periodo 16).
+#: A primeira versao subia 1 px por coluna ATE O TOPO -- e "nunca pular
+#: mais de 1 px" garante que a escada seja lisa, mas uma RAMPA RETA de
+#: passo 1 continua sendo um TRIANGULO, so que sem quina serrilhada. Bojo
+#: redondo de verdade precisa da INCLINACAO MUDANDO: mais inclinado perto
+#: da base, quase chato perto do topo -- e por isso a tabela vem de um
+#: arco de circulo (sqrt(R^2 - d^2)), nao de uma rampa linear. Nos dois
+#: pontos onde o arco pularia 2 px de uma vez (perto da base, onde o
+#: circulo e mais vertical) o valor foi ajustado a mao em 1 px pra manter
+#: a regra de nunca pular mais que 1 -- sem isso volta a ter quina.
+#:
+#: Existem DOIS perfis, nao um so: o grande (acima) e otimo numa lagoa ou
+#: clareira, mas em cima de um caminho estreito de 1-2 tiles ele avanca
+#: quase 1/4 da largura de cada lado e vira bolha, que foi exatamente o
+#: defeito que apareceu na Vila. A escolha de qual usar e de
+#: src/dados/mapas.ts, medindo a largura de verdade do chao ali -- e por
+#: isso o resultado muda pelo mapa em vez de ser sempre igual: nao e
+#: aleatorio, e a beira respondendo ao que esta desenhado.
+_PERFIL_GRANDE = [4, 5, 6, 7, 7, 8, 8, 8, 8, 8, 8, 7, 7, 6, 5, 4]
+_PERFIL_PEQUENO = [2, 3, 4, 4, 4, 3, 2, 2]
+
+
+def _franja(k, semente, perfil):
     """Quanto a grama avanca para dentro, na coluna/linha k.
 
-    Anda em TUFOS DE TRES, nao coluna a coluna: variando a cada coluna a
-    franja vira um pente de dentes regulares, que e pior que o corte reto
-    que ela substitui. Grama de verdade avanca em moitas, e tres colunas e o
-    menor tufo que ainda le como moita."""
-    return 1 + ((k // 3) * 5 + semente * 3) % 4
+    Um lobo redondo por tile (o periodo do PERFIL fecha sem emenda quando
+    o tile se repete, porque os dois perfis tem tamanho que divide T).
+    Sobe e desce 1 px por coluna, sempre -- e o "nunca pular mais de 1 px"
+    que faz ler como bojo redondo, nao ziguezague."""
+    return perfil[(k + semente * 2) % len(perfil)]
 
 
-def beira(lados, semente=0):
+def beira(lados, semente=0, perfil=_PERFIL_GRANDE):
     """Beira de grama de 16 x 16, transparente exceto nos LADOS pedidos.
 
-    A ponta da franja sai em GRAMA_E: e a sombra que a grama joga sobre o
-    terreno mais baixo. Sem ela a franja parece papel recortado colado por
-    cima, nao grama de verdade avancando."""
+    A ponta da franja sai em GRAMA_E (a propria grama mais escura), e logo
+    ALEM dela, 1 px solido em TINTA -- o mesmo contorno que separa todo
+    personagem e todo objeto do chao (ver contorno_seletivo em
+    arte/base.py). Sem esse traço a beira e só duas variações de verde
+    encostadas, e some contra o proprio mapa; com ele, a borda le como
+    borda em qualquer chao por baixo (terra, caminho, areia, agua)."""
     im = nova()
+    CONTORNO = TINTA + (255,) if len(TINTA) == 3 else TINTA
     for lado in lados:
         for k in range(T):
-            f = _franja(k, semente + _LADOS.index(lado))
+            f = _franja(k, semente + _LADOS.index(lado), perfil)
             for d in range(f):
                 if lado == "n":
                     x, y = k, d
@@ -400,15 +498,15 @@ def beira(lados, semente=0):
                 else:
                     x, y = T - 1 - d, k
                 px(im, x, y, GRAMA_E if d == f - 1 else GRAMA)
-            if (k + semente) % 5 == 0 and f > 3:
-                if lado == "n":
-                    px(im, k, f - 3, GRAMA_C)
-                elif lado == "s":
-                    px(im, k, T - 1 - (f - 3), GRAMA_C)
-                elif lado == "o":
-                    px(im, f - 3, k, GRAMA_C)
-                else:
-                    px(im, T - 1 - (f - 3), k, GRAMA_C)
+            if lado == "n":
+                x, y = k, f
+            elif lado == "s":
+                x, y = k, T - 1 - f
+            elif lado == "o":
+                x, y = f, k
+            else:
+                x, y = T - 1 - f, k
+            px(im, x, y, CONTORNO)
     return im
 
 
@@ -419,6 +517,15 @@ BEIRAS = [
     ("beira-l", ("l",)), ("beira-o", ("o",)),
     ("beira-no", ("n", "o")), ("beira-nl", ("n", "l")),
     ("beira-so", ("s", "o")), ("beira-sl", ("s", "l")),
+]
+
+#: as mesmas 8 combinacoes, com o lobo pequeno -- para quando
+#: src/dados/mapas.ts mede o chao vizinho e acha estreito (ver _PERFIL_PEQUENO)
+BEIRAS_FINA = [
+    ("beira-n-fina", ("n",)), ("beira-s-fina", ("s",)),
+    ("beira-l-fina", ("l",)), ("beira-o-fina", ("o",)),
+    ("beira-no-fina", ("n", "o")), ("beira-nl-fina", ("n", "l")),
+    ("beira-so-fina", ("s", "o")), ("beira-sl-fina", ("s", "l")),
 ]
 
 TILES = [
@@ -443,6 +550,15 @@ TILES = [
     ("barranco", barranco()),
     ("grama-mata", grama_mata()),
     *[(nome, beira(lados, i)) for i, (nome, lados) in enumerate(BEIRAS)],
+    ("grama-pequena", grama_pequena()),
+    ("grama-falha", grama_falha()),
+    ("grama-orvalho", grama_orvalho()),
+    ("areia-pedra", areia_pedra()),
+    ("areia-mancha", areia_mancha()),
+    ("areia-pegada", areia_pegada()),
+    ("areia2", areia(1)),
+    ("areia3", areia(2)),
+    *[(nome, beira(lados, i, perfil=_PERFIL_PEQUENO)) for i, (nome, lados) in enumerate(BEIRAS_FINA)],
 ]
 
 

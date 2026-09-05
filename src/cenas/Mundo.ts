@@ -1,24 +1,28 @@
 /** O mundo jogavel. Monta o chao, os objetos, as pessoas e o heroi,
  *  e cuida de andar, esbarrar e conversar. */
 import Phaser from "phaser";
-import { TILE, SOLIDOS, COR, ALTURA_PERSONAGEM } from "../dados/config";
-import { MAPAS, VILA, montarChao, bordasDeGrama, plantarMata, Mapa, Saida } from "../dados/mapas";
+import { TILE, SOLIDOS, COR, ALTURA_PERSONAGEM, escalaDoSprite, direcaoDe, type NomeDirecao } from "../dados/config";
+import { MAPAS, VILA, montarChao, bordasDeGrama, plantarMata, Mapa, Saida, type Pessoa } from "../dados/mapas";
 import { acharCriatura, nomeDoItem, spriteDoGoblin } from "../dados/conteudo";
-import { DIALOGOS } from "../dados/dialogos";
+import { DIALOGOS, type Escolha } from "../dados/dialogos";
+import { concluirEtapa } from "../sistemas/missoes";
 import { estado, salvar, marcarVisitado, foiDerrotado } from "../sistemas/estado";
 import type { Encontro } from "./Combate";
 import { Controles } from "../sistemas/controles";
 import { camadasDoHeroi, criarAnimacoes, Heroi } from "../sistemas/heroi";
 import { COLCHAO, PONTOS } from "../dados/sons";
+import { refazerAoRedimensionar } from "../sistemas/visao";
 import {
   calarAmbiente, montarAmbiente, musica, ouvirDe, passo, soltarPassaros, tocar,
   type FonteDeSom,
 } from "../sistemas/som";
 import {
-  alisarCaminho, encontrarCaminho, estaBloqueado, marcarBloqueado, novaMalha,
+  alisarCaminho, avancarPonto, encontrarCaminho, estaBloqueado, marcarBloqueado, novaMalha,
   type Celula, type Malha,
 } from "../sistemas/caminho";
 import { definirEstado } from "../sistemas/cursor";
+import { avancarRelogio, corDoCeu, periodoAtual } from "../sistemas/tempo";
+import type { Periodo } from "../dados/tempo";
 
 type FichaObjeto = { w: number; h: number; cw: number; ch: number };
 /** x,y e o CENTRO da caixa de verdade do alvo (nao um ponto arbitrario perto
@@ -41,6 +45,23 @@ type Ponto = { x: number; y: number };
 /** Um bicho plantado no mapa, com a chave estavel que o marca como derrotado
  *  em `estado()` e o corpo que precisa sumir junto quando ele perde a luta. */
 type CriaturaViva = { sprite: Phaser.GameObjects.Sprite; corpo: Phaser.GameObjects.Rectangle; id: string; chave: string };
+
+/** Um NPC com rotina (ver `Pessoa.rotina` em dados/mapas.ts): quem ja anda
+ *  sozinho de um ponto a outro quando o periodo do dia muda, reusando o
+ *  mesmo A* que o clique do heroi usa (sistemas/caminho.ts). NPC sem rotina
+ *  nunca vira um destes — continua puro `Interagivel` parado, como sempre foi. */
+type NpcComRotina = {
+  pessoa: Pessoa;
+  sprite: Phaser.GameObjects.Sprite;
+  corpo: Phaser.GameObjects.Rectangle;
+  /** o mesmo objeto que esta (ou nao) em `this.interagiveis` — atualizado a
+   *  cada passo, senao clique e destaque mirariam onde o NPC estava antes de
+   *  comecar a andar. */
+  interagivel: Interagivel;
+  direcaoAtual: NomeDirecao;
+  caminho?: Ponto[];
+  escondido: boolean;
+};
 
 /** A quantas casas um goblin nota o heroi e o combate comeca. Mesma ideia do
  *  Provador (`docs/plano-do-combate.md`), numero proprio porque aqui e o
@@ -122,6 +143,17 @@ export class Mundo extends Phaser.Scene {
    *  Ver docs/plano-do-combate.md, secao 3.6: o combate acontece NESTE
    *  mundo, nunca troca de cena nem de mapa. */
   private emCombate = false;
+
+  /** O ceu de dia/noite: um retangulo preso a camera, por cima do mapa
+   *  inteiro. Ver Parte B do plano — a cor/alpha vem de sistemas/tempo.ts. */
+  private overlayCeu!: Phaser.GameObjects.Rectangle;
+  /** So os NPCs que tem `rotina` em mapas.ts entram aqui; o resto continua
+   *  100% parado, sem custo nenhum a mais. */
+  private npcs: NpcComRotina[] = [];
+  private ultimoPeriodo?: Periodo;
+  /** px por ms. Mais devagar que o heroi (VELOCIDADE em config.ts e px/s) —
+   *  ninguem precisa correr pra trocar de lugar entre um periodo e outro. */
+  private readonly VELOCIDADE_NPC = 0.03;
 
   /** De onde o heroi entra. Vazio quer dizer "a entrada de sempre do mapa";
    *  quem chega de outro lugar manda o tile pelo qual apareceu. */
@@ -256,19 +288,34 @@ export class Mundo extends Phaser.Scene {
     musica(this, "vila");
 
     // ------------------------------------------------------- pessoas
+    // Quem tem `rotina` nasce ja no ponto certo pro periodo atual do save
+    // (nunca no x,y do mapa por padrao) — senao o jogador que carrega o jogo
+    // de noite veria todo mundo de dia por um instante, ate o primeiro
+    // quadro trocar de lugar.
+    this.ultimoPeriodo = periodoAtual();
+    this.npcs = [];
     mapa.pessoas.forEach((pessoa) => {
-      const x = pessoa.x * TILE + TILE / 2;
-      const y = pessoa.y * TILE + TILE;
+      const alvoInicial = pessoa.rotina?.[this.ultimoPeriodo!];
+      const escondidoInicial = alvoInicial === "escondido";
+      const pos = alvoInicial && alvoInicial !== "escondido" ? alvoInicial : { x: pessoa.x, y: pessoa.y };
+      const x = pos.x * TILE + TILE / 2;
+      const y = pos.y * TILE + TILE;
       const s = this.add.sprite(x, y, `npc-${pessoa.sprite}`, 0).setOrigin(0.5, 1);
       s.setDepth(y);
+      s.setVisible(!escondidoInicial);
       s.play(`npc-${pessoa.sprite}-parado-baixo`, true);
       const corpo = this.add.rectangle(x, y - 4, 10, 8);
       this.solidos.add(corpo);
       (corpo.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
-      this.interagiveis.push({
+      if (escondidoInicial) (corpo.body as Phaser.Physics.Arcade.StaticBody).enable = false;
+      const interagivel: Interagivel = {
         x, y: y - ALTURA_PERSONAGEM / 2, chave: pessoa.quem, tipo: "pessoa",
         largura: TILE, altura: ALTURA_PERSONAGEM, obj: s,
-      });
+      };
+      if (!escondidoInicial) this.interagiveis.push(interagivel);
+      if (pessoa.rotina) {
+        this.npcs.push({ pessoa, sprite: s, corpo, interagivel, direcaoAtual: "baixo", escondido: escondidoInicial });
+      }
       // a respiracao agora e quadro de animacao, nao tween de escala
     });
 
@@ -286,7 +333,7 @@ export class Mundo extends Phaser.Scene {
       const spriteChave = bicho.id === "goblin" ? spriteDoGoblin(bicho.x, bicho.y) : ficha.sprite;
       const x = bicho.x * TILE + TILE / 2;
       const y = bicho.y * TILE + TILE;
-      const s = this.add.sprite(x, y, spriteChave, 0).setOrigin(0.5, 1);
+      const s = this.add.sprite(x, y, spriteChave, 0).setOrigin(0.5, 1).setScale(escalaDoSprite(spriteChave));
       s.setDepth(y);
       s.play(`${spriteChave}-parado-baixo`, true);
       const corpo = this.add.rectangle(x, y - 4, 10, 8);
@@ -333,8 +380,13 @@ export class Mundo extends Phaser.Scene {
       passo(tile?.index ?? -1);
     });
 
-    this.cameras.main.setBounds(0, 0, tilemap.widthInPixels, tilemap.heightInPixels);
+    this.limitarCamera(tilemap.widthInPixels, tilemap.heightInPixels);
     this.cameras.main.startFollow(this.heroi, true, 0.14, 0.14);
+    // a janela pode mudar de tamanho a qualquer momento, e com ela o quanto de
+    // mundo cabe na tela. Os limites da camera dependem disso.
+    refazerAoRedimensionar(this, () =>
+      this.limitarCamera(tilemap.widthInPixels, tilemap.heightInPixels)
+    );
     this.cameras.main.setBackgroundColor(COR.tinta);
     // zoom sempre 1: quem muda a visao e a resolucao do canvas, ver sistemas/visao.ts.
     // com zoom fracionario a grade de pixels sai do lugar e o mapa pisca ao andar.
@@ -344,6 +396,21 @@ export class Mundo extends Phaser.Scene {
     this.cameras.main.setRoundPixels(true);
     this.physics.world.setBounds(0, 0, tilemap.widthInPixels, tilemap.heightInPixels);
     this.heroi.body.setCollideWorldBounds(true);
+
+    // ---------------------------------------------------- ceu de dia/noite
+    // Preso a camera (setScrollFactor(0)), por cima do mapa inteiro e por
+    // baixo da Interface: como Interface e outra Scene, lancada depois na
+    // lista de main.ts, a ordem de cena ja resolve a sobreposicao sozinha,
+    // sem precisar de depth cruzando cena. Cor/alpha vem de corDoCeu().
+    this.overlayCeu = this.add
+      .rectangle(0, 0, this.cameras.main.width, this.cameras.main.height, COR.tinta, 0)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(Number.MAX_SAFE_INTEGER);
+    refazerAoRedimensionar(this, () =>
+      this.overlayCeu.setSize(this.cameras.main.width, this.cameras.main.height)
+    );
+    this.atualizarCeu();
 
     this.scene.launch("Interface");
     this.scene.get("Interface").events.on("acao", () => this.tentarInteragir());
@@ -362,6 +429,30 @@ export class Mundo extends Phaser.Scene {
     // sair do mundo solta os loops. A musica sobrevive: menu e titulo sao o
     // mesmo lugar do ponto de vista de quem joga, e recomecar a faixa se ouve.
     this.events.once("shutdown", () => calarAmbiente());
+  }
+
+  /**
+   * Os limites da camera, cuidando do caso do mapa MENOR que a tela.
+   *
+   * A vila tem 576x384. Numa tela grande na visao LONGE o mundo visivel passa
+   * disso, e ai o Phaser encosta o mapa no canto de cima a esquerda e deixa
+   * fundo sobrando dos outros dois lados — justamente quando a vila inteira
+   * caberia bonitinha no meio da tela.
+   *
+   * A correcao e nao deixar o limite ser menor que a camera: ele cresce ate o
+   * tamanho da tela, centrado no mapa. Os limites da FISICA continuam sendo o
+   * mapa de verdade, entao o heroi nao ganha permissao de andar no vazio.
+   */
+  private limitarCamera(mapaLargura: number, mapaAltura: number) {
+    const cam = this.cameras.main;
+    const largura = Math.max(mapaLargura, cam.width);
+    const altura = Math.max(mapaAltura, cam.height);
+    cam.setBounds(
+      Math.round(-(largura - mapaLargura) / 2),
+      Math.round(-(altura - mapaAltura) / 2),
+      largura,
+      altura
+    );
   }
 
   pausar() {
@@ -391,6 +482,14 @@ export class Mundo extends Phaser.Scene {
     if (!alvo) return;
     const fala = DIALOGOS[alvo.chave];
     if (!fala) return;
+    // a primeira variante cuja condicao falta ou bate e a que toca — ver o
+    // comentario no topo de dados/dialogos.ts. O `??` de baixo e so uma rede
+    // de seguranca: se ninguem escreveu uma variante sem condicao por
+    // ultimo, ainda assim alguma fala abre, nunca um interagivel mudo.
+    const variante =
+      fala.variantes.find((v) => !v.condicao || v.condicao()) ??
+      fala.variantes[fala.variantes.length - 1];
+    variante.efeito?.();
     if (alvo.chave === "bau" && marcarVisitado("bau-vila")) {
       estado().moedas += 1;
       salvar();
@@ -399,15 +498,15 @@ export class Mundo extends Phaser.Scene {
       // viram um so, e o premio e justamente o segundo
       this.time.delayedCall(220, () => tocar("moeda"));
     }
-    this.abrirFala(fala.quem, fala.linhas, alvo.chave);
+    this.abrirFala(fala.quem, variante.linhas, alvo.chave, variante.escolhas);
   }
 
-  private abrirFala(quem: string, linhas: string[], chave?: string) {
+  private abrirFala(quem: string, linhas: string[], chave?: string, escolhas?: Escolha[]) {
     this.conversando = true;
     this.heroi.mover(0, 0);
     // a chave viaja junto porque e ela, e nao o nome na chapinha, que a
     // tabela VOZ usa para achar a altura da voz do personagem
-    this.scene.get("Interface").events.emit("falar", { quem, linhas, cena: this, chave });
+    this.scene.get("Interface").events.emit("falar", { quem, linhas, cena: this, chave, escolhas });
   }
 
   /** Fase 13.4: o aviso do prejuizo de uma derrota, factual e sem julgamento
@@ -437,7 +536,7 @@ export class Mundo extends Phaser.Scene {
     return ["Voce acorda no Hospital, sem lembrar do golpe final.", prejuizo];
   }
 
-  update() {
+  update(_tempo: number, delta: number) {
     // consumida SEMPRE, mesmo em conversa: Interface tem a PROPRIA tecla de
     // acao, uma instancia independente da mesma tecla fisica, e Phaser so
     // zera "recem apertado" de uma tecla quando ALGUEM chama JustDown nela.
@@ -482,19 +581,151 @@ export class Mundo extends Phaser.Scene {
     ouvirDe(this.heroi.x, this.heroi.y);
     this.conferirSaida();
     this.conferirEncontro();
+    // o relogio e a rotina dos NPCs so andam quando o heroi tambem anda: os
+    // dois `return` de cima (conversando, emCombate) ja cobrem essa pausa,
+    // entao ninguem troca de lugar no meio de uma fala ou de uma luta.
+    avancarRelogio(delta);
+    this.atualizarRotinasDeNpc(delta);
+    this.atualizarCeu();
   }
 
-  /** Chegou perto demais de um goblin? O mundo para e a luta comeca.
+  /** A cor do ceu agora, por cima do mapa inteiro. Publico so porque a
+   *  auditoria de UI (`ferramentas/auditar-ui.mjs`) precisa fixar o relogio
+   *  antes do screenshot e forcar esta cor a acompanhar na hora, senao a
+   *  troca so apareceria no quadro seguinte. */
+  private atualizarCeu() {
+    const { cor, alpha } = corDoCeu();
+    this.overlayCeu.setFillStyle(cor, 1);
+    this.overlayCeu.setAlpha(alpha);
+  }
+
+  /** So para `ferramentas/auditar-ui.mjs`: prende o relogio num horario fixo
+   *  antes do screenshot. Sem isto, `ferramentas/telas/10-mundo.png` muda de
+   *  tom a cada rodada de auditoria por causa da hora, nao da UI. */
+  travarRelogioParaAuditoria(minuto: number) {
+    // a cena existe registrada no scene manager mesmo fora do ar (titulo,
+    // criacao...); so mexe no ceu se `create()` ja rodou de verdade.
+    if (!this.overlayCeu) return;
+    estado().relogio = minuto;
+    this.atualizarCeu();
+  }
+
+  /** Move cada NPC com rotina para o ponto do periodo atual, reusando o
+   *  A* do clique do heroi (sistemas/caminho.ts) — nao uma IA nova, so o
+   *  mesmo caminho, andado por outro sprite. Ver Parte C do plano. */
+  private atualizarRotinasDeNpc(delta: number) {
+    const periodo = periodoAtual();
+    const mudouPeriodo = periodo !== this.ultimoPeriodo;
+    this.ultimoPeriodo = periodo;
+    this.npcs.forEach((npc) => {
+      if (mudouPeriodo) this.tracarRotaDoNpc(npc, npc.pessoa.rotina![periodo]);
+      if (!npc.caminho || npc.caminho.length === 0) return;
+      const proximo = npc.caminho[0];
+      const passo = avancarPonto({ x: npc.sprite.x, y: npc.sprite.y }, proximo, this.VELOCIDADE_NPC, delta);
+      const dir = direcaoDe(proximo.x - npc.sprite.x, proximo.y - npc.sprite.y);
+      if (dir) npc.direcaoAtual = dir;
+      npc.sprite.setPosition(passo.x, passo.y);
+      npc.sprite.setDepth(passo.y);
+      npc.sprite.play(`npc-${npc.pessoa.sprite}-anda-${npc.direcaoAtual}`, true);
+      npc.interagivel.x = passo.x;
+      npc.interagivel.y = passo.y - ALTURA_PERSONAGEM / 2;
+      if (passo.chegou) {
+        npc.caminho.shift();
+        if (npc.caminho.length === 0) this.finalizarRotaDoNpc(npc);
+      }
+    });
+  }
+
+  /** Decide o que fazer quando o periodo muda: sumir, reaparecer, ou tracar
+   *  caminho ate o novo ponto sobre `this.malha` (a mesma malha do heroi —
+   *  ver o aviso sobre ela ficar parada no lugar de descanso de cada um, no
+   *  plano). Sem caminho possivel, teleporta: melhor um pulo raro do que um
+   *  NPC preso pro resto do jogo. */
+  private tracarRotaDoNpc(npc: NpcComRotina, alvo: { x: number; y: number } | "escondido") {
+    if (alvo === "escondido") {
+      npc.caminho = undefined;
+      this.esconderNpc(npc);
+      return;
+    }
+    const destino = { x: alvo.x * TILE + TILE / 2, y: alvo.y * TILE + TILE };
+    if (npc.escondido) {
+      this.reaparecerNpc(npc, destino);
+      return;
+    }
+    if (Math.round(npc.sprite.x) === Math.round(destino.x) && Math.round(npc.sprite.y) === Math.round(destino.y)) {
+      return; // ja estava la — nada para andar
+    }
+    const origem: Celula = { tx: Math.floor(npc.sprite.x / TILE), ty: Math.floor(npc.sprite.y / TILE) };
+    const bruto = encontrarCaminho(this.malha, origem, { tx: alvo.x, ty: alvo.y });
+    if (!bruto) {
+      this.moverNpcDireto(npc, destino);
+      return;
+    }
+    const leve = alisarCaminho(this.malha, bruto);
+    const pontos = leve.slice(1).map((c) => ({ x: c.tx * TILE + TILE / 2, y: c.ty * TILE + TILE }));
+    if (pontos.length === 0) return;
+    pontos[pontos.length - 1] = destino;
+    npc.caminho = pontos;
+    // ninguem trava atras de um vizinho andando: a colisao volta ao chegar
+    (npc.corpo.body as Phaser.Physics.Arcade.StaticBody).enable = false;
+  }
+
+  private finalizarRotaDoNpc(npc: NpcComRotina) {
+    npc.caminho = undefined;
+    npc.sprite.play(`npc-${npc.pessoa.sprite}-parado-${npc.direcaoAtual}`, true);
+    npc.corpo.setPosition(npc.sprite.x, npc.sprite.y - 4);
+    const corpo = npc.corpo.body as Phaser.Physics.Arcade.StaticBody;
+    corpo.enable = true;
+    corpo.updateFromGameObject();
+  }
+
+  /** Sem caminho possivel ate o alvo: pula direto pra la em vez de ficar
+   *  preso no lugar de descanso antigo pro resto do jogo. */
+  private moverNpcDireto(npc: NpcComRotina, destino: Ponto) {
+    npc.sprite.setPosition(destino.x, destino.y);
+    npc.sprite.setDepth(destino.y);
+    npc.sprite.play(`npc-${npc.pessoa.sprite}-parado-${npc.direcaoAtual}`, true);
+    npc.corpo.setPosition(destino.x, destino.y - 4);
+    (npc.corpo.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
+    npc.interagivel.x = destino.x;
+    npc.interagivel.y = destino.y - ALTURA_PERSONAGEM / 2;
+  }
+
+  private esconderNpc(npc: NpcComRotina) {
+    if (npc.escondido) return;
+    npc.escondido = true;
+    npc.sprite.setVisible(false);
+    (npc.corpo.body as Phaser.Physics.Arcade.StaticBody).enable = false;
+    const idx = this.interagiveis.indexOf(npc.interagivel);
+    if (idx !== -1) this.interagiveis.splice(idx, 1);
+  }
+
+  private reaparecerNpc(npc: NpcComRotina, destino: Ponto) {
+    npc.escondido = false;
+    npc.sprite.setVisible(true);
+    npc.sprite.setPosition(destino.x, destino.y);
+    npc.sprite.setDepth(destino.y);
+    npc.sprite.play(`npc-${npc.pessoa.sprite}-parado-${npc.direcaoAtual}`, true);
+    npc.corpo.setPosition(destino.x, destino.y - 4);
+    const corpo = npc.corpo.body as Phaser.Physics.Arcade.StaticBody;
+    corpo.enable = true;
+    corpo.updateFromGameObject();
+    npc.interagivel.x = destino.x;
+    npc.interagivel.y = destino.y - ALTURA_PERSONAGEM / 2;
+    if (!this.interagiveis.includes(npc.interagivel)) this.interagiveis.push(npc.interagivel);
+  }
+
+  /** Chegou perto demais de uma criatura? O mundo para e a luta comeca.
    *
-   *  So goblin briga por enquanto: e a unica criatura que `Combate.ts` sabe
-   *  colocar numa arena (retrato, folha de sprite parada-baixo). Aranha e
-   *  lobo de nevoa continuam so decorando ate ganharem a mesma entrada. */
+   *  Generico para o bestiario inteiro (`Combate.ts` monta a arena a partir
+   *  da ficha de qualquer `bicharioId`) -- na pratica so goblin, aranha e
+   *  lobo-de-nevoa tem instancia de verdade num mapa hoje (`dados/mapas.ts`),
+   *  entao so eles brigam. */
   private conferirEncontro() {
     if (this.conversando || this.trocandoDeMapa) return;
     const hx = Math.floor(this.heroi.x / TILE);
     const hy = Math.floor((this.heroi.y - 1) / TILE);
     const perto = this.criaturas.filter((c) => {
-      if (c.id !== "goblin") return false;
       const cx = Math.floor(c.sprite.x / TILE);
       const cy = Math.floor((c.sprite.y - 1) / TILE);
       return Math.hypot(cx - hx, cy - hy) <= DISTANCIA_DE_ENCONTRO;
@@ -864,6 +1095,11 @@ export class Mundo extends Phaser.Scene {
     this.trocandoDeMapa = true;
     this.heroi.mover(0, 0);
     const st = estado();
+    // a terceira etapa do sino se resolve sozinha andando ate la, sem fala
+    // nem escolha — a mesma trilha que o guarda ja indica no dialogo dele
+    if (st.cena === "vila" && saida.para === "floresta") {
+      concluirEtapa("sino-da-vila", "seguir-para-floresta");
+    }
     st.cena = saida.para;
     st.lugar = destino.lugar;
     salvar();

@@ -1,7 +1,6 @@
 import "@fontsource/silkscreen";
 import Phaser from "phaser";
 import { COR, definirTamanhoLogico } from "./dados/config";
-import { visaoEscolhida } from "./sistemas/preferencias";
 import { Boot } from "./cenas/Boot";
 import { Titulo } from "./cenas/Titulo";
 import { Carregar } from "./cenas/Carregar";
@@ -15,24 +14,30 @@ import { Provador } from "./cenas/Provador";
 import { Combate } from "./cenas/Combate";
 import { Ponteiro } from "./cenas/Ponteiro";
 import { instalarAuditor } from "./sistemas/auditoria";
-import { vigiarJanela } from "./sistemas/visao";
+import { medidaDaJanela, vigiarJanela } from "./sistemas/visao";
 import { instalarBancada } from "./sistemas/bancada";
 import { ligarDoutor } from "./sistemas/doutor";
 import { instalarPonteiro } from "./sistemas/cursor";
+import { vigiarOrientacao } from "./sistemas/orientacao";
 
 // escuta antes do Phaser subir, senao um erro na propria subida passa batido
 ligarDoutor();
+// nao depende do Phaser: se o celular ja esta de pe, o aviso aparece antes
+// mesmo da fonte terminar de carregar, em vez de esperar o jogo montar
+vigiarOrientacao();
 
 function comecar() {
-  // a visao escolhida define a resolucao logica antes de qualquer cena montar
-  const visao = visaoEscolhida();
-  definirTamanhoLogico(visao.largura, visao.altura);
+  // a resolucao logica sai da janela e da visao escolhida, e tem que estar
+  // definida antes de qualquer cena montar. A mesma conta roda de novo a cada
+  // resize, dentro de vigiarJanela.
+  const medida = medidaDaJanela();
+  definirTamanhoLogico(medida.largura, medida.altura);
 
   const jogo = new Phaser.Game({
   type: Phaser.AUTO,
   parent: "jogo",
-  width: visao.largura,
-  height: visao.altura,
+  width: medida.largura,
+  height: medida.altura,
   backgroundColor: COR.tinta,
   pixelArt: true,
   roundPixels: true,
@@ -41,6 +46,9 @@ function comecar() {
     // quebrado (3,2x) e a arte de pixel sai com pixels de tamanhos diferentes.
     mode: Phaser.Scale.NONE,
     autoCenter: Phaser.Scale.CENTER_BOTH,
+    // a tela cheia leva o proprio #jogo, e nao um div que o Phaser inventa:
+    // assim o fundo e a centralizacao do index.html continuam valendo la dentro
+    fullscreenTarget: "jogo",
   },
   physics: { default: "arcade", arcade: { gravity: { x: 0, y: 0 }, debug: false } },
     // o Ponteiro e o ULTIMO de proposito: o Phaser desenha as cenas nesta ordem,

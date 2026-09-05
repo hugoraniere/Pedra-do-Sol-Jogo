@@ -61,6 +61,17 @@ export const T = {
   // desenha por cima do chao. Ver arte/tiles.py e src/dados/mapas.ts.
   beiraN: 20, beiraS: 21, beiraL: 22, beiraO: 23,
   beiraNO: 24, beiraNL: 25, beiraSO: 26, beiraSL: 27,
+  // detalhe raro, plantado a mao pelo mapa -- nunca dentro do "." comum
+  gramaPequena: 28, gramaFalha: 29, gramaOrvalho: 30,
+  areiaPedra: 31, areiaMancha: 32, areiaPegada: 33,
+  // tons de areia, mesma ideia de grama/grama2/grama3: variedade de tom
+  // entre tiles vizinhos, nao textura dentro de um tile so
+  areia2: 34, areia3: 35,
+  // a mesma beira, com um bojo pequeno em vez de grande: para o chao estreito
+  // (trilha, caminho de um tile de largura) onde o bojo grande vira bolha.
+  // bordasDeGrama() escolhe entre esta e a de cima medindo a largura real.
+  beiraNFina: 36, beiraSFina: 37, beiraLFina: 38, beiraOFina: 39,
+  beiraNOFina: 40, beiraNLFina: 41, beiraSOFina: 42, beiraSLFina: 43,
 } as const;
 
 /** Tiles de chao que o heroi nao atravessa. Objeto tem colisao propria.
@@ -78,11 +89,14 @@ export const ALTURA_PERSONAGEM = 32;
  *  a metade dela. Quem monta palco e retrato precisa deste numero. */
 export const LARGURA_PERSONAGEM = 16;
 
-/** Grade da folha de personagem, igual a de arte/gente.py.
- *  8 colunas por 8 linhas, quadro = linha * 8 + coluna. */
+/** Grade da folha de personagem, igual a de arte/gente.py (COLUNAS em
+ *  arte/base.py). 11 colunas por 8 linhas, quadro = linha * 11 + coluna.
+ *  As tres ultimas (esquiva, fuga, derrota) sao novas: quem nao desenhar
+ *  pose propria pra elas recebe a mesma arte de `parado` (heranca de
+ *  `deslocamento()` em arte/base.py, que nao reconhece esses nomes). */
 export const QUADRO = {
   parado: 0, passoA: 1, passoB: 2, respira: 3, conjura: 4, tonto: 5,
-  ataque: 6, machucado: 7,
+  ataque: 6, machucado: 7, esquiva: 8, fuga: 9, derrota: 10,
 } as const;
 /** Linha da folha de sprite para cada uma das oito direcoes.
  *
@@ -129,7 +143,7 @@ export function direcaoDe(x: number, y: number): NomeDirecao | undefined {
     } as Record<string, NomeDirecao>
   )[String(fatia)];
 }
-export const COLUNAS_FOLHA = 8;
+export const COLUNAS_FOLHA = 11;
 
 /** Ciclo de caminhada no padrao do Stardew: contato, passo, contato, outro passo,
  *  a 5 quadros por segundo. Com 4 quadros diferentes a perna pisca. */
@@ -243,12 +257,21 @@ export const NPCS_SPRITE = [
 export const GOBLINS_SPRITE = ["magricela", "gorducho", "moleque", "chefe"] as const;
 export const ARANHAS_SPRITE = ["filhote", "pequena", "media", "matriarca"] as const;
 
+/** O goblin desenha em 48 x 96 (3x o resto do jogo, decisao do Hugo em
+ *  2026-09-05, so para ele). Sem compensar, ele ficaria do tamanho do
+ *  dragao no mundo. Primeira vez que o jogo separa "pixels da arte" de
+ *  "tamanho no mundo" — os dois pontos que criam o sprite do goblin
+ *  (`Mundo.ts`, `Combate.ts`) chamam isto ao montar o sprite. */
+export function escalaDoSprite(chaveDoSprite: string): number {
+  return chaveDoSprite.startsWith("goblin-") ? LARGURA_PERSONAGEM / 48 : 1;
+}
+
 /** Objetos do mundo, um PNG cada em public/assets/objetos/.
  *  A lista tem que bater com OBJETOS em arte/mundo.py. */
 export const OBJETOS = [
   "casa-pequena", "casa-grande", "ferraria", "casa-vovo", "hospital",
   "arvore", "arvore-escura", "arbusto",
-  "poste-sino", "poste-com-sino", "poco", "barraca", "cerca",
+  "poste-sino", "poste-com-sino", "poco", "pedra-solta", "barraca", "cerca",
   "fogueira", "bau", "placa", "varal",
   "pinheiro", "pinheiro-baixo", "grande-ouvinte", "arvore-raio", "tronco-caido",
   "toco", "samambaia", "cogumelo", "cogumelo-azul", "pedra-musgo", "teia", "raizes",

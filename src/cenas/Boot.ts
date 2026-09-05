@@ -60,12 +60,21 @@ export class Boot extends Phaser.Scene {
       this.load.spritesheet(`heroi-chapeu-${c.id}`, `assets/heroi-chapeu-${c.id}.png`, P)
     );
     NPCS_SPRITE.forEach((n) => this.load.spritesheet(`npc-${n}`, `assets/npc-${n}.png`, P));
-    GOBLINS_SPRITE.forEach((g) => this.load.spritesheet(`goblin-${g}`, `assets/goblin-${g}.png`, P));
+    // O goblin sozinho foi para 48 x 96 (3x), decisao do Hugo em 2026-09-05:
+    // arte com mais pixel so nele, sem esperar a resolucao do resto do jogo.
+    // `escalaDoSprite()` (config.ts) compensa isso na exibicao, para ele
+    // continuar do mesmo tamanho no mundo.
+    const GP = { frameWidth: 48, frameHeight: 96 };
+    GOBLINS_SPRITE.forEach((g) => this.load.spritesheet(`goblin-${g}`, `assets/goblin-${g}.png`, GP));
     ARANHAS_SPRITE.forEach((a) => this.load.spritesheet(`aranha-${a}`, `assets/aranha-${a}.png`, P));
     // O bestiario carrega a si mesmo. Cada criatura diz na ficha qual e o
     // sprite dela e qual o porte, e o porte diz o tamanho do quadro: assim
     // criatura nova entra no jogo mexendo so em conteudo.ts, sem tocar aqui.
-    BESTIARIO.forEach((c) => {
+    // O goblin fica de fora: a chave "goblin" nunca desenhou um sprite de
+    // verdade (os 4 corpos de verdade sao "goblin-<tipo>", ja carregados
+    // acima) e o tamanho de `PORTES.pequeno` (16x32) nao bate mais com nada
+    // que `arte/goblin.py` gera.
+    BESTIARIO.filter((c) => c.sprite !== "goblin").forEach((c) => {
       const q = PORTES[c.porte];
       this.load.spritesheet(c.sprite, `assets/${c.sprite}.png`,
         { frameWidth: q.largura, frameHeight: q.altura });

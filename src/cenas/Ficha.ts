@@ -29,6 +29,8 @@ import {
   acharRaca,
 } from "../dados/conteudo";
 import { estado } from "../sistemas/estado";
+import { MISSOES } from "../dados/missoes";
+import { missaoAceita, etapaAtual } from "../sistemas/missoes";
 import { Heroi, camadasDoHeroi, criarAnimacoes } from "../sistemas/heroi";
 import { ICONE, LADO_ICONE } from "../sistemas/icones";
 import { poderesDoHeroi } from "../sistemas/poderes";
@@ -135,6 +137,25 @@ export class Ficha extends Phaser.Scene {
       grupos: [[paragrafo(recado)]],
     });
 
+    // uma missao so aparece aqui depois de aceita (etapas[0] concluida) —
+    // o diario e o registro do que o jogador ja sabe, nunca um spoiler do
+    // que ainda vai encontrar
+    const paginaDiario = (): Pagina => {
+      const conhecidas = Object.entries(MISSOES).filter(([id]) => missaoAceita(id));
+      if (conhecidas.length === 0) {
+        return emConstrucao("Nada para anotar ainda. Fale com alguem na vila.");
+      }
+      return {
+        grupos: conhecidas.map(([id, missao]) => {
+          const atual = etapaAtual(id);
+          return [
+            { tipo: "titulo", conteudo: missao.titulo.toUpperCase() } as Bloco,
+            paragrafo(atual ? atual.descricao : "Concluida!"),
+          ];
+        }),
+      };
+    };
+
     return [
       {
         // EU
@@ -166,7 +187,7 @@ export class Ficha extends Phaser.Scene {
         ],
       },
       emConstrucao("A mochila ainda esta vazia. Um dia vai ter aqui o que voce guardar."),
-      emConstrucao("O diario ainda nao existe. Um dia vai ter aqui o que voce ja descobriu."),
+      paginaDiario(),
       {
         // MENU: ponte para a Pausa, ate ela virar conteudo desta mesma janela
         grupos: [

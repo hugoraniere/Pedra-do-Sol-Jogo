@@ -125,6 +125,24 @@ export function criarAnimacoes(cena: Phaser.Scene, chaves: string[]) {
         frames: [{ key: chave, frame: quadro(dir, QUADRO.machucado) }],
         frameRate: 1,
       });
+      // esquiva, fuga e derrota: novas, hoje so o goblin desenha pose propria
+      // (quem nao desenhar recebe a mesma arte de `parado`, ver QUADRO em
+      // dados/config.ts). Um quadro so, como conjura/tonto/ataque acima.
+      cena.anims.create({
+        key: `${chave}-esquiva-${dir}`,
+        frames: [{ key: chave, frame: quadro(dir, QUADRO.esquiva) }],
+        frameRate: 1,
+      });
+      cena.anims.create({
+        key: `${chave}-fuga-${dir}`,
+        frames: [{ key: chave, frame: quadro(dir, QUADRO.fuga) }],
+        frameRate: 1,
+      });
+      cena.anims.create({
+        key: `${chave}-derrota-${dir}`,
+        frames: [{ key: chave, frame: quadro(dir, QUADRO.derrota) }],
+        frameRate: 1,
+      });
     });
   });
 }

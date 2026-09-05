@@ -16,6 +16,7 @@
     "app:win": "npm run build && electron-builder --win",
     "app:linux": "npm run build && electron-builder --linux",
     "auditar": "npm run build && node ferramentas/auditar-ui.mjs",
+    "auditar-celular": "npm run build && node ferramentas/auditar-celular.mjs",
     "conferir": "node ferramentas/conferir-personagens.mjs",
     "folha": "python3 ferramentas/folha-de-personagens.py",
     "bestiario": "python3 ferramentas/folha-do-bestiario.py",
@@ -39,6 +40,7 @@
     "playwright": "^1.62.1",
     "typescript": "^5.7.3",
     "vite": "^6.1.0",
+    "vite-plugin-pwa": "^1.3.0",
     "wait-on": "^9.1.0"
   },
   "main": "app/principal.cjs",

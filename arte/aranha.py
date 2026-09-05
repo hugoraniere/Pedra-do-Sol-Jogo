@@ -56,10 +56,16 @@ def aranha(direcao, coluna, tipo="media"):
     _, sobe, _ = deslocamento(coluna)
     tonto = coluna == "tonto"
     conjura = coluna == "conjura"
+    # "encolhe as oito pernas antes do bote" (telegrafo do bestiario): as
+    # pernas se recolhem para debaixo do corpo e ela agacha, pronta pra
+    # saltar. E o mesmo quadro que fica em pe durante o avanco de verdade
+    # (atacarComoCriatura em Combate.ts so move a POSICAO, nao troca de
+    # quadro), entao "agachada" tem que ler tanto parada quanto em salto.
+    ataca = coluna == "ataque"
 
     rx, ry = t["rx"], t["ry"]
     cor, escura, clara = t["corpo"], ROXO_ARANHA_E, ROXO_ARANHA_C
-    cy = PES - ry - 2 + sobe
+    cy = PES - ry - 2 + sobe + (2 if ataca else 0)
     cx = 8
 
     # ------------------------------------------------------------ pernas
@@ -70,14 +76,15 @@ def aranha(direcao, coluna, tipo="media"):
     elif coluna == "passo-b":
         grupo = 2
     n = t["pernas"]
+    recolhe = 2 if ataca else 0
     for lado in (-1, 1):
         for k in range(n):
             impar = (k + (0 if lado < 0 else 1)) % 2
             fase = 1 if (grupo == 1 and impar) or (grupo == 2 and not impar) else 0
             # as pernas da frente sao mais altas e mais curtas que as de tras
             ombro = (cx + lado * (rx - 1), cy - ry + 2 + k)
-            joelho = (cx + lado * (rx + 1 + k // 2), cy - ry - 2 + k)
-            pe = (cx + lado * (rx + 2 + (n - 1 - k)), PES - 1)
+            joelho = (cx + lado * max(1, rx + 1 + k // 2 - recolhe), cy - ry - 2 + k + (recolhe if ataca else 0))
+            pe = (cx + lado * max(2, rx + 2 + (n - 1 - k) - recolhe * 2), PES - 1)
             _perna(im, ombro, joelho, pe, lado, escura, t["meia"], fase)
 
     # ------------------------------------------------------------- corpo

@@ -40,6 +40,12 @@ export type Estado = {
   cena: string;
   lugar: string;
   minutos: number;
+  /** minuto do dia simulado, 0 a 1439 — ver sistemas/tempo.ts */
+  relogio: number;
+  /** quanto cada NPC gosta do heroi, por escolha de dialogo. Chave = id do
+   *  NPC (o mesmo de dialogos.ts/npcs.ts). So sobe: escolha errada nunca
+   *  desconta, so nao rende o ponto — ver sistemas/missoes.ts. */
+  afinidades: Record<string, number>;
   criadoEm: number;
   atualizadoEm: number;
   /** quantas vezes cada acao de escopo "porAventura" (magia, dom de raca) ja
@@ -79,6 +85,9 @@ export const VAZIO: Estado = {
   cena: "vila",
   lugar: "Vila Semente",
   minutos: 0,
+  // 480 = 8h, o heroi chega de manha
+  relogio: 480,
+  afinidades: {},
   criadoEm: 0,
   atualizadoEm: 0,
   usosDeAventura: {},
@@ -138,6 +147,18 @@ export function marcarVisitado(chave: string): boolean {
   atual.visitados.push(chave);
   salvar();
   return true;
+}
+
+/** Escolha de dialogo que o NPC gosta soma ponto; a que ele nao gosta nunca
+ *  desconta, so nao rende o extra (falha sem humilhacao vale pra afinidade
+ *  tambem). */
+export function mudarAfinidade(npcId: string, delta: number) {
+  atual.afinidades[npcId] = (atual.afinidades[npcId] ?? 0) + delta;
+  salvar();
+}
+
+export function afinidadeCom(npcId: string): number {
+  return atual.afinidades[npcId] ?? 0;
 }
 
 export function foiDerrotado(chave: string): boolean {
