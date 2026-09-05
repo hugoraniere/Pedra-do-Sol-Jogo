@@ -50,11 +50,12 @@ ponta a ponta.
 Tudo estreia **na Vila Semente**, que ja existe e e pequena. Nao se estreia sistema
 em mapa novo.
 
-- [ ] **O dado, como sistema proprio.** A conta (1d6 + atributo, tres faixas)
-      juntou num `sistemas/dado.ts` puro e testavel (`rolar()` + `faixaDoDado()`,
-      antes espalhados entre `sistemas/turnos.ts` e `dados/sons.ts`).
-      **Ainda falta:** os modificadores do material impresso (+1 com ajuda, +1
-      com o item certo, -1 se dificil) **nao existem em lugar nenhum do codigo**.
+- [x] **O dado, como sistema proprio.** Descricao original desta linha (1d6,
+      `sistemas/dado.ts`) ficou pra tras com o merge do `ambiente/combate` —
+      ver a decisao de 2026-09-05 abaixo. O dado de verdade hoje e 1d20 + ND
+      em `sistemas/teste.ts` (`testar()`), puro e testavel. **Ainda falta:**
+      os modificadores do material impresso (+1 com ajuda, +1 com o item
+      certo, -1 se dificil) **nao existem em lugar nenhum do codigo**.
 - [x] **Atributos no estado.** `poderesDoHeroi()` (`sistemas/poderes.ts`) soma
       raca (+1) + classe (+1) + a escolha do jogador (`heroi.poderEscolhido`),
       igual o manual pede.
@@ -67,12 +68,13 @@ em mapa novo.
       e salva no estado). Falta o resto: comer e dormir nao enchem nada ainda, e o
       Anao continua nascendo com 3 coracoes em vez de 4 (`coracoesMax` e fixo em
       `novoJogo()`, o dom dele nao esta ligado).
-- [x] **Derrota e fogueira.** Zero coracoes nocauteia de verdade: o heroi fica
-      tonto, a tela esmaece e `Mundo.acordarNaFogueira()` acorda ele na ULTIMA
-      fogueira acesa (`estado().fogueirasAcesas`, mesmo em mapa diferente de
-      onde caiu), com coracoes cheios e moedas zeradas — conhecimento nunca se
-      perde. Acender e permanente (`acenderFogueira()`), a fogueira da Vila ja
-      comeca acesa, e sentar numa ja acesa tambem cura.
+- [x] **Derrota e fogueira.** Zero coracoes nocauteia de verdade. **Descricao
+      original desta linha (acorda na ULTIMA fogueira acesa,
+      `Mundo.acordarNaFogueira()`) ficou pra tras com o merge do
+      `ambiente/combate`** — ver a decisao de 2026-09-05 abaixo: agora acorda
+      no Hospital (`aplicarDerrota()` em `estado.ts`), perdendo moedas e ate 3
+      itens da mochila. Acender uma fogueira continua permanente e continua
+      curando (`acenderFogueira()`), so deixou de ser o ponto de resgate.
 - [x] **Combate, o laco inteiro** — mas **o modelo mudou**. Ver a decisao logo
       abaixo: nao e mais tempo real com mira, e por turnos.
 - [ ] **O modo de alvo.** A fase de mira existe de verdade (`Combate.ts`): anel de
@@ -92,12 +94,14 @@ em mapa novo.
       (`estado().usosDeAventura`, `registrarUso()` chamado ao executar em
       `Combate.ts`).
 
-Pronto quando: da para tomar um susto na vila, perder, acordar na fogueira, e
+Pronto quando: da para tomar um susto na vila, perder, acordar no Hospital, e
 entender exatamente o que custou. **O risco de verdade ja joga de ponta a
-ponta.** O que ainda falta pra fechar a fase de vez e mais modesto: o dado
-como `sistemas/dado.ts` proprio (hoje espalhado), coracoes cheios por comer/
-dormir e o Anao com 4, e os dois passos que faltam no modo de alvo
-(confirmacao e previa de area).
+ponta** (so o destino do resgate mudou de fogueira pra Hospital, ver a decisao
+de 2026-09-05 abaixo). O que ainda falta pra fechar a fase de vez: coracoes
+cheios por comer/dormir e o Anao com 4, os dois passos que faltam no modo de
+alvo (confirmacao e previa de area), e o achado da mesma data — decidir se o
+combate migra de vez pra tempo real (o que `docs/modelo-de-combate.md` ja diz)
+ou se essa decisao volta atras.
 
 **Decisao, registrada em `docs/plano-do-combate.md`: o combate deixou de ser
 tempo real com mira e virou por turnos** (estilo mesa, decidido e construido
@@ -139,6 +143,38 @@ de fora de proposito em `docs/plano-de-ciclo-do-dia.md`.
 direto (falas condicionadas + missoes + opcoes de dialogo). Ver os itens
 marcados abaixo — o unico que ficou de proposito pra depois foi ramificacao de
 dialogo em mais de um nivel, pra nao inventar mecanismo demais antes da hora.
+
+**Decisao, 2026-09-05: `ambiente/combate` foi mergeada em `principal`**
+(`6b3391a`) — a maior mudanca de fundo do projeto ate aqui, ver
+`ESTADO-DO-JOGO.md` pro resumo e `CLAUDE.md` pro texto completo. Isto
+reescreve boa parte do que este roadmap dizia sobre o sistema:
+- **O dado virou 1d20 + ND, cinco desfechos** (critico-sucesso, sucesso,
+  falha-perto, falha, critico-fracasso), nao mais 1d6 em tres faixas. Vive
+  em `sistemas/teste.ts` (`testar()`), puro e testavel — o item "o dado como
+  sistema proprio" abaixo, que pedia exatamente isto, esta feito, so que por
+  um caminho diferente do `sistemas/dado.ts` que existia antes (esse continua
+  vivo, mas so o `Provador.ts` ainda usa; `Combate.ts` ja rola d20).
+- **Atributos: 3 viraram 5** (Forca, Destreza, Agilidade, Inteligencia,
+  Vitalidade). `poderesDoHeroi()` continua somando raca+classe+escolha+selo,
+  so que espalhado pelas 5 opcoes agora.
+- **Derrota nao acorda mais na fogueira — acorda no Hospital.** O item
+  "Derrota e fogueira" abaixo, marcado feito, descreve o comportamento
+  ANTIGO (`Mundo.acordarNaFogueira()`); o de agora e `aplicarDerrota()` em
+  `estado.ts`, um predio fixo na Vila (`arte/mundo.py:hospital()`). A
+  fogueira continua sendo onde se salva/descansa, so deixou de ser o ponto
+  de resgate. Perde-se **todas as moedas** e uma selecao aleatoria de ate 3
+  itens da mochila (nunca item `chave-*`), nao mais so "o que carregava na
+  mao".
+- **Achado, nao decisao: o combate voltou a ser tempo real no PAPEL, mas o
+  CODIGO ainda e por turnos.** `docs/modelo-de-combate.md` (a fonte da
+  verdade do modelo, citado por `CLAUDE.md`) agora diz explicitamente "nao e
+  por turno" — Baldur's Gate em top-down, tempo real com mira. Mas
+  `Combate.ts` ainda importa `Ordem` de `sistemas/turnos.ts` e usa `Fase =
+  "meuTurno" | "vezDaCriatura" | ...`: a estrutura de turno de mesa que a
+  decisao "por turnos" (linha abaixo) descreve continua rodando, so com d20
+  no lugar de d6 por baixo. Ou o documento esta na frente do codigo (migracao
+  ainda por vir) ou o documento ficou desatualizado por engano — nao decidi
+  qual dos dois sozinho, so registrei a divergencia encontrada.
 
 ---
 
