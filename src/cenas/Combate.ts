@@ -18,8 +18,9 @@ import { testar, foiSucesso, type Desfecho, type ResultadoDeTeste } from "../sis
 import { alcancaveis, caminho, chaveDaCasa, distanciaEmCasas, type Casa } from "../sistemas/alcance";
 import { decidirAcaoDaCriatura, type Comportamento } from "../sistemas/criatura";
 import { acoesDoHeroi, type AcaoDeHeroi } from "../sistemas/acao";
-import { fileira } from "../sistemas/fileira";
 import { criarAnimacoes, camadasDoHeroi, Heroi } from "../sistemas/heroi";
+import { montarHudDeAcao, type HudDeAcao } from "../sistemas/hudDeAcao";
+import { itemRapidoAtual } from "../sistemas/consumiveis";
 import { agachar, estourinho, hitstop, ondaDeConjuracao, piscar, popIn, projetil, projetilOrientado, textoFlutuante } from "../sistemas/fx";
 import {
   aplicarDerrota, estado, guardar, marcarDerrotado, registrarUso, salvar, usosGastos, ganharSelo,
@@ -39,11 +40,6 @@ import { condicoesDados } from "../dados/condicoes-dados";
 import { definirPreferencia, preferencias } from "../sistemas/preferencias";
 import type { Mundo } from "./Mundo";
 
-const SLOT = 22;
-const GAP = 2;
-/** largura da barra de vida do heroi, em px - vida virou numero de verdade
- *  (sistemas/dado.ts), uma fileira de icones nao cabe mais nela. */
-const LARGURA_VIDA = 60;
 
 /** Traduz o `comportamento` narrativo do bestiario (7 palavras, `conteudo.ts`)
  *  para o modelo mecanico de 3 que `decidirAcaoDaCriatura` sabe jogar
@@ -100,15 +96,10 @@ type Bicho = {
   jaAtacouDeSurpresa: boolean;
 };
 
+/** So o ESTADO de cada acao - quem desenha o slot e sistemas/hudDeAcao.ts,
+ *  que so recebe este estado como dado (nunca sabe o que e um turno). */
 type Slot = {
   acao: AcaoDeHeroi;
-  fundo: Phaser.GameObjects.NineSlice;
-  icone: Phaser.GameObjects.Image;
-  borda: Phaser.GameObjects.Graphics;
-  marca: Phaser.GameObjects.Graphics;
-  numero: Phaser.GameObjects.BitmapText;
-  x: number;
-  y: number;
   livreNaRodada: number;
   gastou: boolean;
 };
@@ -140,8 +131,9 @@ export class Combate extends Phaser.Scene {
   private rotulo!: Phaser.GameObjects.BitmapText;
   private chapaRotulo!: Phaser.GameObjects.NineSlice;
   private pipsMovimento: Phaser.GameObjects.Graphics[] = [];
-  private barraVidaFrente!: Phaser.GameObjects.Rectangle;
-  private textoVida!: Phaser.GameObjects.BitmapText;
+  /** retrato+vida+item rapido+acoes, sempre no mesmo rodape que
+   *  `Interface.ts` usa fora de combate - ver sistemas/hudDeAcao.ts. */
+  private hud!: HudDeAcao;
   private trilhaIniciativa!: Phaser.GameObjects.Container;
   private botaoPassar!: Phaser.GameObjects.Container;
   private fundoAutoPassar!: Phaser.GameObjects.NineSlice;
@@ -333,50 +325,40 @@ export class Combate extends Phaser.Scene {
       return o;
     };
 
-    fixo(this.add.nineslice(2, 1, "painel-escuro", undefined, LARGURA - 4, 22, 8, 8, 8, 8).setOrigin(0));
-    fixo(this.add.rectangle(8, 5, LARGURA_VIDA, 12, 0x2c2440).setOrigin(0));
-    this.barraVidaFrente = fixo(this.add.rectangle(9, 6, LARGURA_VIDA - 2, 10, 0x3e9b62).setOrigin(0));
-    this.textoVida = fixo(texto(this, 8 + LARGURA_VIDA / 2, 6, "", { cor: 0xfff8ea, ancora: 0.5 }));
-    this.atualizarCoracoes();
-    this.trilhaIniciativa = fixo(this.add.container(14 + LARGURA_VIDA, 2));
-
     const acoes = acoesDoHeroi(estado().heroi);
-    // -56 virou -76: sobra os 20px que o toggle de passar automaticamente
-    // precisa no canto, sem disputar espaco com o ultimo slot de acao.
-    const area = { x: 6, y: ALTURA - SLOT - 2, largura: LARGURA - 76, altura: SLOT };
-    const linha = fileira(area, SLOT, GAP);
-    const cabem = Math.min(linha.cabem(), acoes.length);
-    this.topoDaBarra = area.y - 14;
+    // -76 sobra os 26px que PASSAR + o toggle de passar automaticamente
+    // precisam no canto, sem disputar espaco com o ultimo slot de acao.
+    const area = { x: 6, y: ALTURA - 24, largura: LARGURA - 6 - 76, altura: 22 };
+    const item = itemRapidoAtual();
+    this.hud = montarHudDeAcao(this, {
+      area, acoes,
+      // usar item so fora de combate por enquanto (ver hudDeAcao.ts) - em
+      // combate o slot aparece igual, so sempre apagado.
+      itemRapido: item ? { ...item, disponivel: false } : null,
+      vida: { atual: this.coracoes, max: this.coracoesMax },
+      fixarNaTela: true,
+      aoEscolherAcao: (acao) => this.escolher(acao),
+      aoApontarAcao: (acao, xSlot) => this.mostrarDica(acao, xSlot),
+      aoTirarApontamento: () => this.esconderDica(),
+      aoUsarItemRapido: () => this.mostrarDicaLinhas(["ITEM RAPIDO", "SO FORA DE COMBATE"], this.hud.area.x + 60),
+    });
+    this.topoDaBarra = this.hud.area.y - 14;
+    // canto superior-esquerdo, livre desde que a vida saiu do topo.
+    this.trilhaIniciativa = fixo(this.add.container(8, 2));
 
-    fixo(this.add.nineslice(area.x - 2, area.y - 2, "painel-escuro", undefined,
-      cabem * (SLOT + GAP) - GAP + 4, SLOT + 4, 8, 8, 8, 8).setOrigin(0).setAlpha(0.85));
-
-    for (let i = 0; i < cabem; i++) {
-      const acao = acoes[i];
-      const r = linha.reservar();
-      const fundo = fixo(this.add.nineslice(r.x, r.y, "painel-creme", undefined, SLOT, SLOT, 8, 8, 8, 8).setOrigin(0));
-      const icone = fixo(this.add.image(r.x + SLOT / 2, r.y + SLOT / 2 + 1, "icones", acao.icone));
-      const borda = fixo(this.add.graphics());
-      borda.lineStyle(2, acao.cor, 1).strokeRect(r.x + 1, r.y + 1, SLOT - 2, SLOT - 2);
-      const marca = fixo(this.add.graphics());
-      const numero = fixo(texto(this, r.x + 2, r.y + 1, String(i + 1), { cor: 0x2c2440 }));
-
-      const alvo = fixo(this.add.rectangle(r.x + SLOT / 2, r.y + SLOT / 2, SLOT + 2, SLOT + 6, 0x000000, 0)
-        .setInteractive({ useHandCursor: true }));
-      alvo.on("pointerdown", () => this.escolher(acao));
-      alvo.on("pointerover", () => this.mostrarDica(acao, r.x + SLOT / 2));
-      alvo.on("pointerout", () => this.esconderDica());
+    this.slots = acoes.map((acao) => ({
+      acao,
+      livreNaRodada: 0,
       // "porAventura" pode ja ter sido gasta numa luta anterior desta mesma
       // aventura — o slot nasce riscado se for o caso.
-      const jaGastou = acao.escopo === "porAventura" && usosGastos(acao.id) > 0;
-      this.slots.push({ acao, fundo, icone, borda, marca, numero, x: r.x, y: r.y, livreNaRodada: 0, gastou: jaGastou });
-    }
+      gastou: acao.escopo === "porAventura" && usosGastos(acao.id) > 0,
+    }));
 
     for (let i = 0; i < MOVIMENTO.heroi; i++) {
       this.pipsMovimento.push(fixo(this.add.graphics()));
     }
 
-    const px = LARGURA - 26;
+    const px = this.hud.area.x + this.hud.area.largura + 26;
     const py = ALTURA - 16;
     const fundoP = this.add.nineslice(0, 0, "painel-ouro", undefined, 44, 16, 8, 8, 8, 8).setOrigin(0.5);
     const txtP = texto(this, 0, 0, "PASSAR", { cor: 0x2c2440, ancora: 0.5, ancoraY: 0.5 });
@@ -842,10 +824,7 @@ export class Combate extends Phaser.Scene {
    *  abaixo disso - a mesma leitura de "cor avisa gravidade" que motivou a
    *  pesquisa (Project Zomboid), so com a paleta do jogo. */
   private atualizarCoracoes() {
-    const fracao = Phaser.Math.Clamp(this.coracoes / this.coracoesMax, 0, 1);
-    this.barraVidaFrente.width = Math.max(1, (LARGURA_VIDA - 2) * fracao);
-    this.barraVidaFrente.fillColor = fracao > 0.5 ? 0x3e9b62 : fracao > 0.25 ? 0xf5b62b : 0xe2483d;
-    this.textoVida.setText(`${Math.max(0, this.coracoes)}/${this.coracoesMax}`);
+    this.hud.atualizarVida(this.coracoes, this.coracoesMax);
   }
 
   // ==================================================================== a vez
@@ -899,7 +878,6 @@ export class Combate extends Phaser.Scene {
     const emEspera = this.ordem.rodada() < slot.livreNaRodada;
     if (slot.gastou || emEspera || vez?.acaoUsada) {
       tocar("menu-volta", { volume: 0.4 });
-      this.tweens.add({ targets: [slot.fundo, slot.icone], x: "+=1", duration: 45, yoyo: true, repeat: 2 });
       return;
     }
     if (this.escolhida?.id === acao.id) return this.cancelar();
@@ -1599,24 +1577,15 @@ export class Combate extends Phaser.Scene {
   private atualizarSlots() {
     const vez = this.ordem.agora();
     const minhaVez = vez?.id === "heroi";
-    this.slots.forEach((s) => {
-      s.marca.clear();
+    const porAcao = new Map(this.slots.map((s) => {
       const espera = Math.max(0, s.livreNaRodada - this.ordem.rodada());
-      const indisponivel = s.gastou || espera > 0 || (this.ordem.emCombate() && (!minhaVez || vez!.acaoUsada));
-      s.fundo.setTexture(this.escolhida?.id === s.acao.id ? "painel-ouro" : "painel-creme");
-      s.fundo.setAlpha(indisponivel ? 0.4 : 1);
-      s.icone.setAlpha(indisponivel ? 0.3 : 1);
-      s.borda.setAlpha(indisponivel ? 0.3 : 1);
-      s.numero.setAlpha(indisponivel ? 0.4 : 1);
-      for (let i = 0; i < espera; i++) {
-        s.marca.fillStyle(0x7ec4f2, 1).fillRect(s.x + 3 + i * 5, s.y + SLOT - 5, 3, 3);
-      }
-      if (s.gastou) {
-        s.marca.lineStyle(1, 0x2c2440, 0.8)
-          .lineBetween(s.x + 5, s.y + 5, s.x + SLOT - 5, s.y + SLOT - 5)
-          .lineBetween(s.x + SLOT - 5, s.y + 5, s.x + 5, s.y + SLOT - 5);
-      }
-    });
+      const indisponivel = espera > 0 || (this.ordem.emCombate() && (!minhaVez || vez!.acaoUsada));
+      return [s.acao.id, {
+        selecionada: this.escolhida?.id === s.acao.id,
+        indisponivel, gastou: s.gastou, esperaTurnos: espera,
+      }] as const;
+    }));
+    this.hud.atualizarSlots(porAcao);
   }
 
   private atualizarPipsMovimento() {
