@@ -269,7 +269,7 @@ export function escalaDoSprite(chaveDoSprite: string): number {
 /** Objetos do mundo, um PNG cada em public/assets/objetos/.
  *  A lista tem que bater com OBJETOS em arte/mundo.py. */
 export const OBJETOS = [
-  "casa-pequena", "casa-grande", "ferraria", "casa-vovo",
+  "casa-pequena", "casa-grande", "ferraria", "casa-vovo", "hospital",
   "arvore", "arvore-escura", "arbusto",
   "poste-sino", "poste-com-sino", "poco", "pedra-solta", "barraca", "cerca",
   "fogueira", "bau", "placa", "varal",

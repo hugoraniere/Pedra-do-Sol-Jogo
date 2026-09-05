@@ -13,18 +13,24 @@ import Phaser from "phaser";
 import { ALTURA, LARGURA, SOLIDOS, TILE, escalaDoSprite, direcaoDe } from "../dados/config";
 import { acharCriatura, spriteDoGoblin, type Comportamento as ComportamentoNarrativo } from "../dados/conteudo";
 import { ICONE, MOVIMENTO, movimentoDaCriatura } from "../dados/provador";
-import { ARMAS, CRIATURAS_SOM, DADO, DESFECHO, FAMILIA_DA_CRIATURA, IMPACTOS, MAGIAS_SOM, faixaDoDado } from "../dados/sons";
+import { ARMAS, CRIATURAS_SOM, DADO, DESFECHO, FAMILIA_DA_CRIATURA, IMPACTOS, MAGIAS_SOM } from "../dados/sons";
+import { testar, foiSucesso, type Desfecho, type ResultadoDeTeste } from "../sistemas/teste";
 import { alcancaveis, caminho, chaveDaCasa, distanciaEmCasas, type Casa } from "../sistemas/alcance";
 import { decidirAcaoDaCriatura, type Comportamento } from "../sistemas/criatura";
 import { acoesDoHeroi, type AcaoDeHeroi } from "../sistemas/acao";
 import { fileira } from "../sistemas/fileira";
 import { criarAnimacoes, camadasDoHeroi, Heroi } from "../sistemas/heroi";
-import { estado, guardar, marcarDerrotado, registrarUso, salvar, usosGastos } from "../sistemas/estado";
+import { agachar, estourinho, hitstop, ondaDeConjuracao, piscar, popIn, projetil, projetilOrientado, textoFlutuante } from "../sistemas/fx";
+import { aplicarDerrota, estado, guardar, marcarDerrotado, registrarUso, salvar, usosGastos } from "../sistemas/estado";
+import { HOSPITAL_ENTRADA, VILA } from "../dados/mapas";
 import { poderesDoHeroi } from "../sistemas/poderes";
 import type { Atributo } from "../dados/conteudo";
 import { tocar, tocarFicha } from "../sistemas/som";
 import { texto } from "../sistemas/texto";
-import { Ordem, rolar } from "../sistemas/turnos";
+import { Ordem } from "../sistemas/turnos";
+import { aplicarMarca, type Condicao, type Marca } from "../sistemas/marcas";
+import { tem } from "../sistemas/condicoes";
+import { condicoesDados } from "../dados/condicoes-dados";
 import type { Mundo } from "./Mundo";
 
 const SLOT = 22;
@@ -79,6 +85,10 @@ type Bicho = {
   /** "medroso" (ver sistemas/criatura.ts): topa um golpe de surpresa, nunca
    *  dois seguidos -- da segunda vez pra frente, foge em vez de atacar. */
   jaAtacouDeSurpresa: boolean;
+  /** revisao de 2026-09-04: antes disto, `acao.marca` nunca era lido - toda
+   *  magia so causava dano generico, por baixo do efeito visual bonito. */
+  condicoes: Condicao[];
+  condicoesUI?: Phaser.GameObjects.Container;
 };
 
 type Slot = {
@@ -95,6 +105,16 @@ type Slot = {
 };
 
 export type Encontro = { id: string; chave: string }[];
+
+/** So tres arquivos de som existem (oba/quase/ops) pros cinco desfechos novos -
+ *  gravar dois desfechos novos (critico de sucesso, critico de fracasso) fica
+ *  pra quando fizer sentido investir em som/gerar.py. Ate la, os dois criticos
+ *  emprestam o tom do desfecho mais proximo. */
+function somDoDesfecho(desfecho: Desfecho): keyof typeof DESFECHO {
+  if (desfecho === "critico-sucesso" || desfecho === "sucesso") return "oba";
+  if (desfecho === "falha-perto") return "quase";
+  return "ops";
+}
 
 export class Combate extends Phaser.Scene {
   private encontro: Encontro = [];
@@ -121,7 +141,11 @@ export class Combate extends Phaser.Scene {
   private dicaChapa!: Phaser.GameObjects.NineSlice;
   private coracoes = 3;
   private coracoesMax = 3;
-  private atributos: Record<Atributo, number> = { forca: 0, esperteza: 0, coracao: 0 };
+  private atributos: Record<Atributo, number> = { forca: 0, destreza: 0, agilidade: 0, inteligencia: 0, vitalidade: 0 };
+  /** condicoes no proprio heroi - Escudo de Bolha, Veu de Sombra e Aderencia
+   *  sao autolancadas, ninguem mais tem essa lista (ver sistemas/alvo.ts). */
+  private heroiCondicoes: Condicao[] = [];
+  private heroiCondicoesUI?: Phaser.GameObjects.Container;
   private topoDaBarra = 0;
   private alcancadas = new Map<string, { tx: number; ty: number; custo: number; de?: string }>();
   /** A cena de onde o heroi e o chao de verdade vem emprestados. Nunca cria
@@ -148,6 +172,11 @@ export class Combate extends Phaser.Scene {
     this.fase = "montando";
     this.escolhida = undefined;
     this.rotaDoHeroi = [];
+    // sem isto, Escudo de Bolha ou Veu de Sombra lancado numa luta continuava
+    // valendo na luta seguinte - a cena e reaproveitada, os campos nao se
+    // limpam sozinhos.
+    this.heroiCondicoes = [];
+    this.heroiCondicoesUI = undefined;
 
     const st0 = estado();
     const ficha = st0.heroi;
@@ -266,7 +295,8 @@ export class Combate extends Phaser.Scene {
       id, bicharioId, chave, nome, bonus,
       retrato: ICONE.retrato[spriteChave.replace("goblin-", "")] ?? 1,
       sprite: s, corpo: s.body as Phaser.Physics.Arcade.Body, tipo: "criatura",
-      coracoes, coracoesMax: coracoes, mostrarAte: 0, rota: [], jaAtacouDeSurpresa: false,
+      coracoes, coracoesMax: coracoes, mostrarAte: 0, rota: [],
+      jaAtacouDeSurpresa: false, condicoes: [],
     });
   }
 
@@ -398,16 +428,17 @@ export class Combate extends Phaser.Scene {
     return this.bichos.filter((b) => b.tipo === "criatura");
   }
 
-  private d6 = () => Phaser.Math.Between(1, 6);
+  /** Revisao de 2026-09-04 (docs/modelo-de-combate.md secao 3): 1d20, nao 1d6. */
+  private d20 = () => Phaser.Math.Between(1, 20);
 
   private comecarCombate() {
     const lutadores = this.criaturasVivas();
     if (lutadores.length === 0) return this.acabarCombate();
     this.fase = "vezDaCriatura";
     this.ordem.comecar([
-      { id: "heroi", iniciativa: this.d6() + this.atributos.esperteza, movimentoMax: MOVIMENTO.heroi },
+      { id: "heroi", iniciativa: this.d20() + this.atributos.agilidade, movimentoMax: MOVIMENTO.heroi },
       ...lutadores.map((g) => ({
-        id: g.id, iniciativa: this.d6(),
+        id: g.id, iniciativa: this.d20(),
         movimentoMax: movimentoDaCriatura(acharCriatura(g.bicharioId)?.velocidade ?? 0),
       })),
     ]);
@@ -473,8 +504,12 @@ export class Combate extends Phaser.Scene {
   /** A vez da criatura: decide com `decidirAcaoDaCriatura` (sistemas/criatura.ts,
    *  comportamento "medroso" -- bate uma vez de surpresa, depois foge; fraca,
    *  foge sempre) o que faz ESTE turno, e so faz uma coisa por vez: anda OU
-   *  ataca OU foge, nunca as duas no mesmo turno. Ela nunca rola dado antes de
-   *  bater, igual a mesa -- so o RESULTADO do golpe rola. */
+   *  ataca OU foge, nunca as duas no mesmo turno. Ela NUNCA rola dado - isso
+   *  nao mudou, so ficou mais estrito (docs/modelo-de-combate.md secao 3,
+   *  revisao de 2026-09-04): antes ela rolava o proprio ataque contra uma
+   *  faixa fixa; agora e sempre o HEROI que rola, tambem pra se defender. A
+   *  criatura so tem um ND fixo (10 + bonus) que representa a forca do golpe
+   *  dela. */
   private jogarCriatura(id: string) {
     const b = this.bichos.find((x) => x.id === id);
     if (!b) { this.ordem.remover(id); return this.entrarNoTurno(); }
@@ -528,6 +563,35 @@ export class Combate extends Phaser.Scene {
       if (intencao === "fugir") {
         const dir = direcaoDe(this.casaDoBicho(b).tx - alvo.tx, this.casaDoBicho(b).ty - alvo.ty) ?? "baixo";
         b.sprite.play(`${b.sprite.texture.key}-parado-${dir}`, true);
+      } else if (distanciaEmCasas(this.casaDoBicho(b), this.casaDoHeroi()) <= 1) {
+        const grito = texto(this, b.sprite.x, b.sprite.y - 40, "!", { cor: 0xf5b62b, ancora: 0.5 });
+        grito.setDepth(2000);
+        this.tweens.add({ targets: b.sprite, scaleY: 0.85, scaleX: 1.15, duration: 160, yoyo: true });
+        tocarFicha(CRIATURAS_SOM.pequeno.reage);
+        this.time.delayedCall(500, () => {
+          grito.destroy();
+          // o heroi rola DEFESA contra o ND do golpe da criatura - nunca mais
+          // a criatura rolando o proprio ataque. Escondido (Veu de Sombra)
+          // torna o golpe mais dificil de acertar: -4 no ND que o heroi
+          // precisa bater, nunca abaixo de 4 (sempre sobra alguma chance de
+          // apanhar, nunca um "impossivel errar").
+          const escondido = tem(this.heroiCondicoes, "escondido");
+          const nd = Math.max(4, 10 + b.bonus - (escondido ? 4 : 0));
+          const resultado = testar(this.atributos.agilidade, nd, this.d20);
+          tocarFicha(DADO.rola);
+          this.mostrarDado(resultado, this.atributos.agilidade, b.sprite.x, b.sprite.y - 40);
+          this.time.delayedCall(520, () => {
+            tocarFicha(DESFECHO[somDoDesfecho(resultado.desfecho)]);
+            if (foiSucesso(resultado.desfecho)) {
+              this.poeira(this.heroi.x, this.heroi.y - 8);
+              tocarFicha(IMPACTOS.errou);
+            } else {
+              this.heroiApanha(resultado.desfecho === "critico-fracasso");
+            }
+            this.time.delayedCall(420, () => { this.ordem.passar(); this.entrarNoTurno(); });
+          });
+        });
+        return;
       }
       this.time.delayedCall(220, () => { this.ordem.passar(); this.entrarNoTurno(); });
     };
@@ -595,17 +659,21 @@ export class Combate extends Phaser.Scene {
       this.time.delayedCall(130, () => {
         b.corpo?.setVelocity(0, 0);
         this.tweens.add({ targets: b.sprite, scaleX: baseEsc * 1.15, scaleY: baseEsc * 0.85, duration: 90, yoyo: true });
-        const { dado, total } = rolar(b.bonus, this.d6);
-        const faixa = faixaDoDado(total);
+        // mesmo padrao de jogarCriatura()/aoTerminar: a criatura nunca rola,
+        // so tem ND fixo -- quem rola pra se defender do golpe de surpresa
+        // continua sendo o heroi (docs/modelo-de-combate.md secao 3).
+        const escondido = tem(this.heroiCondicoes, "escondido");
+        const nd = Math.max(4, 10 + b.bonus - (escondido ? 4 : 0));
+        const resultado = testar(this.atributos.agilidade, nd, this.d20);
         tocarFicha(DADO.rola);
-        this.mostrarDado(dado, b.bonus, faixa, b.sprite.x, b.sprite.y - 40);
+        this.mostrarDado(resultado, this.atributos.agilidade, b.sprite.x, b.sprite.y - 40);
         this.time.delayedCall(520, () => {
-          tocarFicha(DESFECHO[faixa]);
-          if (faixa === "ops") {
+          tocarFicha(DESFECHO[somDoDesfecho(resultado.desfecho)]);
+          if (foiSucesso(resultado.desfecho)) {
             this.poeira(this.heroi.x, this.heroi.y - 8);
             tocarFicha(IMPACTOS.errou);
           } else {
-            this.heroiApanha(faixa === "oba");
+            this.heroiApanha(resultado.desfecho === "critico-fracasso");
           }
           b.jaAtacouDeSurpresa = true;
           // volta para a posicao de origem -- "avanca, ataca, volta"
@@ -622,6 +690,16 @@ export class Combate extends Phaser.Scene {
   }
 
   private heroiApanha(cheio = true) {
+    // Escudo de Bolha "absorve o proximo golpe" (conteudo.ts) - literal: o
+    // golpe que ia acontecer some inteiro, mesmo um critico-fracasso de
+    // defesa, e a protecao se gasta na hora (nunca mais que um golpe).
+    if (tem(this.heroiCondicoes, "protegido")) {
+      this.heroiCondicoes = this.heroiCondicoes.filter((c) => c.id !== "protegido");
+      this.mostrarCondicoesHeroi();
+      piscar(this, this.heroi, 90, 2, 0.5);
+      tocarFicha(IMPACTOS.errou);
+      return;
+    }
     tocarFicha(IMPACTOS.bicho);
     this.cameras.main.shake(cheio ? 140 : 90, cheio ? 0.005 : 0.003);
     this.coracoes = Math.max(0, this.coracoes - 1);
@@ -637,16 +715,29 @@ export class Combate extends Phaser.Scene {
     }
     // com zero coracoes quem manda e a tonteira: nada de machucar() aqui, senao
     // uma pose comeria a outra no mesmo quadro e nenhuma das duas apareceria.
-    // Nunca existe derrota: fica tonto, e volta com um coracao. A fogueira de
-    // verdade (CLAUDE.md) ainda nao existe; ate la este e o mesmo desfecho que
-    // o Provador ja validou.
     this.heroi.ficarTonto(1200);
     this.anunciar("QUE TONTEIRA!", 900);
-    this.time.delayedCall(1200, () => {
-      this.coracoes = 1;
-      this.atualizarCoracoes();
-      estado().coracoes = 1;
-      salvar();
+    this.time.delayedCall(1200, () => this.derrota());
+  }
+
+  /** Fase 13 (docs/plano-de-implementacao.md, CLAUDE.md "Divergencia
+   *  deliberada"): zero coracoes nunca apaga o heroi nem o save - so custa
+   *  dinheiro e parte da mochila, e acorda no Hospital da Vila Semente. O
+   *  Hospital cura os coracoes pro maximo: punir a mesma derrota duas vezes
+   *  (ferido E sem dinheiro) seria demais. O resumo do prejuizo (13.4) viaja
+   *  junto pro Mundo mostrar assim que a tela acender de novo la. */
+  private derrota() {
+    const derrota = aplicarDerrota();
+    this.coracoes = this.coracoesMax;
+    this.atualizarCoracoes();
+    estado().coracoes = this.coracoes;
+    estado().cena = "vila";
+    estado().lugar = VILA.lugar;
+    salvar();
+    this.cameras.main.fadeOut(220, 0, 0, 0);
+    this.cameras.main.once("camerafadeoutcomplete", () => {
+      this.scene.stop();
+      this.mundo.scene.restart({ entrada: HOSPITAL_ENTRADA, derrota });
     });
   }
 
@@ -655,10 +746,17 @@ export class Combate extends Phaser.Scene {
   }
 
   // ==================================================================== a vez
-  private passavel(tx: number, ty: number, quem?: Bicho): boolean {
+  /** `ignorarSolido` e a Aderencia: maos grudentas escalam o que normalmente
+   *  bloqueia passagem (parede, pedra) - so o heroi usa isto, e so enquanto a
+   *  condicao "rapido" durar (ver aplicarMarcaNoHeroi, marca "cola"). Um bicho
+   *  ocupando a casa continua bloqueando: escalar parede nao e atravessar
+   *  gente. */
+  private passavel(tx: number, ty: number, quem?: Bicho, ignorarSolido = false): boolean {
     if (tx < 0 || ty < 0 || tx >= this.largura || ty >= this.altura) return false;
-    const tile = this.chaoLayer.getTileAt(tx, ty);
-    if (!tile || (SOLIDOS as readonly number[]).includes(tile.index)) return false;
+    if (!ignorarSolido) {
+      const tile = this.chaoLayer.getTileAt(tx, ty);
+      if (!tile || (SOLIDOS as readonly number[]).includes(tile.index)) return false;
+    }
     const ocupada = this.bichos.some(
       (b) => b !== quem && b.tipo !== "arbusto" && this.mesmaCasa(this.casaDoBicho(b), tx, ty)
     );
@@ -676,7 +774,8 @@ export class Combate extends Phaser.Scene {
   private calcularAlcance() {
     const vez = this.ordem.agora();
     if (!vez) return;
-    this.alcancadas = alcancaveis(this.casaDoHeroi(), vez.movimento, (tx, ty) => this.passavel(tx, ty));
+    const grudento = tem(this.heroiCondicoes, "rapido");
+    this.alcancadas = alcancaveis(this.casaDoHeroi(), vez.movimento, (tx, ty) => this.passavel(tx, ty, undefined, grudento));
     this.desenharCasas();
   }
 
@@ -736,6 +835,7 @@ export class Combate extends Phaser.Scene {
       this.ordem.gastarMovimento(achada.custo);
       this.fase = "andando";
       this.pincelCasas.clear();
+      this.quebrarEsconderijo();
     }
   }
 
@@ -745,6 +845,9 @@ export class Combate extends Phaser.Scene {
     this.escolhida = undefined;
     this.pincel.clear();
     this.heroi.parar();
+    // agir quebra o esconderijo igual andar quebra - a unica excecao e o
+    // proprio lance de Veu de Sombra, que acabou de criar a condicao.
+    if (acao.id !== "sumir-sumindo") this.quebrarEsconderijo();
     // Vira para o alvo antes de agir. Em combate o heroi ataca parado, e a
     // direcao dele so mudava andando: sem isto, o braco estica para o lado em
     // que ele andou pela ultima vez, que quase nunca e o lado do goblin.
@@ -754,7 +857,14 @@ export class Combate extends Phaser.Scene {
     // folha de sprite ganhou 8 colunas. Ate aqui toda acao usava a de conjurar,
     // entao dar uma espadada tinha o mesmo desenho que lancar uma bola de fogo.
     if (acao.tipo === "magia") this.heroi.conjurar(300);
-    else this.heroi.atacar(300);
+    else {
+      // o corpo a corpo ganha um agachar de anticipacao, junto da pose de
+      // ataque - Fase 12 (Atualizacao 3), passo 3. A distancia so entra pra
+      // nao dar o mesmo "impulso" pra quem ataca de longe (arco, funda),
+      // que ainda usa so a pose crua ate o passo 5 do plano chegar.
+      if (acao.alcance === 1) agachar(this, this.heroi, 90);
+      this.heroi.atacar(300);
+    }
 
     const slot = this.slots.find((s) => s.acao.id === acao.id)!;
     if (acao.escopo === "porLuta") slot.gastou = true;
@@ -770,28 +880,42 @@ export class Combate extends Phaser.Scene {
     else if (acao.som === "voz") tocarFicha(MAGIAS_SOM.voz);
 
     const bonus = this.atributos[acao.atributo];
-    const { dado, total } = rolar(bonus, this.d6);
-    const faixa = faixaDoDado(total);
+    // o ND vem de quem esta na casa mirada - hoje todo bicho tem bonus 0, entao
+    // isto da ND 10 sempre, mas ja fica pronto pro dia que o bestiario
+    // diferenciar bicho fraco de chefe (docs/modelo-de-combate.md secao 3).
+    const pegos = this.pegos(acao, casa);
+    const nd = 10 + (pegos[0]?.bonus ?? 0);
+    const resultado = testar(bonus, nd, this.d20);
     tocarFicha(DADO.rola);
     const [cx, cy] = this.centroDaCasa(casa.tx, casa.ty);
-    this.mostrarDado(dado, bonus, faixa, cx, cy - 40);
+    this.mostrarDado(resultado, bonus, cx, cy - 40);
 
     this.time.delayedCall(420, () => {
-      tocarFicha(DESFECHO[faixa]);
-      const pegos = this.pegos(acao, casa);
-      // mesmo com QUASE/INCRIVEL (o golpe ia acertar), uma criatura agil
-      // pode esquivar por conta propria -- `esquivaChance` (conteudo.ts),
-      // o atributo novo pedido pelo Hugo em 2026-09-05. O DADO continua
-      // sendo de quem decide o resultado; isto so filtra por cima dele.
-      // Em faixa "ops" ninguem tem chance de novo: ela ja esquivou por
-      // causa do dado, nao por sorte dupla.
-      const esquivaram = faixa === "ops"
+      tocarFicha(DESFECHO[somDoDesfecho(resultado.desfecho)]);
+      if (acao.id === "fala-bicho") {
+        // tabela de desfecho propria (docs/11-combate-e-magias.md secao 9):
+        // convencer nunca foi um golpe, entao nao cabe no galho generico de
+        // acerto/erro logo abaixo - ver convencerBicho().
+        this.convencerBicho(pegos, resultado.desfecho, cx, cy);
+        this.time.delayedCall(500, () => this.fimDaAcao());
+        return;
+      }
+      // "livre" (sistemas/alvo.ts): a acao age no proprio heroi ou numa casa
+      // vazia, entao pegos() vazio e o resultado ESPERADO, nunca um erro.
+      const semAlvoNecessario = acao.alvo === "livre";
+      const sucesso = foiSucesso(resultado.desfecho);
+      // mesmo com sucesso no dado, uma criatura agil pode esquivar por conta
+      // propria -- `esquivaChance` (conteudo.ts), o atributo novo pedido pelo
+      // Hugo em 2026-09-05. O DADO continua sendo de quem decide o resultado;
+      // isto so filtra por cima dele. Sem sucesso no dado ninguem tem chance
+      // de novo: ja errou por causa do dado, nao por sorte dupla.
+      const esquivaram = !sucesso
         ? pegos
         : pegos.filter((b) => Math.random() < (acharCriatura(b.bicharioId)?.esquivaChance ?? 0));
       const atingidos = pegos.filter((b) => !esquivaram.includes(b));
       if (esquivaram.length > 0) {
-        // OPS com bicho na mira, ou esquiva de verdade: nao "nada aconteceu",
-        // ele ESQUIVOU do golpe -- e por isso que o heroi errou.
+        // falha com bicho na mira, ou esquiva de verdade: nao "nada
+        // aconteceu", ele ESQUIVOU do golpe -- e por isso que o heroi errou.
         esquivaram.forEach((b) => {
           const chave = b.sprite.texture.key;
           const dir = direcaoDe(this.heroi.x - b.sprite.x, this.heroi.y - b.sprite.y) ?? "baixo";
@@ -799,11 +923,109 @@ export class Combate extends Phaser.Scene {
           this.time.delayedCall(360, () => b.sprite.play(`${chave}-parado-${dir}`, true));
         });
       }
-      if (atingidos.length === 0) {
+      // errou se: o dado falhou, ou precisava de alvo e nao tinha nenhum, ou
+      // tinha alvo e todos esquivaram -- as tres causas de "nada foi atingido"
+      // sao diferentes e so a ultima depende da esquiva calculada acima.
+      const semAlvoQuandoPrecisava = pegos.length === 0 && !semAlvoNecessario;
+      const todosEsquivaram = pegos.length > 0 && atingidos.length === 0;
+      if (!sucesso || semAlvoQuandoPrecisava || todosEsquivaram) {
         this.poeira(cx, cy - 8);
         tocarFicha(IMPACTOS.errou);
+      } else if (acao.id === "golpe-arco" || acao.id === "golpe-funda") {
+        // arco e funda atiram de verdade: quem acerta e a flecha/pedra
+        // CHEGANDO no alvo, nao o clique - passo 5 do plano (Atualizacao 3).
+        // O tempo de voo escala com a distancia real ate a casa, nao com o
+        // alcance maximo da arma: um tiro de perto chega mais rapido que um
+        // no limite do alcance.
+        const distancia = distanciaEmCasas(minha, casa);
+        const ms = 90 + distancia * 45;
+        const [corProjetil, largura, comprimento] = acao.id === "golpe-funda"
+          ? [0x96a2b8, 4, 4]
+          : [0xa87a4e, 2, 8];
+        projetilOrientado(this, this.heroi.x, this.heroi.y - 8, cx, cy, corProjetil, largura, comprimento, ms, () => {
+          atingidos.forEach((b) => this.atingir(b, cx, cy, resultado.desfecho === "critico-sucesso"));
+          this.cameras.main.shake(90, 0.0022);
+          this.time.delayedCall(500, () => this.fimDaAcao());
+        });
+        return;
+      } else if (acao.id === "bafo-gelado") {
+        // sopro em leque: um projetil por casa da linha, saindo quase junto
+        // mas escalonado (40ms), pra ler como cone e nao parede - passo 6 do
+        // plano. Gelo pisca fosco no impacto (piscar), nunca o flash branco
+        // generico de fogo/golpe - a diferenca sozinha ja separa os dois.
+        ondaDeConjuracao(this, this.heroi.x, this.heroi.y, 0x7ec4f2, 14);
+        this.casasNaLinha(casa, acao.alcance).forEach((c, i) => {
+          this.time.delayedCall(i * 40, () => {
+            const [px, py] = this.centroDaCasa(c.tx, c.ty);
+            projetilOrientado(this, this.heroi.x, this.heroi.y - 8, px, py, 0x7ec4f2, 5, 6, 160, () => {
+              atingidos
+                .filter((b) => this.mesmaCasa(this.casaDoBicho(b), c.tx, c.ty))
+                .forEach((b) => {
+                  this.atingir(b, px, py, resultado.desfecho === "critico-sucesso", "gelo");
+                  if (acao.marca) this.aplicarMarcaNoBicho(b, acao.marca);
+                });
+            });
+          });
+        });
+        this.cameras.main.shake(70, 0.0015);
+        this.time.delayedCall(600, () => this.fimDaAcao());
+        return;
+      } else if (acao.id === "bola-de-fogo") {
+        // a magia mais forte do Mago merece pesar mais que as outras treze -
+        // passo 7 do plano (o ultimo). Onda maior (16 em vez do padrao),
+        // bola mais gorda (raio 3 em vez de 2) e o unico impacto com
+        // hitstop de magia de proposito: Bafo Gelado nao trava a tela,
+        // Bola de Fogo trava.
+        ondaDeConjuracao(this, this.heroi.x, this.heroi.y, 0xf2802b, 16);
+        projetil(this, this.heroi.x, this.heroi.y - 8, cx, cy, 0xf2802b, 3, 220, () => {
+          atingidos.forEach((b) => {
+            this.atingir(b, cx, cy, resultado.desfecho === "critico-sucesso");
+            if (acao.marca) this.aplicarMarcaNoBicho(b, acao.marca);
+          });
+          estourinho(this, cx, cy, 0xf2802b, 8, 12);
+          hitstop(this, 60);
+          this.cameras.main.shake(100, 0.003);
+          this.time.delayedCall(500, () => this.fimDaAcao());
+        });
+        return;
+      } else if (acao.id === "pulo-de-sapo") {
+        this.saltar(casa);
+      } else if (acao.id === "remendo") {
+        this.curarComRemendo(resultado.desfecho === "critico-sucesso");
+      } else if (acao.id === "chama-vento") {
+        // Rajada "empurra tudo pela frente" (conteudo.ts) - alem do dano
+        // generico, quem for atingido anda 2 casas na mesma direcao do
+        // vento, parando na primeira parede/bicho/borda do mapa. A outra
+        // metade do texto ("alimenta o fogo que ja estava queimando") espera
+        // "queimando" existir de verdade - isso e Fase 4 (superficie de
+        // fogo, ver o cabecalho de sistemas/marcas.ts), nao esta feio de
+        // proposito, so ainda nao tem com o que interagir.
+        const minhaCasa = this.casaDoHeroi();
+        const ventoDx = Math.sign(casa.tx - minhaCasa.tx);
+        const ventoDy = Math.sign(casa.ty - minhaCasa.ty);
+        atingidos.forEach((b) => {
+          this.atingir(b, cx, cy, resultado.desfecho === "critico-sucesso");
+          this.empurrarBicho(b, ventoDx, ventoDy, 2);
+        });
+        this.cameras.main.shake(90, 0.0022);
+      } else if (semAlvoNecessario) {
+        // Escudo de Bolha, Veu de Sombra, Aderencia: a marca vira condicao no
+        // proprio heroi, nunca em quem calhou de estar perto - "aoRedor
+        // alcance 0" nunca pega um bicho de verdade (ver sistemas/alvo.ts).
+        if (acao.marca) this.aplicarMarcaNoHeroi(acao.marca);
+        ondaDeConjuracao(this, this.heroi.x, this.heroi.y, acao.cor, 10);
       } else {
-        atingidos.forEach((b) => this.atingir(b, cx, cy, faixa === "oba"));
+        atingidos.forEach((b) => {
+          this.atingir(b, cx, cy, resultado.desfecho === "critico-sucesso");
+          // e aqui que as magias sem animacao propria (Cresce-Grama, Voz de
+          // Trovao, Cheiro de Fogueira...) ganham reacao de verdade, mesmo
+          // sem projetil dedicado - o dano generico continua, a marca por
+          // cima e o que muda de verdade.
+          if (acao.marca) this.aplicarMarcaNoBicho(b, acao.marca);
+        });
+        // o martelo pesa mais que espada, cajado ou soco: o mesmo golpe corpo
+        // a corpo (passo 3 do plano), so essa arma ganha o micro-engasgo.
+        if (acao.id === "golpe-martelo") hitstop(this, 50);
         this.cameras.main.shake(90, 0.0022);
       }
       this.time.delayedCall(500, () => this.fimDaAcao());
@@ -821,28 +1043,62 @@ export class Combate extends Phaser.Scene {
     this.calcularAlcance();
   }
 
-  private mostrarDado(dado: number, bonus: number, faixa: "ops" | "quase" | "oba", x: number, y: number) {
-    const cores = { ops: 0xe2483d, quase: 0xf5b62b, oba: 0x3e9b62 };
-    const palavras = { ops: "OPS", quase: "QUASE", oba: "OBA" };
-    const palavra = palavras[faixa];
-    const largura = 26 + (bonus > 0 ? 18 : 0) + palavra.length * 8 + 8;
+  /** O cartao do dado, revisado pra 1d20/5 desfechos (docs/modelo-de-combate.md
+   *  secao 3). Nao ha mais icone de face - 20 faces de dado nao cabem em pixel
+   *  art razoavel, entao o numero sai como texto, igual o modificador ja saia. */
+  private mostrarDado(resultado: ResultadoDeTeste, bonus: number, x: number, y: number) {
+    const cores: Record<Desfecho, number> = {
+      "critico-sucesso": 0xf5b62b,
+      sucesso: 0x3e9b62,
+      "falha-perto": 0xf2802b,
+      falha: 0xe2483d,
+      "critico-fracasso": 0x7b5ac4,
+    };
+    const palavras: Record<Desfecho, string> = {
+      "critico-sucesso": "CRITICO!",
+      sucesso: "SUCESSO",
+      "falha-perto": "PERTO",
+      falha: "FALHOU",
+      "critico-fracasso": "DESASTRE",
+    };
+    const palavra = palavras[resultado.desfecho];
+    const largura = 30 + (bonus > 0 ? 18 : 0) + palavra.length * 8 + 8;
     const cx = Phaser.Math.Clamp(x, largura / 2 + 4, this.largura * TILE - largura / 2 - 4);
     const caixa = this.add.container(cx, y).setDepth(2000);
     const chapa = this.add.nineslice(0, 0, "painel-creme", undefined, largura, 20, 8, 8, 8, 8).setOrigin(0.5);
     const esquerda = -largura / 2 + 4;
-    const face = this.add.image(esquerda + 8, 0, "icones", ICONE.dadoBase + dado - 1);
-    const pecas: Phaser.GameObjects.GameObject[] = [chapa, face];
-    let cursor = esquerda + 18;
+    const numero = texto(this, esquerda + 4, -4, String(resultado.dado), { cor: 0x2c2440 });
+    const pecas: Phaser.GameObjects.GameObject[] = [chapa, numero];
+    let cursor = esquerda + 22;
     if (bonus > 0) {
       pecas.push(texto(this, cursor, -4, `+${bonus}`, { cor: 0x4a3e64 }));
       cursor += 18;
     }
-    pecas.push(texto(this, cursor + 2, -4, palavra, { cor: cores[faixa] }));
+    pecas.push(texto(this, cursor + 2, -4, palavra, { cor: cores[resultado.desfecho] }));
     caixa.add(pecas);
+    // os dois criticos ganham um pulo de entrada - a mesma familia de efeito que
+    // ja marca "isto e diferente do normal" em pips e selos, so emprestada aqui.
+    if (resultado.desfecho === "critico-sucesso" || resultado.desfecho === "critico-fracasso") {
+      popIn(this, caixa, 160);
+    }
     this.tweens.add({
       targets: caixa, y: y - 10, alpha: 0, delay: 640, duration: 320,
       onComplete: () => caixa.destroy(),
     });
+  }
+
+  /** As casas em linha reta do heroi ate `casa`, uma por passo do alcance -
+   *  a mesma conta que `pegos()` ja fazia pra "linha", so devolvendo a CASA
+   *  em vez do bicho que estiver nela. `executar()` usa isto pra desenhar um
+   *  projetil por casa (Bafo Gelado, passo 6), mesmo nas casas vazias do meio
+   *  do cone - sem isso o sopro pularia direto pro alvo, sem ler como cone. */
+  private casasNaLinha(casa: Casa, alcance: number): Casa[] {
+    const eu = this.casaDoHeroi();
+    const dx = Math.sign(casa.tx - eu.tx);
+    const dy = Math.sign(casa.ty - eu.ty);
+    const casas: Casa[] = [];
+    for (let i = 1; i <= alcance; i++) casas.push({ tx: eu.tx + dx * i, ty: eu.ty + dy * i });
+    return casas;
   }
 
   private pegos(acao: AcaoDeHeroi, casa: Casa): Bicho[] {
@@ -851,22 +1107,26 @@ export class Combate extends Phaser.Scene {
       return this.bichos.filter((b) => distanciaEmCasas(this.casaDoBicho(b), eu) <= acao.alcance);
     }
     if (acao.forma === "linha") {
-      const dx = Math.sign(casa.tx - eu.tx);
-      const dy = Math.sign(casa.ty - eu.ty);
       const naLinha: Bicho[] = [];
-      for (let i = 1; i <= acao.alcance; i++) {
-        const c = { tx: eu.tx + dx * i, ty: eu.ty + dy * i };
+      this.casasNaLinha(casa, acao.alcance).forEach((c) => {
         this.bichos.forEach((b) => { if (this.mesmaCasa(this.casaDoBicho(b), c.tx, c.ty)) naLinha.push(b); });
-      }
+      });
       return naLinha;
     }
     return this.bichos.filter((b) => this.mesmaCasa(this.casaDoBicho(b), casa.tx, casa.ty));
   }
 
-  private atingir(b: Bicho, dex: number, dey: number, cheio: boolean) {
+  /** `estilo` muda so o sinal visual do impacto: "flash" (branco, quente -
+   *  golpe e fogo) ou "gelo" (pisca fosco, `piscar()` de fx.ts) - a mesma
+   *  distincao que faz o jogador ler "isso foi frio" sem precisar de texto. */
+  private atingir(b: Bicho, dex: number, dey: number, cheio: boolean, estilo: "flash" | "gelo" = "flash") {
     tocarFicha(b.tipo === "arbusto" ? IMPACTOS.madeira : IMPACTOS.bicho);
-    b.sprite.setTintFill(0xfff8ea);
-    this.time.delayedCall(70, () => b.sprite.clearTint());
+    if (estilo === "gelo") {
+      piscar(this, b.sprite, 90, 2, 0.5);
+    } else {
+      b.sprite.setTintFill(0xfff8ea);
+      this.time.delayedCall(70, () => b.sprite.clearTint());
+    }
     // relativo a escala BASE do sprite (escalaDoSprite): o goblin exibe a 1/3
     // (arte em 48x96, mundo continua no tamanho de sempre) -- um scaleY
     // absoluto aqui pularia de volta para quase o tamanho cheio por 80ms,
@@ -883,6 +1143,25 @@ export class Combate extends Phaser.Scene {
     if (b.coracoes <= 0) this.desistir(b);
   }
 
+  /** O empurrao de Rajada: anda uma casa de cada vez na direcao do vento ate
+   *  travar (parede, outro bicho, borda do mapa) - fisico, nao magico, entao
+   *  nunca atravessa nada (diferente de Salto Longo, que e o heroi pulando
+   *  de proposito). Se a primeira casa ja estiver bloqueada, o bicho so nao
+   *  anda - nunca um erro, so um empurrao que nao pegou espaco. */
+  private empurrarBicho(b: Bicho, dx: number, dy: number, casas: number) {
+    if (dx === 0 && dy === 0) return;
+    let atual = this.casaDoBicho(b);
+    for (let i = 0; i < casas; i++) {
+      const prox = { tx: atual.tx + dx, ty: atual.ty + dy };
+      if (!this.passavel(prox.tx, prox.ty, b)) break;
+      atual = prox;
+    }
+    const [px, py] = this.centroDaCasa(atual.tx, atual.ty);
+    if (px === b.sprite.x && py === b.sprite.y) return;
+    b.corpo?.setVelocity(0, 0);
+    this.tweens.add({ targets: b.sprite, x: px, y: py, duration: 160, ease: "Sine.easeOut" });
+  }
+
   /** Some do combate E do mapa de verdade. `chave` e a mesma que `Mundo.ts`
    *  guarda em `estado().derrotados`: quando o jogador voltar para a floresta,
    *  este goblin ja nao esta la. */
@@ -890,6 +1169,7 @@ export class Combate extends Phaser.Scene {
     this.bichos = this.bichos.filter((o) => o !== b);
     b.corpo?.setVelocity(0, 0);
     b.pips?.destroy();
+    b.condicoesUI?.destroy();
     if (b.tipo === "criatura") {
       tocarFicha(CRIATURAS_SOM[FAMILIA_DA_CRIATURA[b.bicharioId] ?? "pequeno"].desiste);
       if (b.chave) {
@@ -926,6 +1206,39 @@ export class Combate extends Phaser.Scene {
     });
   }
 
+  /** A mesma saida de `desistir()` (some do combate E do mapa, larga o de
+   *  sempre) - so que sem a queda giratoria de quem perde a luta. Foi
+   *  CONVENCIDO, nao vencido (Lingua Selvagem, ver convencerBicho()). Some
+   *  trotando pro lado de fora do heroi, e `comLoot` so vem true no critico:
+   *  a magia funcionou tao bem que o bicho deixa cair o de sempre mesmo assim. */
+  private convencido(b: Bicho, comLoot: boolean) {
+    this.bichos = this.bichos.filter((o) => o !== b);
+    b.corpo?.setVelocity(0, 0);
+    b.pips?.destroy();
+    b.condicoesUI?.destroy();
+    if (b.tipo === "criatura") {
+      tocarFicha(CRIATURAS_SOM[FAMILIA_DA_CRIATURA[b.bicharioId] ?? "pequeno"].desiste);
+      if (b.chave) {
+        marcarDerrotado(b.chave);
+        this.mundo.removerCriatura(b.chave);
+        if (comLoot) {
+          const ficha = acharCriatura(b.bicharioId);
+          ficha?.larga.forEach((item) => {
+            if (item === "moeda") estado().moedas += 1;
+            else guardar(item);
+          });
+        }
+        salvar();
+      }
+    }
+    this.ordem.remover(b.id);
+    const ladoDoHeroi = b.sprite.x < this.heroi.x ? -1 : 1;
+    this.tweens.add({
+      targets: b.sprite, alpha: 0, x: b.sprite.x + ladoDoHeroi * 24,
+      duration: 420, ease: "Sine.easeIn", onComplete: () => b.sprite.destroy(),
+    });
+  }
+
   private poeira(x: number, y: number) {
     for (let i = 0; i < 5; i++) {
       const p = this.add.circle(x, y, 1.5, 0xfdefd6, 0.9).setDepth(y + 1);
@@ -934,6 +1247,65 @@ export class Combate extends Phaser.Scene {
         alpha: 0, duration: 300, onComplete: () => p.destroy(),
       });
     }
+  }
+
+  /** Salto Longo: acerta o dado e o heroi pula direto pra casa mirada, sem se
+   *  importar com parede, rio ou bicho no meio do caminho - "atravessa rio,
+   *  muro ou inimigo de um salto so" (conteudo.ts). Sem pegos(): o efeito e
+   *  mover o proprio heroi, nunca causar dano (marca "pulo" e efeito DIRETO,
+   *  ver o cabecalho de sistemas/marcas.ts). */
+  private saltar(casa: Casa) {
+    const [dx, dy] = this.centroDaCasa(casa.tx, casa.ty);
+    agachar(this, this.heroi, 90);
+    this.time.delayedCall(90, () => {
+      this.tweens.add({
+        targets: this.heroi, x: dx, y: dy, duration: 200, ease: "Sine.easeOut",
+        onComplete: () => {
+          this.tweens.add({ targets: this.heroi, scaleY: 0.82, duration: 70, yoyo: true });
+          this.poeira(dx, dy);
+        },
+      });
+    });
+  }
+
+  /** Remendo: conserta o proprio heroi, nao um objeto - a mochila ainda nao
+   *  tem nada quebravel pra consertar de verdade (marca "conserto", mesmo
+   *  cabecalho de sistemas/marcas.ts). Cura 1 coracao, 2 no critico - a unica
+   *  cura de combate que o heroi tem hoje. */
+  private curarComRemendo(critico: boolean) {
+    const antes = this.coracoes;
+    this.coracoes = Math.min(this.coracoesMax, this.coracoes + (critico ? 2 : 1));
+    this.atualizarCoracoes();
+    estado().coracoes = this.coracoes;
+    salvar();
+    ondaDeConjuracao(this, this.heroi.x, this.heroi.y, 0xb08658, 10);
+    if (this.coracoes > antes) {
+      const t = texto(this, this.heroi.x, this.heroi.y - 30, `+${this.coracoes - antes}`, { cor: 0x3e9b62, ancora: 0.5 });
+      textoFlutuante(this, t, 20, 500);
+    }
+  }
+
+  /** Lingua Selvagem nunca causa dano, so tenta convencer - tabela propria
+   *  pros 5 desfechos (docs/11-combate-e-magias.md secao 9), porque nao cabe
+   *  no galho generico de acerto/erro de golpe e magia:
+   *    critico-sucesso: vai embora E larga o de sempre (efeito extra do critico)
+   *    sucesso:         vai embora, sem loot (foi convencido, nao vencido)
+   *    falha / falha-perto: nao convenceu, a luta continua igual
+   *    critico-fracasso: assustou o bicho errado - ele fica bravo (+2 no ND) */
+  private convencerBicho(pegos: Bicho[], desfecho: Desfecho, cx: number, cy: number) {
+    const b = pegos[0];
+    if (!b) { this.poeira(cx, cy - 8); tocarFicha(IMPACTOS.errou); return; }
+    if (desfecho === "critico-sucesso") return this.convencido(b, true);
+    if (desfecho === "sucesso") return this.convencido(b, false);
+    if (desfecho === "critico-fracasso") {
+      b.bonus += 2;
+      const grito = texto(this, b.sprite.x, b.sprite.y - 40, "!", { cor: 0xe2483d, ancora: 0.5 });
+      textoFlutuante(this, grito, 16, 500);
+      tocarFicha(CRIATURAS_SOM.pequeno.reage);
+      return;
+    }
+    this.poeira(cx, cy - 8);
+    tocarFicha(IMPACTOS.errou);
   }
 
   // ===================================================== vida sobre a cabeca
@@ -952,6 +1324,73 @@ export class Combate extends Phaser.Scene {
     b.pips = this.add.container(b.sprite.x, b.sprite.y - 36, [g]).setDepth(2000);
     b.pips.setScale(0.6);
     this.tweens.add({ targets: b.pips, scale: 1, duration: 140, ease: "Back.easeOut" });
+  }
+
+  /** As condicoes de verdade acima da cabeca (acima dos coracoes) - MOLHADO,
+   *  PRESO, ASSUSTADO etc, no mesmo molde que Provador.ts ja usava. Max 3
+   *  visiveis: as 11 magias novas raramente empilham mais que isso numa
+   *  criatura so, e "+N" pode esperar o dia que empilhar. */
+  private mostrarCondicoes(b: Bicho) {
+    b.condicoesUI?.destroy();
+    if (b.condicoes.length === 0) return;
+    const visiveis = b.condicoes.slice(0, 3);
+    const largura = visiveis.length * 10 - 2;
+    const g = this.add.graphics();
+    visiveis.forEach((cond, i) => {
+      const ficha = condicoesDados(cond.id);
+      const x = -largura / 2 + i * 10;
+      g.fillStyle(ficha.cor, 1).fillRect(x, 0, 8, 8);
+      g.lineStyle(1, 0x2c2440, 0.8).strokeRect(x + 0.5, 0.5, 7, 7);
+    });
+    b.condicoesUI = this.add.container(b.sprite.x, b.sprite.y - 46, [g]).setDepth(2000);
+    popIn(this, b.condicoesUI, 140, 0.6);
+  }
+
+  /** O elo que faltava entre `acao.marca` (que so alimentava a cor do efeito
+   *  visual) e o motor de condicoes de verdade - antes desta revisao (2026-
+   *  09-04) NENHUMA magia do jogo real chamava `aplicarMarca()`, nem Bafo
+   *  Gelado ou Bola de Fogo. As condicoes aplicadas aqui ainda nao contam os
+   *  proprios turnos (isso pede passarTurno() rodando em entrarNoTurno(),
+   *  fica pro proximo passo) - mas a marca agora MUDA o bicho de verdade, em
+   *  vez de so colorir um flash. */
+  private aplicarMarcaNoBicho(b: Bicho, marca: Marca) {
+    const resultado = aplicarMarca(marca, b.condicoes);
+    b.condicoes = resultado.condicoesNovas;
+    this.mostrarCondicoes(b);
+  }
+
+  /** O mesmo desenho de `mostrarCondicoes`, so que acima do proprio heroi -
+   *  Escudo de Bolha, Veu de Sombra e Aderencia sao autolancadas (alvo
+   *  "livre" em sistemas/alvo.ts), entao o efeito e nele, nunca num bicho. */
+  private mostrarCondicoesHeroi() {
+    this.heroiCondicoesUI?.destroy();
+    if (this.heroiCondicoes.length === 0) return;
+    const visiveis = this.heroiCondicoes.slice(0, 3);
+    const largura = visiveis.length * 10 - 2;
+    const g = this.add.graphics();
+    visiveis.forEach((cond, i) => {
+      const ficha = condicoesDados(cond.id);
+      const x = -largura / 2 + i * 10;
+      g.fillStyle(ficha.cor, 1).fillRect(x, 0, 8, 8);
+      g.lineStyle(1, 0x2c2440, 0.8).strokeRect(x + 0.5, 0.5, 7, 7);
+    });
+    this.heroiCondicoesUI = this.add.container(this.heroi.x, this.heroi.y - 46, [g]).setDepth(2000);
+    popIn(this, this.heroiCondicoesUI, 140, 0.6);
+  }
+
+  private aplicarMarcaNoHeroi(marca: Marca) {
+    const resultado = aplicarMarca(marca, this.heroiCondicoes);
+    this.heroiCondicoes = resultado.condicoesNovas;
+    this.mostrarCondicoesHeroi();
+  }
+
+  /** Veu de Sombra some "enquanto o heroi ficar parado" (conteudo.ts) - andar
+   *  ou agir quebra o esconderijo na hora. Passar a vez, nao: e exatamente o
+   *  "ficar parado" que mantem a magia valendo. */
+  private quebrarEsconderijo() {
+    if (!tem(this.heroiCondicoes, "escondido")) return;
+    this.heroiCondicoes = this.heroiCondicoes.filter((c) => c.id !== "escondido");
+    this.mostrarCondicoesHeroi();
   }
 
   // =================================================================== update
@@ -1072,12 +1511,17 @@ export class Combate extends Phaser.Scene {
   private cuidarDosPips() {
     const agora = this.time.now;
     this.bichos.forEach((b) => {
-      if (!b.pips) return;
-      b.pips.setPosition(b.sprite.x, b.sprite.y - 36);
-      if (agora > b.mostrarAte && b.pips.alpha > 0) {
-        b.pips.setAlpha(Math.max(0, b.pips.alpha - 0.04));
+      if (b.pips) {
+        b.pips.setPosition(b.sprite.x, b.sprite.y - 36);
+        if (agora > b.mostrarAte && b.pips.alpha > 0) {
+          b.pips.setAlpha(Math.max(0, b.pips.alpha - 0.04));
+        }
       }
+      // condicoes nunca desbotam sozinhas (diferente dos pips de dano) -
+      // elas representam um estado que continua valendo, so seguem o bicho.
+      b.condicoesUI?.setPosition(b.sprite.x, b.sprite.y - 46);
     });
+    this.heroiCondicoesUI?.setPosition(this.heroi.x, this.heroi.y - 46);
   }
 
   private desenharIniciativa() {

@@ -104,6 +104,46 @@ caso("tem() nao acha uma condicao ausente", !tem([{ id: "molhado", turnosRestant
   caso("marca sem reacao ainda escrita devolve a lista intacta, nunca erro", igual(r.condicoesNovas, []));
 }
 
+// -------------- as seis marcas novas (revisao de 2026-09-04, 11 magias) ---
+{
+  const r = aplicarMarca("luz", [{ id: "escondido", turnosRestantes: 5 }]);
+  caso("luz tira escondido", !r.condicoesNovas.some((c) => c.id === "escondido"));
+  caso("e aplica iluminado", igual(r.condicoesNovas, [{ id: "iluminado", turnosRestantes: 20 }]));
+}
+{
+  const r = aplicarMarca("planta", []);
+  caso("planta aplica preso", igual(r.condicoesNovas, [{ id: "preso", turnosRestantes: 2 }]));
+}
+{
+  // cola e autolancada (Aderencia gruda as MAOS DO PROPRIO heroi) - nao faz
+  // sentido prender quem for acertado, entao a reacao mudou: deixa GRUDENTO
+  // (id "rapido", ver condicoes-dados.ts pro nome exibido), nunca preso.
+  const r = aplicarMarca("cola", []);
+  caso("cola aplica rapido (\"grudento\"), nao mais preso", igual(r.condicoesNovas, [{ id: "rapido", turnosRestantes: 99 }]));
+}
+{
+  const r = aplicarMarca("invisivel", []);
+  caso("invisivel (Veu de Sombra) aplica escondido", igual(r.condicoesNovas, [{ id: "escondido", turnosRestantes: 99 }]));
+}
+{
+  const r = aplicarMarca("doce", []);
+  caso("doce aplica atraido", igual(r.condicoesNovas, [{ id: "atraido", turnosRestantes: 3 }]));
+}
+{
+  const r = aplicarMarca("bolha", []);
+  caso("bolha aplica protegido", igual(r.condicoesNovas, [{ id: "protegido", turnosRestantes: 3 }]));
+}
+{
+  const r = aplicarMarca("som-alto", []);
+  caso("som-alto aplica assustado", igual(r.condicoesNovas, [{ id: "assustado", turnosRestantes: 2 }]));
+}
+{
+  const jaPreso = [{ id: "preso", turnosRestantes: 1 }];
+  const r = aplicarMarca("planta", jaPreso);
+  caso("planta de novo com duracao maior renova (nunca empilha, regra de condicoes.ts)",
+    igual(r.condicoesNovas, [{ id: "preso", turnosRestantes: 2 }]));
+}
+
 if (falhas > 0) {
   console.error(`\n${falhas} caso(s) falharam.`);
   process.exit(1);

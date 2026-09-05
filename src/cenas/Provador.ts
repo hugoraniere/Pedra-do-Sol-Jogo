@@ -119,7 +119,7 @@ export class Provador extends Phaser.Scene {
    *  coracoes dele, que ja sao tratados do mesmo jeito. */
   private condicoesHeroi: Condicao[] = [];
   private condicoesHeroiUI!: Phaser.GameObjects.Container;
-  private atributos: Record<Atributo, number> = { forca: 0, esperteza: 0, coracao: 0 };
+  private atributos: Record<Atributo, number> = { forca: 0, destreza: 0, agilidade: 0, inteligencia: 0, vitalidade: 0 };
   private topoDaBarra = 0;
   private alcancadas = new Map<string, { tx: number; ty: number; custo: number; de?: string }>();
   private largura = 0;
@@ -206,8 +206,8 @@ export class Provador extends Phaser.Scene {
     // Os atributos saem da mesa: raca da +1, classe da +1. O elfo mago fica com
     // ESPERTEZA 2 e FORCA 0, e isso aparece na hora de rolar: ele e otimo de
     // magia e ruim de porrada, sem ninguem ter escrito essa regra em lugar nenhum.
-    this.atributos = { forca: 0, esperteza: 0, coracao: 0 };
-    this.atributos[acharRaca(ficha.raca).bonus] += 1;
+    this.atributos = { forca: 0, destreza: 0, agilidade: 0, inteligencia: 0, vitalidade: 0 };
+    acharRaca(ficha.raca).bonus.forEach((atributo) => { this.atributos[atributo] += 1; });
     this.atributos[acharClasse(ficha.classe).bonus] += 1;
 
     criarAnimacoes(this, [
@@ -464,7 +464,7 @@ export class Provador extends Phaser.Scene {
     // re-rolada dezenas de vezes: a ordem muda sozinha na frente do jogador.
     this.fase = "vezDaCriatura";
     this.ordem.comecar([
-      { id: "heroi", iniciativa: this.d6() + this.atributos.esperteza, movimentoMax: MOVIMENTO.heroi },
+      { id: "heroi", iniciativa: this.d6() + this.atributos.agilidade, movimentoMax: MOVIMENTO.heroi },
       ...lutadores.map((g) => ({ id: g.id, iniciativa: this.d6(), movimentoMax: MOVIMENTO.goblin })),
     ]);
     // O heroi anda solto fora de combate, entao quando a luta comeca ele quase

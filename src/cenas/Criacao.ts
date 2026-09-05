@@ -679,7 +679,7 @@ export class Criacao extends Phaser.Scene {
       })),
       atual,
       [
-        `${raca.nome} · +1 ${ATRIBUTOS[raca.bonus].nome} · ${raca.coracoes} coracoes`,
+        `${raca.nome} · +1 ${ATRIBUTOS[raca.bonus[0]].nome} e +1 ${ATRIBUTOS[raca.bonus[1]].nome} · ${raca.coracoes} coracoes`,
         `${raca.dom}: ${raca.domTexto}`,
       ],
       (k) => {
@@ -754,10 +754,10 @@ export class Criacao extends Phaser.Scene {
     const corpo = this.corpo("Escolha seu ponto forte");
     const linhas = this.linhasDaFicha(
       [
-        `${raca.curto} deu +1 ${ATRIBUTOS[raca.bonus].nome}, ${classe.curto} deu +1 ${
-          ATRIBUTOS[classe.bonus].nome
-        }.`,
-        "O terceiro ponto e seu.",
+        `${raca.curto} deu +1 ${ATRIBUTOS[raca.bonus[0]].nome} e +1 ${ATRIBUTOS[raca.bonus[1]].nome}, ${
+          classe.curto
+        } deu +1 ${ATRIBUTOS[classe.bonus].nome}.`,
+        "O ultimo ponto e seu.",
       ],
       corpo.largura
     );

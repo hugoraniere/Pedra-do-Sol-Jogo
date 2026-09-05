@@ -213,16 +213,17 @@ export function projetil(
   x1: number, y1: number,
   x2: number, y2: number,
   cor: number,
+  raio = 2,
   ms = 220,
   onChegar?: () => void
 ) {
-  const bola = cena.add.circle(x1, y1, 2, cor).setDepth(9999);
+  const bola = cena.add.circle(x1, y1, raio, cor).setDepth(9999);
   const rastro: Phaser.GameObjects.Arc[] = [];
   const evento = cena.time.addEvent({
     delay: 30,
     loop: true,
     callback: () => {
-      const p = cena.add.circle(bola.x, bola.y, 1.3, cor, 0.35).setDepth(9998);
+      const p = cena.add.circle(bola.x, bola.y, raio * 0.65, cor, 0.35).setDepth(9998);
       rastro.push(p);
       cena.tweens.add({ targets: p, alpha: 0, duration: 180, onComplete: () => p.destroy() });
     },
@@ -232,6 +233,51 @@ export function projetil(
     onComplete: () => {
       evento.remove();
       bola.destroy();
+      onChegar?.();
+    },
+  });
+}
+
+/** Como `projetil()`, mas com PONTA: uma flecha tem que apontar pra onde vai,
+ *  uma bolinha de fogo nao. `largura`/`comprimento` sozinhos ja diferenciam
+ *  flecha (fina e comprida) de pedra de funda (curta e grossa) sem precisar
+ *  de sprite novo - so um triangulo desenhado em Graphics, girado no angulo
+ *  do trajeto. Reto, nunca em arco: o mesmo "linear" de qualquer projetil
+ *  deste jogo. */
+export function projetilOrientado(
+  cena: Phaser.Scene,
+  x1: number, y1: number,
+  x2: number, y2: number,
+  cor: number,
+  largura = 3,
+  comprimento = 7,
+  ms = 180,
+  onChegar?: () => void
+) {
+  const angulo = Phaser.Math.Angle.Between(x1, y1, x2, y2);
+  const desenho = cena.add.graphics();
+  desenho.fillStyle(cor, 1);
+  desenho.fillTriangle(
+    comprimento / 2, 0,
+    -comprimento / 2, -largura / 2,
+    -comprimento / 2, largura / 2
+  );
+  const corpo = cena.add.container(x1, y1, [desenho]).setRotation(angulo).setDepth(9999);
+  const rastro: Phaser.GameObjects.Arc[] = [];
+  const evento = cena.time.addEvent({
+    delay: 30,
+    loop: true,
+    callback: () => {
+      const p = cena.add.circle(corpo.x, corpo.y, Math.max(1, largura * 0.35), cor, 0.35).setDepth(9998);
+      rastro.push(p);
+      cena.tweens.add({ targets: p, alpha: 0, duration: 180, onComplete: () => p.destroy() });
+    },
+  });
+  cena.tweens.add({
+    targets: corpo, x: x2, y: y2, duration: ms, ease: "Linear",
+    onComplete: () => {
+      evento.remove();
+      corpo.destroy();
       onChegar?.();
     },
   });
