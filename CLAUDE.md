@@ -105,6 +105,22 @@ sem julgamento, quanto dinheiro e quais itens sumiram, e devolve o controle na
 hora, com o heroi ja no Hospital. Sem musica de fracasso, sem "voce perdeu",
 sem tela de game over - so o resumo do prejuizo e um botao pra seguir.
 
+### Divergencia deliberada: fome e sono voltaram a mesa
+
+`docs/plano-de-itens-e-equipamento.md` (secao 3) tinha excluido fome e sede de
+proposito: "nenhum esta na mesa, e todos pesam contra Legibilidade/Densidade".
+Decisao de 2026-09-05: essa exclusao foi revertida. O motivo e a propria
+virada de tom deste jogo pra "RPG de sobrevivencia... no tom seco de jogos
+como Project Zomboid" (ver "O que estamos fazendo") - decidida DEPOIS daquela
+exclusao, entao a exclusao ficou desatualizada, nao errada na epoca. Fome e
+sono agora acumulam com o relogio de jogo fora de combate e dialogo
+(`sistemas/moodles.ts`), mostram so palavra (nunca numero cru) na aba EU da
+Ficha, e custam -1 em todos os atributos de combate quando criticos - os dois
+nunca empilham, mesma filosofia de `sistemas/condicoes.ts`. Comida (Pao da
+Padeira) e sono (dormir na cama) resetam cada um pro zero. Frio/molhado
+ficaram de fora desta rodada de proposito - seriam feature nova (checagem de
+proximidade a fonte de luz que nao existe hoje), nao reuso.
+
 ### As regras propriamente ditas
 
 - **Atributos, revisao de 2026-09-04:** os tres da mesa (FORCA, ESPERTEZA, CORACAO)
@@ -169,6 +185,8 @@ Ja funciona:
 - roupa e arma penduradas por ponto de encaixe, nao desenhadas dentro do corpo
 - tres niveis de visao (perto, normal, longe), que trocam a resolucao logica
 - estado salvo em localStorage
+- fome e sono (moodles), fora de combate: acumulam com o relogio de jogo,
+  penalizam combate quando criticos, ver `docs/plano-de-moodles.md`
 
 **Nada do sistema da secao anterior existe em codigo ainda.** Nao ha dado, atributo,
 coracao, combate, derrota, fogueira nem selo. Esse e o maior buraco do projeto, e a
