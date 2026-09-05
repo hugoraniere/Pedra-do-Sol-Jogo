@@ -19,7 +19,7 @@
  * colunas dividem. Ver docs/07-design-system.md.
  */
 import Phaser from "phaser";
-import { ALTURA_PERSONAGEM, COR, SPRITE_DA_ARMA } from "../dados/config";
+import { ALTURA_PERSONAGEM, COR, LARGURA, SPRITE_DA_ARMA } from "../dados/config";
 import {
   ATRIBUTOS,
   ORDEM_PODERES,
@@ -29,12 +29,21 @@ import {
   acharRaca,
   acharQualquerItem,
 } from "../dados/conteudo";
-import { estado, equipar, venderMaterial } from "../sistemas/estado";
+import {
+  estado,
+  equipar,
+  venderMaterial,
+  jogarFora,
+  moverItem,
+  capacidadeDaMochila,
+  type SlotDaMochila,
+} from "../sistemas/estado";
 import { temEfeitoForaDeCombate, usarConsumivel } from "../sistemas/consumiveis";
 import { MISSOES } from "../dados/missoes";
 import { missaoAceita, etapaAtual } from "../sistemas/missoes";
 import { Heroi, camadasDoHeroi, criarAnimacoes } from "../sistemas/heroi";
 import { ICONE, LADO_ICONE } from "../sistemas/icones";
+import { ICONE_ITEM } from "../sistemas/icones-itens";
 import { poderesDoHeroi } from "../sistemas/poderes";
 import { Aba, alturaUtilDaJanela, janela, larguraUtilDaJanela } from "../sistemas/janela";
 import { botao } from "../sistemas/botao";
@@ -52,11 +61,20 @@ import {
   meio,
   pilha,
   quebrar,
+  textoNaArea,
   Retangulo,
 } from "../sistemas/design";
 import { medirTexto, texto } from "../sistemas/texto";
 import { refazerAoRedimensionar } from "../sistemas/visao";
 import { tocar } from "../sistemas/som";
+
+/** Indice de MOCHILA em ABAS — a unica pagina que nao usa o sistema de
+ *  Bloco/pilha generico: e uma grade de slot com icone, nao uma lista de
+ *  texto. Ver `desenharMochila()`. */
+const INDICE_MOCHILA = 3;
+
+const SLOT = 26;
+const GAP_SLOT = 4;
 
 /** Um pedaco de pagina. Cada um sabe de quanta altura precisa antes de existir,
  *  que e o que deixa a pagina se cortar sozinha quando a tela e baixa. */
@@ -89,12 +107,29 @@ export class Ficha extends Phaser.Scene {
   private pagina = 0;
   private boneco?: Heroi;
 
+  // ------------------------------------------------------- grade da mochila
+  // So esta pagina foge do sistema de Bloco/pilha: e uma grade de slot com
+  // icone (ver docs/plano-de-itens-e-equipamento.md, "focar em icones, hover,
+  // arrastar pra reorganizar, botao direito pra usar"), nao uma lista de
+  // texto. Estado de arrastar/pressionar precisa sobreviver ENTRE chamadas de
+  // desenhar() (que destroi e reconstroi todo o resto), entao mora aqui.
+  private slotsMochila: { indice: number; area: Retangulo }[] = [];
+  private zonaJogarFora?: Retangulo;
+  private dicaCaixaMochila?: Phaser.GameObjects.Container;
+  private dicaTextoMochila?: Phaser.GameObjects.BitmapText;
+  private dicaChapaMochila?: Phaser.GameObjects.NineSlice;
+  private indiceComDica?: number;
+  private pressionando?: { indice: number; x: number; y: number; temporizador: Phaser.Time.TimerEvent };
+  private arrastando?: { deIndice: number; icone: Phaser.GameObjects.Image };
+
   constructor() {
     super("Ficha");
   }
 
   create() {
     this.pagina = 0;
+    this.pressionando = undefined;
+    this.arrastando = undefined;
     this.desenhar();
     // Esc fecha tambem, para quem esta no teclado. O botao continua sendo o
     // caminho de verdade: no iPad nao existe Esc.
@@ -105,6 +140,14 @@ export class Ficha extends Phaser.Scene {
       if (e.key === "ArrowRight") this.irPara(this.pagina + 1);
     });
     refazerAoRedimensionar(this, () => this.desenhar());
+
+    // botao direito usa o item (a mesma acao do toque longo, ver
+    // aoPressionarSlot) — sem isto o menu do navegador cobriria o jogo.
+    this.input.mouse?.disableContextMenu();
+    // arrastar e soltar sao globais da CENA, nao do slot: o dedo/ponteiro sai
+    // da area do slot de origem assim que comeca a arrastar.
+    this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => this.aoMoverPonteiro(pointer));
+    this.input.on("pointerup", (pointer: Phaser.Input.Pointer) => this.aoSoltarPonteiro(pointer));
   }
 
   private irPara(indice: number) {
@@ -138,92 +181,6 @@ export class Ficha extends Phaser.Scene {
     const emConstrucao = (recado: string): Pagina => ({
       grupos: [[paragrafo(recado)]],
     });
-
-    // cada item possuido vira um grupo: titulo (com a contagem, quando da
-    // pra empilhar), descricao, e a acao que faz sentido pra categoria dele.
-    // Reusa os mesmos tres tipos de Bloco que EU/PODERES/MENU ja usam — a
-    // mochila nao precisa de grade nem de hover: a descricao ja fica sempre
-    // visivel, o que serve melhor um jogo de toque do que passar o mouse
-    // por cima teria servido.
-    const grupoDoItem = (id: string, quantidade: number): Grupo => {
-      const info = acharQualquerItem(id);
-      const valor = quantidade > 1 ? `x${quantidade}` : undefined;
-      const titulo: Bloco = { tipo: "titulo", conteudo: info.nome.toUpperCase(), valor };
-
-      if (info.categoria === "consumivel") {
-        const podeUsar = temEfeitoForaDeCombate(id) && st.coracoes < st.coracoesMax;
-        const semEfeitoAinda = !temEfeitoForaDeCombate(id);
-        const texto = semEfeitoAinda
-          ? `${info.texto} (sem efeito fora de combate ainda)`
-          : podeUsar
-            ? info.texto
-            : `${info.texto} (coracoes ja estao cheios)`;
-        const grupo: Grupo = [titulo, paragrafo(texto)];
-        if (podeUsar) {
-          grupo.push({
-            tipo: "acao", rotulo: "USAR",
-            aoTocar: () => { usarConsumivel(id); this.desenhar(); },
-          });
-        }
-        return grupo;
-      }
-
-      if (info.categoria === "material") {
-        return [
-          titulo,
-          paragrafo(info.texto),
-          {
-            tipo: "acao", rotulo: `VENDER 1 (+${info.preco} moedas)`,
-            aoTocar: () => { venderMaterial(id, 1); this.desenhar(); },
-          },
-        ];
-      }
-
-      if (info.categoria === "armadura" || info.categoria === "acessorio") {
-        const equipado = st.heroi.equipamento[info.categoria] === id;
-        const texto = info.origem ? `${info.bonus} (${info.origem})` : info.bonus;
-        return [
-          titulo,
-          paragrafo(texto),
-          {
-            tipo: "acao", rotulo: equipado ? "DESEQUIPAR" : "EQUIPAR",
-            aoTocar: () => { equipar(info.categoria, equipado ? null : id); this.desenhar(); },
-          },
-        ];
-      }
-
-      if (info.categoria === "arma") {
-        const base = info.origem ? `${info.bonus} (${info.origem})` : info.bonus;
-        const spriteDaArma = SPRITE_DA_ARMA[id];
-        if (spriteDaArma) {
-          const equipada = st.heroi.armaSprite === spriteDaArma;
-          return [
-            titulo, paragrafo(base),
-            {
-              tipo: "acao", rotulo: equipada ? "DESEMPUNHAR" : "EMPUNHAR",
-              aoTocar: () => { equipar("arma", equipada ? null : spriteDaArma); this.desenhar(); },
-            },
-          ];
-        }
-        // as 6 armas "encontradas" e escudo/machado/adaga/lendarias ainda
-        // nao tem sprite proprio (SPRITE_DA_ARMA, config.ts) — equipar
-        // quebraria a camada visual do heroi. Ver docs/plano-de-itens-e-
-        // equipamento.md, Fase C.
-        return [titulo, paragrafo(`${base}. Ainda nao da pra equipar (sem desenho proprio ainda).`)];
-      }
-
-      return [titulo, paragrafo("Item de historia. Guarde para quando fizer sentido usar.")];
-    };
-
-    const paginaMochila = (): Pagina => {
-      const posses = Object.entries(st.mochila).filter(([, quantidade]) => quantidade > 0);
-      if (posses.length === 0) {
-        return emConstrucao(
-          "A mochila ainda esta vazia. Ache, ganhe ou compre alguma coisa pra ver aqui."
-        );
-      }
-      return { grupos: posses.map(([id, quantidade]) => grupoDoItem(id, quantidade)) };
-    };
 
     // uma missao so aparece aqui depois de aceita (etapas[0] concluida) —
     // o diario e o registro do que o jogador ja sabe, nunca um spoiler do
@@ -274,7 +231,7 @@ export class Ficha extends Phaser.Scene {
           ],
         ],
       },
-      paginaMochila(),
+      { grupos: [] }, // MOCHILA: desenharMochila() cuida sozinha, ver desenhar()
       paginaDiario(),
       {
         // MENU: ponte para a Pausa, ate ela virar conteudo desta mesma janela
@@ -334,6 +291,15 @@ export class Ficha extends Phaser.Scene {
   private desenhar() {
     this.children.removeAll(true);
     this.boneco = undefined;
+    // o que estava sendo arrastado nao sobrevive a um redesenho (o icone
+    // flutuante acabou de ser destruido por removeAll) — sem isto o proximo
+    // pointermove tentaria mexer num GameObject morto.
+    this.arrastando = undefined;
+
+    if (this.pagina === INDICE_MOCHILA) {
+      this.desenharMochila();
+      return;
+    }
 
     const pagina = this.paginas()[this.pagina];
 
@@ -468,5 +434,253 @@ export class Ficha extends Phaser.Scene {
         String(valor)
       );
     });
+  }
+
+  // --------------------------------------------------------- grade da mochila
+  /** A grade inteira: slot por slot, mais a zona de jogar fora e a dica. Foge
+   *  do sistema Bloco/pilha de proposito — grade de icone e outra forma de
+   *  conteudo, nao uma lista de texto. */
+  private desenharMochila() {
+    const st = estado();
+    const capacidade = capacidadeDaMochila();
+    const largura = larguraUtilDaJanela();
+    const colunasGrade = Math.max(1, Math.floor((largura + GAP_SLOT) / (SLOT + GAP_SLOT)));
+    const linhasGrade = Math.ceil(capacidade / colunasGrade);
+    const alturaGrade = linhasGrade * (SLOT + GAP_SLOT) - GAP_SLOT;
+    const alturaZona = TAMANHO.linhaTexto + ESPACO.sm;
+    const alturaConteudo = alturaGrade + ESPACO.md + alturaZona;
+
+    const area = janela(this, {
+      alturaConteudo,
+      aoFechar: () => this.fechar(),
+      abas: { itens: ABAS, ativa: this.pagina, aoEscolher: (i) => this.irPara(i) },
+    });
+
+    this.slotsMochila = [];
+    const p = pilha(area, ESPACO.md);
+    const rGrade = p.reservar(alturaGrade, 0);
+    for (let i = 0; i < capacidade; i++) {
+      const col = i % colunasGrade;
+      const lin = Math.floor(i / colunasGrade);
+      const slotArea: Retangulo = {
+        x: rGrade.x + col * (SLOT + GAP_SLOT),
+        y: rGrade.y + lin * (SLOT + GAP_SLOT),
+        largura: SLOT,
+        altura: SLOT,
+      };
+      this.slotsMochila.push({ indice: i, area: slotArea });
+      this.desenharSlot(i, slotArea, st.mochila[i]);
+    }
+
+    const rJogar = p.reservar(alturaZona, ESPACO.sm);
+    this.zonaJogarFora = rJogar;
+    marcar(
+      this.add
+        .nineslice(rJogar.x, rJogar.y, "painel-creme", undefined, rJogar.largura, rJogar.altura, 6, 6, 6, 6)
+        .setOrigin(0),
+      "fundo"
+    );
+    textoNaArea(this, rJogar, "ARRASTE ATE AQUI PRA JOGAR FORA", { tamanho: 8, cor: COR.tintaSuave });
+
+    this.criarDicaMochila();
+  }
+
+  /** Um slot: fundo encaixado, icone (se tiver item), numero (se empilhado),
+   *  e a zona de toque que liga hover/toque/arraste/botao direito. */
+  private desenharSlot(indice: number, area: Retangulo, slot: SlotDaMochila) {
+    marcar(
+      this.add
+        .nineslice(area.x, area.y, "painel-escuro", undefined, area.largura, area.altura, 6, 6, 6, 6)
+        .setOrigin(0),
+      "fundo"
+    );
+
+    if (slot) {
+      const temIconeProprio = ICONE_ITEM[slot.item] !== undefined;
+      const folha = temIconeProprio ? "itens" : "ui";
+      const quadro = temIconeProprio ? ICONE_ITEM[slot.item] : ICONE.mochila;
+      marcar(this.add.image(area.x + area.largura / 2, area.y + area.altura / 2, folha, quadro), "icone");
+      if (slot.quantidade > 1) {
+        marcar(
+          texto(this, area.x + area.largura - 2, area.y + area.altura - 2, String(slot.quantidade), {
+            tamanho: 8,
+            cor: COR.papel,
+            ancora: 1,
+            ancoraY: 1,
+          }),
+          "texto",
+          String(slot.quantidade)
+        );
+      }
+    }
+
+    const zona = this.add
+      .rectangle(area.x + area.largura / 2, area.y + area.altura / 2, area.largura, area.altura, 0, 0)
+      .setInteractive();
+    marcar(zona, "botao");
+    zona.on("pointerdown", (pointer: Phaser.Input.Pointer) => this.aoPressionarSlot(indice, pointer));
+    zona.on("pointerover", () => this.mostrarDicaMochila(indice, area));
+    zona.on("pointerout", () => this.esconderDicaMochila());
+  }
+
+  /** Botao direito usa na hora (o mouse ja sabe distinguir os dois botoes).
+   *  Botao esquerdo/toque comeca a contagem pro toque longo (a mesma acao),
+   *  que `aoMoverPonteiro` cancela se o gesto virar arrasto antes de completar. */
+  private aoPressionarSlot(indice: number, pointer: Phaser.Input.Pointer) {
+    if (!estado().mochila[indice]) return;
+    if (pointer.rightButtonDown()) {
+      this.acaoRapida(indice);
+      return;
+    }
+    this.pressionando = {
+      indice,
+      x: pointer.x,
+      y: pointer.y,
+      temporizador: this.time.delayedCall(450, () => {
+        if (this.pressionando?.indice === indice) {
+          this.acaoRapida(indice);
+          this.pressionando = undefined;
+        }
+      }),
+    };
+  }
+
+  private aoMoverPonteiro(pointer: Phaser.Input.Pointer) {
+    if (this.pagina !== INDICE_MOCHILA) return;
+    if (this.arrastando) {
+      this.arrastando.icone.setPosition(pointer.x, pointer.y);
+      return;
+    }
+    if (!this.pressionando) return;
+    const dx = pointer.x - this.pressionando.x;
+    const dy = pointer.y - this.pressionando.y;
+    if (Math.hypot(dx, dy) > 6) this.iniciarArraste(this.pressionando.indice, pointer.x, pointer.y);
+  }
+
+  private aoSoltarPonteiro(pointer: Phaser.Input.Pointer) {
+    if (this.pagina !== INDICE_MOCHILA) return;
+    if (this.arrastando) {
+      this.finalizarArraste(pointer.x, pointer.y);
+      return;
+    }
+    if (this.pressionando) {
+      this.pressionando.temporizador.remove();
+      const indice = this.pressionando.indice;
+      this.pressionando = undefined;
+      // toque simples (sem arrastar, sem completar o toque longo): mostra a
+      // dica, igual o hover do mouse ja mostra — e o unico jeito de quem esta
+      // no toque ver a descricao sem arriscar usar o item sem querer.
+      if (this.indiceComDica === indice) this.esconderDicaMochila();
+      else {
+        const s = this.slotsMochila.find((s) => s.indice === indice);
+        if (s) this.mostrarDicaMochila(indice, s.area);
+      }
+    }
+  }
+
+  private iniciarArraste(indice: number, x: number, y: number) {
+    this.pressionando?.temporizador.remove();
+    this.pressionando = undefined;
+    this.esconderDicaMochila();
+    const slot = estado().mochila[indice];
+    if (!slot) return;
+    const temIconeProprio = ICONE_ITEM[slot.item] !== undefined;
+    const icone = this.add
+      .image(x, y, temIconeProprio ? "itens" : "ui", temIconeProprio ? ICONE_ITEM[slot.item] : ICONE.mochila)
+      .setScale(1.3)
+      .setDepth(2000);
+    marcar(icone, "icone");
+    this.arrastando = { deIndice: indice, icone };
+  }
+
+  private finalizarArraste(x: number, y: number) {
+    const arrasto = this.arrastando;
+    if (!arrasto) return;
+    this.arrastando = undefined;
+    arrasto.icone.destroy();
+
+    if (this.zonaJogarFora && this.dentroDaArea(this.zonaJogarFora, x, y)) {
+      const slot = estado().mochila[arrasto.deIndice];
+      if (slot) jogarFora(arrasto.deIndice, slot.quantidade);
+      this.desenhar();
+      return;
+    }
+    const destino = this.slotsMochila.find((s) => this.dentroDaArea(s.area, x, y));
+    if (destino && destino.indice !== arrasto.deIndice) moverItem(arrasto.deIndice, destino.indice);
+    this.desenhar();
+  }
+
+  private dentroDaArea(r: Retangulo, x: number, y: number): boolean {
+    return x >= r.x && x <= r.x + r.largura && y >= r.y && y <= r.y + r.altura;
+  }
+
+  /** A acao "de um toque so": botao direito no mouse, toque longo no dedo.
+   *  Uma por categoria, a mesma que os botoes EQUIPAR/USAR/VENDER faziam na
+   *  primeira versao desta pagina (lista de texto) — so muda o gesto. */
+  private acaoRapida(indice: number) {
+    const st = estado();
+    const slot = st.mochila[indice];
+    if (!slot) return;
+    const info = acharQualquerItem(slot.item);
+    if (info.categoria === "consumivel") {
+      if (temEfeitoForaDeCombate(slot.item) && st.coracoes < st.coracoesMax) usarConsumivel(slot.item);
+    } else if (info.categoria === "material") {
+      venderMaterial(slot.item, 1);
+    } else if (info.categoria === "armadura" || info.categoria === "acessorio") {
+      const equipado = st.heroi.equipamento[info.categoria] === slot.item;
+      equipar(info.categoria, equipado ? null : slot.item);
+    } else if (info.categoria === "arma") {
+      const spriteDaArma = SPRITE_DA_ARMA[slot.item];
+      if (spriteDaArma) {
+        const equipada = st.heroi.armaSprite === spriteDaArma;
+        equipar("arma", equipada ? null : spriteDaArma);
+      }
+    }
+    this.desenhar();
+  }
+
+  private criarDicaMochila() {
+    // ancora em CIMA (0.5, 0): a caixa cresce pra baixo, a partir do slot. A
+    // grade fica logo abaixo das abas, entao "cresce pra cima" (como o
+    // combate faz, onde a barra de acao mora no rodape) vazaria por cima da
+    // propria janela — a mochila tem mais folga embaixo (zona de jogar fora,
+    // FECHAR) do que em cima.
+    this.dicaChapaMochila = this.add.nineslice(0, 0, "painel-creme", undefined, 8, 24, 8, 8, 8, 8).setOrigin(0.5, 0);
+    this.dicaTextoMochila = texto(this, 0, 5, "", { cor: 0x2c2440, ancora: 0.5 });
+    this.dicaCaixaMochila = this.add.container(0, 0, [this.dicaChapaMochila, this.dicaTextoMochila]);
+    this.dicaCaixaMochila.setVisible(false).setDepth(1500);
+  }
+
+  /** Hover (mouse) e toque simples (dedo) mostram a mesma dica: nome,
+   *  descricao/bonus, e de onde ela vem quando tiver. */
+  private mostrarDicaMochila(indice: number, area: Retangulo) {
+    const slot = estado().mochila[indice];
+    if (!slot || !this.dicaCaixaMochila || !this.dicaTextoMochila || !this.dicaChapaMochila) return;
+    this.indiceComDica = indice;
+    const info = acharQualquerItem(slot.item);
+    const descricao =
+      info.categoria === "consumivel" || info.categoria === "material"
+        ? info.texto
+        : info.categoria === "historia"
+          ? "Item de historia. Guarde para quando fizer sentido usar."
+          : info.origem
+            ? `${info.bonus} (${info.origem})`
+            : info.bonus;
+    const linhas = [info.nome.toUpperCase(), ...quebrar(descricao, 140)];
+    const ENTRE = 2;
+    const alturaTexto = linhas.length * (10 + ENTRE) - ENTRE;
+    const altura = alturaTexto + 10;
+    const largura = Math.min(160, Math.max(...linhas.map((l) => medirTexto(this, l))) + 12);
+    this.dicaTextoMochila.setText(linhas.join("\n"));
+    this.dicaTextoMochila.setLineSpacing(ENTRE);
+    this.dicaChapaMochila.setSize(largura, altura);
+    const x = Phaser.Math.Clamp(area.x + area.largura / 2, largura / 2 + 2, LARGURA - largura / 2 - 2);
+    const y = area.y + area.altura + 4;
+    this.dicaCaixaMochila.setPosition(x, y).setVisible(true);
+  }
+
+  private esconderDicaMochila() {
+    this.dicaCaixaMochila?.setVisible(false);
+    this.indiceComDica = undefined;
   }
 }

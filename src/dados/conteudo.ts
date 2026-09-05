@@ -360,6 +360,23 @@ export const ARMAS: Arma[] = [
   },
 ];
 
+// ------------------------------------------------------------- mochilas
+// Tamanho de mochila, igual Stardew Valley (Saco -> Bolsa -> Mochila) e
+// Project Zomboid (mochila pequena vira grande com o jogo). O heroi comeca
+// com a pequena; as outras sao encontradas ou compradas depois — mesma
+// dependencia de loja que o resto do plano (ver secao 7 do documento):
+// `comprarMochila()` em estado.ts ja funciona, so nao ha cena de loja pra
+// chamar ainda.
+export type Mochila = { id: string; nome: string; preco: number; slots: number; texto: string };
+
+export const MOCHILAS: Mochila[] = [
+  { id: "mochila-pequena", nome: "Mochila Pequena", preco: 0, slots: 8, texto: "A que sai da Vila Semente com voce." },
+  { id: "mochila-media", nome: "Mochila de Couro", preco: 15, slots: 16, texto: "Encomendada com Seu Cominho. Cabe o dobro." },
+  { id: "mochila-grande", nome: "Mochila de Viagem", preco: 30, slots: 24, texto: "Pra quem ja nao volta pra casa todo dia." },
+];
+
+export const acharMochila = (id: string): Mochila => MOCHILAS.find((m) => m.id === id) ?? MOCHILAS[0];
+
 // ------------------------------------------------------------------ loja
 export type Item = { id: string; nome: string; preco: number; texto: string };
 

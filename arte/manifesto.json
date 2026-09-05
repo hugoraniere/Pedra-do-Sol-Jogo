@@ -1,6 +1,6 @@
 {
   "gerado_por": "npm run arte",
-  "total": 139,
+  "total": 152,
   "arquivos": {
     "aranha-filhote.png": {
       "hash": "ececeb0a0cfcd628",
@@ -392,6 +392,12 @@
       "largura": 464,
       "altura": 16
     },
+    "itens.png": {
+      "hash": "fd8962d10ba2e2b3",
+      "bytes": 2461,
+      "largura": 688,
+      "altura": 16
+    },
     "lobo-nevoa.png": {
       "hash": "6a6ed5c0dbba02bb",
       "bytes": 6157,
@@ -470,6 +476,12 @@
       "largura": 20,
       "altura": 18
     },
+    "objetos/armario.png": {
+      "hash": "6c1995adb4c90e5b",
+      "bytes": 207,
+      "largura": 22,
+      "altura": 34
+    },
     "objetos/arvore-2.png": {
       "hash": "cdca2a59a42e8e05",
       "bytes": 1061,
@@ -506,6 +518,12 @@
       "largura": 56,
       "altura": 72
     },
+    "objetos/banco.png": {
+      "hash": "2f469c02453cbb8d",
+      "bytes": 183,
+      "largura": 20,
+      "altura": 14
+    },
     "objetos/barraca.png": {
       "hash": "f4263b8039985e30",
       "bytes": 420,
@@ -517,6 +535,24 @@
       "bytes": 223,
       "largura": 20,
       "altura": 18
+    },
+    "objetos/bigorna.png": {
+      "hash": "368cb36c82b252a7",
+      "bytes": 227,
+      "largura": 22,
+      "altura": 18
+    },
+    "objetos/caldeirao.png": {
+      "hash": "9b4b9456eacf56e5",
+      "bytes": 240,
+      "largura": 20,
+      "altura": 20
+    },
+    "objetos/cama.png": {
+      "hash": "4a2d5c72c82422a7",
+      "bytes": 233,
+      "largura": 28,
+      "altura": 20
     },
     "objetos/casa-grande.png": {
       "hash": "fd459e92ba9ef758",
@@ -554,6 +590,12 @@
       "largura": 18,
       "altura": 14
     },
+    "objetos/estante-livros.png": {
+      "hash": "ee8d5c0ef3b7f0d5",
+      "bytes": 215,
+      "largura": 26,
+      "altura": 18
+    },
     "objetos/ferraria.png": {
       "hash": "2376c6f5820f9c3e",
       "bytes": 815,
@@ -566,17 +608,29 @@
       "largura": 20,
       "altura": 18
     },
+    "objetos/forja.png": {
+      "hash": "cd2bf37c01af066d",
+      "bytes": 255,
+      "largura": 28,
+      "altura": 30
+    },
+    "objetos/forno-padaria.png": {
+      "hash": "cb3d773f2b490dc4",
+      "bytes": 235,
+      "largura": 26,
+      "altura": 26
+    },
     "objetos/grande-ouvinte.png": {
       "hash": "ee0738706dcb115b",
       "bytes": 1272,
       "largura": 84,
       "altura": 112
     },
-    "objetos/hospital.png": {
-      "hash": "85b1585beaab50b3",
-      "bytes": 771,
-      "largura": 64,
-      "altura": 68
+    "objetos/mesa.png": {
+      "hash": "c899ab1c755a6057",
+      "bytes": 234,
+      "largura": 30,
+      "altura": 20
     },
     "objetos/pedra-musgo.png": {
       "hash": "a47425bf17053a6c",
@@ -626,6 +680,18 @@
       "largura": 20,
       "altura": 46
     },
+    "objetos/prateleira-pao.png": {
+      "hash": "9ada954f72c7d609",
+      "bytes": 171,
+      "largura": 24,
+      "altura": 16
+    },
+    "objetos/prateleira-pocoes.png": {
+      "hash": "b71a6a89d7a7a392",
+      "bytes": 210,
+      "largura": 24,
+      "altura": 16
+    },
     "objetos/raizes.png": {
       "hash": "9a3d55dd47e1d27a",
       "bytes": 413,
@@ -637,6 +703,18 @@
       "bytes": 346,
       "largura": 22,
       "altura": 18
+    },
+    "objetos/suporte-armas.png": {
+      "hash": "485db62e330b1083",
+      "bytes": 223,
+      "largura": 26,
+      "altura": 20
+    },
+    "objetos/tapete.png": {
+      "hash": "e470b3507dc0f24d",
+      "bytes": 174,
+      "largura": 32,
+      "altura": 20
     },
     "objetos/teia.png": {
       "hash": "7e34494f1469f9bd",
@@ -819,8 +897,8 @@
       "altura": 320
     },
     "tileset.png": {
-      "hash": "35a1b8d11c95782a",
-      "bytes": 2864,
+      "hash": "b62b88e6aba0ed77",
+      "bytes": 2903,
       "largura": 128,
       "altura": 96
     },
