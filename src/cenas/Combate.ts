@@ -10,7 +10,7 @@
  * (os goblins daquele encontro). Esta cena so sabe LUTAR contra quem chegou.
  */
 import Phaser from "phaser";
-import { ALTURA, LARGURA, SOLIDOS, TILE } from "../dados/config";
+import { ALTURA, LARGURA, SOLIDOS, TILE, escalaDoSprite } from "../dados/config";
 import { acharCriatura, spriteDoGoblin } from "../dados/conteudo";
 import { ICONE, MOVIMENTO } from "../dados/provador";
 import { ARMAS, CRIATURAS_SOM, DADO, DESFECHO, IMPACTOS, MAGIAS_SOM, faixaDoDado } from "../dados/sons";
@@ -221,7 +221,8 @@ export class Combate extends Phaser.Scene {
     // nasce no mundo do Mundo, nao no da Combate: sao cenas empilhadas, e cada
     // uma desenha a sua lista inteira por cima da de baixo. Se o goblin fosse
     // desta cena, ele cobriria o heroi sempre, nao importa o Y de cada um.
-    const s = this.mundo.physics.add.sprite(x, y, spriteChave, 0).setOrigin(0.5, 1);
+    const s = this.mundo.physics.add.sprite(x, y, spriteChave, 0).setOrigin(0.5, 1)
+      .setScale(escalaDoSprite(spriteChave));
     s.setDepth(y);
     s.play(`${spriteChave}-parado-baixo`, true);
     s.body.setSize(10, 6).setOffset(3, 26);
@@ -742,9 +743,15 @@ export class Combate extends Phaser.Scene {
         alpha: 0, duration: 420, ease: "Back.easeOut", onComplete: () => e.destroy(),
       });
     }
+    // o corpo desaba (pose `derrota`, desenhada em arte/goblin.py) em vez de
+    // girar 220 graus: o giro era um efeito de codigo no lugar de um quadro
+    // proprio. A direcao vem da animacao que ja estava tocando.
+    if (b.tipo === "goblin") {
+      const dir = b.sprite.anims.currentAnim?.key.split("-").pop() ?? "baixo";
+      b.sprite.play(`${b.sprite.texture.key}-derrota-${dir}`);
+    }
     this.tweens.add({
-      targets: b.sprite, alpha: 0, y: b.sprite.y - 10,
-      angle: b.tipo === "goblin" ? 220 : 0, duration: 380,
+      targets: b.sprite, alpha: 0, y: b.sprite.y - 10, duration: 380,
       onComplete: () => b.sprite.destroy(),
     });
   }

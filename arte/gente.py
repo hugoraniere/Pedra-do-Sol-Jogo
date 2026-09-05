@@ -64,7 +64,8 @@ TIPOS_CORPO = ["magro", "normal", "gordinho"]
 #: coluna da folha do corpo -> linha da folha de roupa
 LINHA_DA_ROUPA = {"parado": 0, "passo-a": 1, "passo-b": 2,
                   "respira": 0, "conjura": 0, "tonto": 0,
-                  "ataque": 0, "machucado": 0}
+                  "ataque": 0, "machucado": 0,
+                  "esquiva": 0, "fuga": 1, "derrota": 0}
 #: direcao -> coluna da folha de roupa. As diagonais caem na vista vertical
 #: porque a silhueta de uma roupa de 16 px nao muda entre a frente e os tres
 #: quartos: quem muda de verdade e o rosto, e o rosto mora no corpo
@@ -222,9 +223,17 @@ def gerar(saida, a_mao=None):
     # ------ npcs, goblins e aranhas, ja prontos, um por folha
     for nome, kw in NPCS:
         guardar(f"npc-{nome}", npc_pronto(**kw))
+    # o goblin foi para 48 x 96 (3x), so ele, por decisao do Hugo em
+    # 2026-09-05: o resto do jogo continua em 16 x 32 ate a resolucao geral
+    # decidir. `src/cenas/Boot.ts` carrega "goblin-<tipo>" nesse tamanho e
+    # `Mundo.ts`/`Combate.ts` compensam a escala na exibicao.
     for tipo in goblin_arte.TIPOS:
-        guardar(f"goblin-{tipo}", folha(goblin_arte.goblin, tipo=tipo))
-    guardar("goblin", folha(goblin_arte.goblin, tipo="magricela"))
+        guardar(f"goblin-{tipo}", folha_de(goblin_arte.goblin, goblin_arte.L, goblin_arte.A, tipo=tipo))
+    # nao existe mais um "goblin" avulso: a chave `sprite: "goblin"` do
+    # BESTIARIO (src/dados/conteudo.ts) nunca desenhou um sprite de verdade
+    # (Combate.ts ja documentava isso), e desde que goblin() so desenha em
+    # 48 x 96 nao ha como gerar uma versao 16 x 32 dela sem duplicar o
+    # desenho. `Boot.ts` pula esta chave de proposito.
     for tipo in aranha_arte.TIPOS:
         guardar(f"aranha-{tipo}", folha(aranha_arte.aranha, tipo=tipo))
 

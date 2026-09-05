@@ -9,7 +9,7 @@ from paleta import *  # noqa
 
 PW, PH = 16, 32
 COLUNAS = ["parado", "passo-a", "passo-b", "respira", "conjura", "tonto",
-           "ataque", "machucado"]
+           "ataque", "machucado", "esquiva", "fuga", "derrota"]
 
 # Oito direcoes. As quatro primeiras sao as antigas e ficaram nas mesmas linhas
 # de proposito, para nao invalidar nenhum indice que ja existia. As diagonais
