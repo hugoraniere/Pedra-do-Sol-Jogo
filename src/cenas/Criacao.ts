@@ -53,8 +53,8 @@ import { ATRIBUTOS, ORDEM_PODERES, acharMagia } from "../dados/conteudo";
 import { poderesDaOrigem, poderEscolhidoDoHeroi, poderesDoHeroi } from "../sistemas/poderes";
 import { novoJogo, VAZIO, Heroi as FichaHeroi } from "../sistemas/estado";
 import { botao, Botao } from "../sistemas/botao";
-import { texto, medirTexto, marcar } from "../sistemas/texto";
-import { ESPACO, TAMANHO, meio, pilha, colunas, quebrarMedido, Retangulo } from "../sistemas/design";
+import { texto, medirTexto } from "../sistemas/texto";
+import { ESPACO, TAMANHO, marcar, meio, pilha, colunas, quebrarMedido, Retangulo } from "../sistemas/design";
 import { criarAnimacoes, Heroi } from "../sistemas/heroi";
 
 const PASSOS = ["Raca", "Classe", "Poder", "Heroi"] as const;
@@ -642,6 +642,7 @@ export class Criacao extends Phaser.Scene {
     }
   }
 
+  // ------------------------------------------------- povo, classe, poder
   /** A vitrine e a ficha dividem o corpo: a ficha pede a altura do texto dela,
    *  a vitrine leva o resto. E o mesmo desenho nos dois primeiros passos. */
   private passoDeVitrine(

@@ -3,7 +3,8 @@
 import Phaser from "phaser";
 import { COR } from "../dados/config";
 import { texto, marcar } from "./texto";
-import { tocar, type ChaveEfeito } from "./som";
+import { type ChaveEfeito } from "./som";
+import { interativo } from "./interativo";
 
 
 export type Botao = Phaser.GameObjects.Container & { marcar(ligado: boolean): void };
@@ -33,24 +34,12 @@ export function botao(
   c.setSize(largura, altura + 3);
   c.setInteractive({ useHandCursor: true });
 
-  const apertar = (v: number) => {
-    fundo.y = v;
-    rotulo.y = v;
-  };
-  // o som sai no pointerdown, junto com o afundar: som de botao atrasado ate
-  // o dedo levantar nao parece resposta ao toque, parece coincidencia
-  c.on("pointerdown", () => {
-    apertar(2);
-    tocar(somDoToque);
-  });
-  c.on("pointerup", () => {
-    apertar(0);
-    aoTocar();
-  });
-  // no computador o mouse passa por cima antes de clicar, e o foco tem som
-  // proprio. No toque isso nunca dispara, e esta certo: dedo nao paira.
-  c.on("pointerover", () => tocar("menu-foco"));
-  c.on("pointerout", () => apertar(0));
+  // sobe, afunda, e os sons dos dois: e o sistema em interativo.ts, o mesmo
+  // que todo widget da interface usa. O som de clique sai no pointerdown,
+  // junto com o afundar: atrasado ate o dedo levantar nao parece resposta ao
+  // toque, parece coincidencia.
+  interativo(c, { pecas: [fundo, rotulo], somClique: somDoToque });
+  c.on("pointerup", () => aoTocar());
 
   c.marcar = (ligado: boolean) => {
     fundo.setTexture(ligado ? "painel-ouro" : painel);

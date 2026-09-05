@@ -1,7 +1,7 @@
 /** O mundo jogavel. Monta o chao, os objetos, as pessoas e o heroi,
  *  e cuida de andar, esbarrar e conversar. */
 import Phaser from "phaser";
-import { TILE, SOLIDOS, COR } from "../dados/config";
+import { TILE, SOLIDOS, COR, ALTURA_PERSONAGEM } from "../dados/config";
 import { MAPAS, VILA, montarChao, bordasDeGrama, plantarMata, Mapa, Saida } from "../dados/mapas";
 import { acharCriatura, spriteDoGoblin } from "../dados/conteudo";
 import { DIALOGOS } from "../dados/dialogos";
@@ -14,9 +14,30 @@ import {
   calarAmbiente, montarAmbiente, musica, ouvirDe, passo, soltarPassaros, tocar,
   type FonteDeSom,
 } from "../sistemas/som";
+import {
+  alisarCaminho, encontrarCaminho, estaBloqueado, marcarBloqueado, novaMalha,
+  type Celula, type Malha,
+} from "../sistemas/caminho";
+import { definirEstado } from "../sistemas/cursor";
 
 type FichaObjeto = { w: number; h: number; cw: number; ch: number };
-type Interagivel = { x: number; y: number; chave: string };
+/** x,y e o CENTRO da caixa de verdade do alvo (nao um ponto arbitrario perto
+ *  dele), largura/altura vem da ficha de verdade do objeto ou do tamanho do
+ *  personagem. A mesma caixa serve para o acerto do clique, para o cursor
+ *  de hover e para o destaque laranja: os tres sempre concordam sobre o
+ *  que e "isto aqui". Antes disso, um objeto largo como o varal (48 px) so
+ *  acertava clicando bem no meio de um circulo de 12 px de raio — quase
+ *  toda a area visivel dele errava, e caia na caixa solida por baixo,
+ *  travando o clique-no-chao tambem. */
+type Interagivel = {
+  x: number; y: number; chave: string; tipo: "pessoa" | "objeto";
+  largura: number; altura: number;
+  /** o sprite de verdade, para o destaque copiar textura, quadro e origem
+   *  dele — nunca desenhar um retangulo generico por cima. */
+  obj: Phaser.GameObjects.Image | Phaser.GameObjects.Sprite;
+};
+type Ponto = { x: number; y: number };
+
 /** Um bicho plantado no mapa, com a chave estavel que o marca como derrotado
  *  em `estado()` e o corpo que precisa sumir junto quando ele perde a luta. */
 type CriaturaViva = { sprite: Phaser.GameObjects.Sprite; corpo: Phaser.GameObjects.Rectangle; id: string; chave: string };
@@ -25,6 +46,37 @@ type CriaturaViva = { sprite: Phaser.GameObjects.Sprite; corpo: Phaser.GameObjec
  *  Provador (`docs/plano-do-combate.md`), numero proprio porque aqui e o
  *  mundo aberto quem decide, nao a arena. */
 const DISTANCIA_DE_ENCONTRO = 3;
+
+/** folga em volta da caixa DE VERDADE do alvo, so para o acerto do
+ *  ponteiro. Sem isto, tocar 1 px fora da borda visivel de um bau ou de um
+ *  personagem magro conta como "errou", e ninguem acerta isso de proposito
+ *  com o dedo. Nao mexe no TAMANHO guardado em cada interagivel — so no
+ *  quanto o teste de acerto perdoa para alem dele. */
+const FOLGA_PONTEIRO = 6;
+/** distancia, em px logicos, dentro da qual o heroi consegue agir sobre um
+ *  interagivel: falar, abrir o bau. A mesma regua serve para o botao A (que
+ *  mede a partir da frente do heroi) e para o clique (que mede do heroi
+ *  ate o alvo, chegando por qualquer lado). */
+const ALCANCE_ACAO = 18;
+/** um toque/clique fica "indeciso" ate um dos dois limiares estourar: rapido
+ *  e sem sair do lugar e toque (anda ate ali por caminho); qualquer um dos
+ *  dois passando do limiar vira segurar (anda direto, sem caminho, na
+ *  direcao de onde o dedo esta agora). Sem essa espera, um segurar-parado
+ *  e um toque comecam exatamente iguais e nao tem como saber qual e qual
+ *  antes do dedo se mexer ou do tempo passar. */
+const LIMIAR_SEGURAR_MS = 150;
+const LIMIAR_ARRASTO_PX = 6;
+/** perto demais do heroi, a direcao de segurar treme: o tremor do dedo vira
+ *  uma direcao normalizada valida, e o heroi vibra parado no lugar. */
+const ZONA_MORTA_SEGURAR = 6;
+/** as oito direcoes de 1 px que fazem o contorno do destaque: a mesma
+ *  ideia de contorno_alfa em arte/desenho.py, so que em tempo real, com
+ *  copias do sprite em vez de pixel a pixel. */
+const DESLOQUES_CONTORNO: [number, number][] = [
+  [-1, -1], [0, -1], [1, -1],
+  [-1, 0], [1, 0],
+  [-1, 1], [0, 1], [1, 1],
+];
 
 export class Mundo extends Phaser.Scene {
   private heroi!: Heroi;
@@ -35,6 +87,33 @@ export class Mundo extends Phaser.Scene {
   private chao!: Phaser.Tilemaps.TilemapLayer;
   private saidas: Saida[] = [];
   private trocandoDeMapa = false;
+  private malha!: Malha;
+  /** o caminho que o clique tracou, em pontos de mundo, do proximo ao ultimo.
+   *  Sem isto, undefined: o heroi anda so pelo teclado/toque/disco. */
+  private caminho?: Ponto[];
+  /** o interagivel esperando o heroi chegar perto, se o clique foi nele. */
+  private acaoPendente?: Interagivel;
+  private distanciaDoAlvo = Infinity;
+  private semAvancarDesde = 0;
+  /** true do pointerdown ao pointerup, so quando a pressao comecou no mundo
+   *  (nao na UI, nao durante uma fala). */
+  private pressionando = false;
+  /** true depois que a pressao vira "segurar": anda direto, e o toque no
+   *  soltar nao conta mais como clique. */
+  private segurando = false;
+  private pressionadoDesde = 0;
+  private pressionadoEmX = 0;
+  private pressionadoEmY = 0;
+  /** true logo depois que uma fala fecha com o botao de acao ainda
+   *  segurado: bloqueia abrir outra fala ate o botao ser solto uma vez. */
+  private esperandoSoltarAcao = false;
+  /** O contorno laranja em volta de quem esta ao alcance de acao AGORA: oito
+   *  copias do PROPRIO sprite do alvo, tingidas de laranja e deslocadas 1 px
+   *  em cada direcao, desenhadas atras do sprite de verdade. E a mesma
+   *  tecnica de silhueta que o resto do jogo usa (arte/desenho.py,
+   *  contorno_alfa) — nunca um retangulo generico, porque um retangulo nao
+   *  hospeda a forma de um poco ou de um personagem, so a caixa dele. */
+  private destaqueCopias: Phaser.GameObjects.Image[] = [];
   private criaturas: CriaturaViva[] = [];
   /** Trava so o ANDAR LIVRE e a deteccao de encontro/saida — nao pausa a
    *  cena. Se a cena pausasse (scene.pause), o mundo dela de fisica tambem
@@ -72,6 +151,18 @@ export class Mundo extends Phaser.Scene {
     this.interagiveis = [];
     this.conversando = false;
     this.solidos = this.physics.add.staticGroup();
+    // oito copias escondidas, prontas para copiar textura/quadro/origem de
+    // quem estiver em destaque a cada quadro. A textura aqui e so um
+    // marcador de partida (precisa de uma que ja exista): atualizarDestaque
+    // troca por assets/ui.png antes de qualquer uma ficar visivel.
+    // setTintFill, nunca setTint: setTint MULTIPLICA a cor pela textura, e
+    // todo sprite do jogo ja tem contorno preto de 1 px desenhado (a
+    // convencao do projeto inteiro) — preto vezes laranja continua preto.
+    // setTintFill ignora a cor original e pinta a silhueta inteira (tudo
+    // que nao e transparente) de uma cor solida so.
+    this.destaqueCopias = Array.from({ length: 8 }, () =>
+      this.add.image(0, 0, "ui", 0).setVisible(false).setTintFill(COR.brasa)
+    );
 
     const mapa: Mapa = mapaAtual;
     this.saidas = mapa.saidas ?? [];
@@ -116,7 +207,14 @@ export class Mundo extends Phaser.Scene {
         this.solidos.add(corpo);
         (corpo.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
       }
-      if (DIALOGOS[peca.nome]) this.interagiveis.push({ x, y: y - 8, chave: peca.nome });
+      if (DIALOGOS[peca.nome]) {
+        // a caixa de verdade: centro (x, y - h/2) porque a origem do sprite
+        // e (0.5, 1), o pe dele, e o desenho sobe `ficha.h` px a partir dali
+        this.interagiveis.push({
+          x, y: y - ficha.h / 2, chave: peca.nome, tipo: "objeto",
+          largura: ficha.w, altura: ficha.h, obj: s,
+        });
+      }
     });
 
     // --------------------------------------------------- som do lugar
@@ -159,7 +257,10 @@ export class Mundo extends Phaser.Scene {
       const corpo = this.add.rectangle(x, y - 4, 10, 8);
       this.solidos.add(corpo);
       (corpo.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
-      this.interagiveis.push({ x, y: y - 10, chave: pessoa.quem });
+      this.interagiveis.push({
+        x, y: y - ALTURA_PERSONAGEM / 2, chave: pessoa.quem, tipo: "pessoa",
+        largura: TILE, altura: ALTURA_PERSONAGEM, obj: s,
+      });
       // a respiracao agora e quadro de animacao, nao tween de escala
     });
 
@@ -184,6 +285,28 @@ export class Mundo extends Phaser.Scene {
       this.solidos.add(corpo);
       (corpo.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
       this.criaturas.push({ sprite: s, corpo, id: bicho.id, chave });
+    });
+
+    // ------------------------------------------------------- a malha
+    // O que faz o heroi esbarrar tambem faz o clique desviar: a malha nasce
+    // do MESMO chao e das MESMAS caixas de colisao que a fisica ja usa,
+    // nunca de uma lista escrita a mao que poderia divergir na primeira
+    // parede nova.
+    this.malha = novaMalha(tilemap.width, tilemap.height);
+    for (let ty = 0; ty < tilemap.height; ty++) {
+      for (let tx = 0; tx < tilemap.width; tx++) {
+        if (camada.getTileAt(tx, ty)?.collides) marcarBloqueado(this.malha, tx, ty);
+      }
+    }
+    this.solidos.getChildren().forEach((corpo) => {
+      const b = (corpo as Phaser.GameObjects.Rectangle).body as Phaser.Physics.Arcade.StaticBody;
+      const x0 = Math.floor(b.x / TILE);
+      const y0 = Math.floor(b.y / TILE);
+      const x1 = Math.floor((b.x + b.width - 1) / TILE);
+      const y1 = Math.floor((b.y + b.height - 1) / TILE);
+      for (let ty = y0; ty <= y1; ty++) {
+        for (let tx = x0; tx <= x1; tx++) marcarBloqueado(this.malha, tx, ty);
+      }
     });
 
     // --------------------------------------------------------- heroi
@@ -217,8 +340,15 @@ export class Mundo extends Phaser.Scene {
     this.scene.launch("Interface");
     this.scene.get("Interface").events.on("acao", () => this.tentarInteragir());
     this.scene.get("Interface").events.on("pausar", () => this.pausar());
+    this.input.on("pointerdown", (p: Phaser.Input.Pointer) => this.aoPressionarNoMundo(p));
+    this.input.on("pointerup", () => this.aoSoltarNoMundo());
+    this.input.on("pointermove", (p: Phaser.Input.Pointer) => this.atualizarCursorDoMundo(p));
     this.events.on("dialogo-fim", () => {
       this.conversando = false;
+      // se o botao de acao ainda estiver segurado neste exato instante (o
+      // mesmo aperto que fechou a fala, repetido pelo sistema operacional),
+      // nao deixa reabrir na hora: exige soltar uma vez primeiro
+      this.esperandoSoltarAcao = this.controles.acaoSegurada();
     });
     // sair do mundo solta os loops. A musica sobrevive: menu e titulo sao o
     // mesmo lugar do ponto de vista de quem joga, e recomecar a faixa se ouve.
@@ -233,12 +363,22 @@ export class Mundo extends Phaser.Scene {
     this.scene.launch("Pausa");
   }
 
-  private tentarInteragir() {
+  /** Sem `alvoForcado`: o botao A e o espaco, que agem no que estiver na
+   *  frente do heroi. Com `alvoForcado`: o clique, que ja escolheu QUEM,
+   *  e so confere se o heroi chegou perto o bastante para valer. */
+  private tentarInteragir(alvoForcado?: Interagivel) {
     if (this.conversando) return;
-    const frente = this.heroi.frente();
-    const alvo = this.interagiveis.find(
-      (i) => Phaser.Math.Distance.Between(frente.x, frente.y, i.x, i.y) < 18
-    );
+    let alvo = alvoForcado;
+    if (alvo) {
+      if (Phaser.Math.Distance.Between(this.heroi.x, this.heroi.y, alvo.x, alvo.y) >= ALCANCE_ACAO) {
+        return;
+      }
+    } else {
+      const frente = this.heroi.frente();
+      alvo = this.interagiveis.find(
+        (i) => Phaser.Math.Distance.Between(frente.x, frente.y, i.x, i.y) < ALCANCE_ACAO
+      );
+    }
     if (!alvo) return;
     const fala = DIALOGOS[alvo.chave];
     if (!fala) return;
@@ -262,16 +402,47 @@ export class Mundo extends Phaser.Scene {
   }
 
   update() {
+    // consumida SEMPRE, mesmo em conversa: Interface tem a PROPRIA tecla de
+    // acao, uma instancia independente da mesma tecla fisica, e Phaser so
+    // zera "recem apertado" de uma tecla quando ALGUEM chama JustDown nela.
+    // Se este `if (conversando) return` de baixo saisse na frente sem nunca
+    // consumir a tecla, ela ficaria pendurada em "recem apertado" por toda a
+    // conversa, e no frame em que a fala fechasse essa tecla velha reabriria
+    // a MESMA fala na hora — o loop de Enter que nunca termina.
+    const agiu = this.controles.acaoApertada();
+    if (this.esperandoSoltarAcao && !this.controles.acaoSegurada()) {
+      this.esperandoSoltarAcao = false;
+    }
     if (this.emCombate) return; // quem manda no heroi agora e o Combate
     if (this.conversando) {
       this.heroi.mover(0, 0);
       return;
     }
-    if (this.controles.acaoApertada()) this.tentarInteragir();
+    // ver o comentario em "dialogo-fim": segurar o botao de acao gera
+    // repeticao de tecla do sistema, e cada repeticao conta como um aperto
+    // novo. Sem este bloqueio, fechar uma fala com o dedo ainda em cima do
+    // botao reabria a proxima na hora — o heroi continua parado bem do
+    // lado do mesmo interagivel.
+    if (agiu && !this.esperandoSoltarAcao) {
+      this.cancelarCaminho();
+      this.tentarInteragir();
+    }
     if (this.controles.pausaApertada()) this.pausar();
+    this.decidirSegurar();
     const d = this.controles.direcao();
-    this.heroi.mover(d.x, d.y);
+    if (d.x !== 0 || d.y !== 0) {
+      // teclado, disco ou botao A: cancelar e sagrado, o jogador manda na hora
+      this.cancelarCaminho();
+      this.heroi.mover(d.x, d.y);
+    } else if (this.segurando) {
+      this.moverSegurando();
+    } else if (this.caminho) {
+      this.avancarCaminho();
+    } else {
+      this.heroi.mover(0, 0);
+    }
     this.heroi.atualizarProfundidade();
+    this.atualizarDestaque();
     ouvirDe(this.heroi.x, this.heroi.y);
     this.conferirSaida();
     this.conferirEncontro();
@@ -353,6 +524,289 @@ export class Mundo extends Phaser.Scene {
     this.emCombate = false;
     this.scene.setVisible(true, "Interface");
     this.scene.resume("Interface");
+  }
+
+  // ----------------------------------------------------------- o clique
+  /** Um clique/toque no mundo pertence a UI, nunca ao mundo, se algum
+   *  objeto interativo da cena Interface esta sob o ponteiro agora. Sem
+   *  isto, clicar na engrenagem tambem mandaria o heroi andar ate ela. */
+  private ehDaInterface(p: Phaser.Input.Pointer): boolean {
+    const interface_ = this.scene.get("Interface");
+    return !!interface_?.input && interface_.input.hitTestPointer(p).length > 0;
+  }
+
+  /** O mundo tem varias cenas por cima (Interface, Ponteiro), cada uma com a
+   *  propria camera, e o Pointer do Phaser e UM objeto so, compartilhado.
+   *  `pointer.worldX/worldY` guarda a ultima camera que o transformou — se
+   *  Interface ou Ponteiro mexerem nele depois do Mundo (e mexem: vem
+   *  depois na lista de cenas), o numero vira coordenada da camera delas,
+   *  sem scroll nenhum, e o clique acerta um lugar errado do mapa. Por isso
+   *  aqui SEMPRE se pede o ponto pela camera do proprio Mundo. */
+  private mundoXY(p: Phaser.Input.Pointer): { x: number; y: number } {
+    const ponto = this.cameras.main.getWorldPoint(p.x, p.y);
+    return { x: ponto.x, y: ponto.y };
+  }
+
+  /** Redesenha o contorno laranja em volta de quem esta ao alcance de acao
+   *  AGORA — o mesmo ALCANCE_ACAO que decide se o botao A ou o clique agem,
+   *  entao o contorno nunca promete uma acao que o jogo depois recusa. Se
+   *  mais de um interagivel estiver perto, destaca so o mais perto; andando
+   *  para longe de todos, o contorno some. */
+  private atualizarDestaque() {
+    let melhor: Interagivel | undefined;
+    let melhorDist = ALCANCE_ACAO;
+    if (!this.conversando) {
+      for (const i of this.interagiveis) {
+        const d = Phaser.Math.Distance.Between(this.heroi.x, this.heroi.y, i.x, i.y);
+        if (d < melhorDist) {
+          melhorDist = d;
+          melhor = i;
+        }
+      }
+    }
+    if (!melhor) {
+      this.destaqueCopias.forEach((c) => c.setVisible(false));
+      return;
+    }
+    const alvo = melhor.obj;
+    this.destaqueCopias.forEach((copia, i) => {
+      const [dx, dy] = DESLOQUES_CONTORNO[i];
+      copia
+        .setTexture(alvo.texture.key, alvo.frame.name)
+        .setOrigin(alvo.originX, alvo.originY)
+        .setPosition(Math.round(alvo.x) + dx, Math.round(alvo.y) + dy)
+        .setFlipX(alvo.flipX)
+        .setDepth(alvo.depth - 0.5)
+        .setVisible(true);
+    });
+  }
+
+  /** O dedo/mouse desceu no mundo. Ainda nao decide nada: so guarda onde e
+   *  quando, para `decidirSegurar()` comparar a cada quadro. */
+  private aoPressionarNoMundo(p: Phaser.Input.Pointer) {
+    if (this.conversando || this.ehDaInterface(p)) return;
+    const ponto = this.mundoXY(p);
+    this.pressionando = true;
+    this.segurando = false;
+    this.pressionadoDesde = this.time.now;
+    this.pressionadoEmX = ponto.x;
+    this.pressionadoEmY = ponto.y;
+  }
+
+  /** O dedo/mouse subiu. Se a pressao nunca virou "segurar", foi um toque de
+   *  verdade: o mesmo clique de sempre, andar ate o chao ou ate perto de
+   *  quem/o que foi tocado. Se ja tinha virado segurar, so termina de andar
+   *  direto — nao clica em nada, porque a pessoa estava arrastando. */
+  private aoSoltarNoMundo() {
+    if (!this.pressionando) return; // a pressao nao comecou no mundo
+    const eraSegurar = this.segurando;
+    this.pressionando = false;
+    this.segurando = false;
+    if (eraSegurar || this.conversando) return;
+    const alvo = this.interagiveis.find((i) =>
+      this.dentroDoAlvo(this.pressionadoEmX, this.pressionadoEmY, i)
+    );
+    if (alvo) {
+      this.irEAgir(alvo);
+      return;
+    }
+    this.irPara(this.pressionadoEmX, this.pressionadoEmY);
+  }
+
+  /** A cada quadro com o dedo/mouse ainda baixo: passou de um dos dois
+   *  limiares (tempo ou arrasto), a pressao vira "segurar" — cancela
+   *  qualquer caminho tracado e, dai em diante, quem anda e
+   *  `moverSegurando()`, nao mais o clique do soltar. */
+  private decidirSegurar() {
+    if (!this.pressionando || this.segurando) return;
+    const p = this.input.activePointer;
+    if (!p.isDown) {
+      // rede de seguranca: se o pointerup nao chegou (perdeu o foco da
+      // janela com o botao apertado, por exemplo), nao fica preso pressionando
+      this.pressionando = false;
+      return;
+    }
+    const agora = this.mundoXY(p);
+    const arrastou =
+      Phaser.Math.Distance.Between(agora.x, agora.y, this.pressionadoEmX, this.pressionadoEmY) >
+      LIMIAR_ARRASTO_PX;
+    const segurou = this.time.now - this.pressionadoDesde > LIMIAR_SEGURAR_MS;
+    if (arrastou || segurou) {
+      this.segurando = true;
+      this.cancelarCaminho();
+    }
+  }
+
+  /** Segurar nunca usa caminho: o heroi anda direto na direcao de onde o
+   *  dedo esta AGORA, recalculada a cada quadro. E o gesto que nao pode
+   *  falhar — nao ha A* para desviar de nada, entao nao ha o que travar —
+   *  e por isso ele e o direcional de sempre sem desenho na tela: o dedo e
+   *  o direcional, e o centro dele e o proprio heroi. */
+  private moverSegurando() {
+    const ponto = this.mundoXY(this.input.activePointer);
+    const dx = ponto.x - this.heroi.x;
+    const dy = ponto.y - this.heroi.y;
+    if (dx * dx + dy * dy < ZONA_MORTA_SEGURAR * ZONA_MORTA_SEGURAR) {
+      this.heroi.mover(0, 0);
+      return;
+    }
+    this.heroi.mover(dx, dy);
+  }
+
+  /** O ponto (px,py) caiu dentro da caixa de verdade do alvo, com uma folga
+   *  a mais para o dedo/mouse nunca precisar acertar o pixel exato? Usada
+   *  pelo clique e pelo hover do cursor — os dois sempre concordam, porque
+   *  os dois perguntam a MESMA caixa. */
+  private dentroDoAlvo(px: number, py: number, alvo: Interagivel): boolean {
+    return (
+      px > alvo.x - alvo.largura / 2 - FOLGA_PONTEIRO &&
+      px < alvo.x + alvo.largura / 2 + FOLGA_PONTEIRO &&
+      py > alvo.y - alvo.altura / 2 - FOLGA_PONTEIRO &&
+      py < alvo.y + alvo.altura / 2 + FOLGA_PONTEIRO
+    );
+  }
+
+  private atualizarCursorDoMundo(p: Phaser.Input.Pointer) {
+    if (this.conversando || this.ehDaInterface(p)) return;
+    const { x: wx, y: wy } = this.mundoXY(p);
+    const alvo = this.interagiveis.find((i) => this.dentroDoAlvo(wx, wy, i));
+    if (alvo) {
+      definirEstado(alvo.tipo === "pessoa" ? "falar" : "olhar");
+      return;
+    }
+    const tx = Math.floor(wx / TILE);
+    const ty = Math.floor(wy / TILE);
+    definirEstado(estaBloqueado(this.malha, tx, ty) ? "bloqueado" : "andar");
+  }
+
+  /** clicou no chao: anda ate ali, sem agir em nada ao chegar */
+  private irPara(wx: number, wy: number) {
+    const tx = Math.floor(wx / TILE);
+    const ty = Math.floor(wy / TILE);
+    if (estaBloqueado(this.malha, tx, ty)) return;
+    this.tracarCaminho(tx, ty, wx, wy);
+  }
+
+  /** clicou num interagivel: anda ate perto e age ao chegar. O interagivel
+   *  em si costuma estar bloqueado (bau, NPC: os dois tem caixa de colisao
+   *  propria), entao o destino do CAMINHO e o tile livre mais perto dele,
+   *  mas quem decide "chegou" e a distancia ate o interagivel de verdade,
+   *  conferida a cada quadro em avancarCaminho — nao o fim do caminho. */
+  private irEAgir(alvo: Interagivel) {
+    const tx = Math.floor(alvo.x / TILE);
+    const ty = Math.floor(alvo.y / TILE);
+    const perto = this.tileLivreMaisPerto(tx, ty);
+    if (!perto) return; // cercado por todo lado, ninguem chega
+    this.tracarCaminho(perto.tx, perto.ty, perto.tx * TILE + TILE / 2, perto.ty * TILE + TILE / 2, alvo);
+  }
+
+  /** O tile livre mais perto de verdade de (tx,ty), nao so o primeiro achado
+   *  varrendo anel por anel: varrer por anel e parar no primeiro pode
+   *  devolver um tile mais longe do que outro no MESMO anel, so por causa da
+   *  ordem do loop, e foi exatamente isso que deixava o destino do caminho
+   *  mais longe do alvo do que ALCANCE_ACAO permite — o heroi chegava,
+   *  parava, e a acao nunca disparava. */
+  private tileLivreMaisPerto(tx: number, ty: number): Celula | null {
+    if (!estaBloqueado(this.malha, tx, ty)) return { tx, ty };
+    const RAIO_MAX = 4;
+    let melhor: Celula | null = null;
+    let melhorDist = Infinity;
+    for (let dy = -RAIO_MAX; dy <= RAIO_MAX; dy++) {
+      for (let dx = -RAIO_MAX; dx <= RAIO_MAX; dx++) {
+        if (estaBloqueado(this.malha, tx + dx, ty + dy)) continue;
+        const dist = dx * dx + dy * dy;
+        if (dist < melhorDist) {
+          melhorDist = dist;
+          melhor = { tx: tx + dx, ty: ty + dy };
+        }
+      }
+    }
+    return melhor;
+  }
+
+  private tracarCaminho(destTx: number, destTy: number, ultimoX: number, ultimoY: number, acao?: Interagivel) {
+    const origem: Celula = {
+      tx: Math.floor(this.heroi.x / TILE),
+      ty: Math.floor(this.heroi.y / TILE),
+    };
+    const bruto = encontrarCaminho(this.malha, origem, { tx: destTx, ty: destTy });
+    if (!bruto) return;
+    const leve = alisarCaminho(this.malha, bruto);
+    // pula o primeiro ponto: e a propria casa onde o heroi ja esta parado
+    const pontos = leve.slice(1).map((c) => ({ x: c.tx * TILE + TILE / 2, y: c.ty * TILE + TILE / 2 }));
+    if (pontos.length > 0) pontos[pontos.length - 1] = { x: ultimoX, y: ultimoY };
+    if (pontos.length === 0) {
+      // ja estava no tile de destino: nada para andar, so a acao
+      this.heroi.mover(0, 0);
+      if (acao) this.tentarInteragir(acao);
+      return;
+    }
+    this.caminho = pontos;
+    this.acaoPendente = acao;
+    this.distanciaDoAlvo = Infinity;
+    this.semAvancarDesde = this.time.now;
+  }
+
+  private cancelarCaminho() {
+    this.caminho = undefined;
+    this.acaoPendente = undefined;
+  }
+
+  private avancarCaminho() {
+    // a acao vale a cada quadro, nao so no fim do caminho: o destino tracado
+    // e o tile livre mais perto do alvo, que pode ficar mais longe do alvo
+    // do que o alcance de acao exige, ou mais perto, dependendo do desenho
+    // do lugar. E a distancia ATE O ALVO que decide, nunca o fim do caminho.
+    if (this.acaoPendente) {
+      const a = this.acaoPendente;
+      if (Phaser.Math.Distance.Between(this.heroi.x, this.heroi.y, a.x, a.y) < ALCANCE_ACAO) {
+        this.caminho = undefined;
+        this.acaoPendente = undefined;
+        this.heroi.mover(0, 0);
+        this.tentarInteragir(a);
+        return;
+      }
+    }
+    if (!this.caminho || this.caminho.length === 0) {
+      this.finalizarCaminho();
+      return;
+    }
+    const proximo = this.caminho[0];
+    const dx = proximo.x - this.heroi.x;
+    const dy = proximo.y - this.heroi.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 3) {
+      this.caminho.shift();
+      if (this.caminho.length === 0) this.finalizarCaminho();
+      return;
+    }
+    // desiste sozinho se parar de progredir: nunca "andando contra a
+    // parede para sempre". 0.4 px de folga contra o tremor do arredondamento.
+    if (dist < this.distanciaDoAlvo - 0.4) {
+      this.distanciaDoAlvo = dist;
+      this.semAvancarDesde = this.time.now;
+    } else if (this.time.now - this.semAvancarDesde > 400) {
+      this.finalizarCaminho();
+      return;
+    }
+    this.heroi.mover(dx, dy);
+  }
+
+  /** O caminho acabou, seja porque chegou ao fim ou porque desistiu por nao
+   *  progredir. Se havia uma acao esperando, tenta mesmo assim:
+   *  `tentarInteragir` ja confere a distancia sozinha e nao faz nada se
+   *  ainda estiver longe demais. O importante e NUNCA deixar a acao
+   *  pendurada esperando um quadro que nao vem mais — era esse esquecimento
+   *  que fazia o heroi andar ate perto de alguem, parar, e a fala nunca
+   *  abrir. */
+  private finalizarCaminho() {
+    this.caminho = undefined;
+    this.heroi.mover(0, 0);
+    if (this.acaoPendente) {
+      const a = this.acaoPendente;
+      this.acaoPendente = undefined;
+      this.tentarInteragir(a);
+    }
   }
 
   /** Encostou numa borda que leva a outro lugar? Entao troca de mapa.
