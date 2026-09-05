@@ -1,6 +1,6 @@
 {
   "gerado_por": "npm run arte",
-  "total": 159,
+  "total": 160,
   "arquivos": {
     "aranha-filhote.png": {
       "hash": "ececeb0a0cfcd628",
@@ -529,6 +529,12 @@
       "bytes": 420,
       "largura": 44,
       "altura": 34
+    },
+    "objetos/bau-marinheiro.png": {
+      "hash": "8ce4373b55feb108",
+      "bytes": 223,
+      "largura": 20,
+      "altura": 18
     },
     "objetos/bau.png": {
       "hash": "8ce4373b55feb108",

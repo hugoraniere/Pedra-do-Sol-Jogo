@@ -294,7 +294,7 @@ export const OBJETOS = [
   "casa-pequena", "casa-grande", "ferraria", "casa-vovo", "hospital",
   "arvore", "arvore-escura", "arbusto",
   "poste-sino", "poste-com-sino", "poco", "pedra-solta", "barraca", "cerca",
-  "fogueira", "bau", "placa", "varal", "navio", "onda",
+  "fogueira", "bau", "bau-marinheiro", "placa", "varal", "navio", "onda",
   "pinheiro", "pinheiro-baixo", "grande-ouvinte", "arvore-raio", "tronco-caido",
   "toco", "samambaia", "cogumelo", "cogumelo-azul", "pedra-musgo", "teia", "raizes",
   "cama", "prateleira-pocoes", "caldeirao",

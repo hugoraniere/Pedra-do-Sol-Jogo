@@ -50,7 +50,7 @@ export const DIALOGOS: Record<string, Fala> = {
         id: "padrao",
         linhas: [
           "Chegamos. Praia de Chegada, como combinado.",
-          "Suas coisas estao no navio — toma, antes que eu esqueca.",
+          "Suas coisas estao naquele bau — toma, antes que eu esqueca.",
           "Sua arma, uma bolsa de moedas, e uma pocao pro caminho.",
           "Agora eu tenho que voltar. A mare nao espera ninguem.",
         ],

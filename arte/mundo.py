@@ -739,6 +739,12 @@ OBJETOS = [
     ("fogueira-3", lambda: fogueira(2), (0.40, 0.40)),
     ("fogueira-4", lambda: fogueira(3), (0.40, 0.40)),
     ("bau", bau, (0.45, 0.45)),
+    # mesmo desenho do bau de cima, nome proprio: e o bau que fica do lado do
+    # marinheiro na Praia de Chegada, so decorativo (sem DIALOGOS.bau-marinheiro
+    # em dialogos.ts, entao Mundo.ts nunca o poe em interagiveis). Existe pra nao
+    # reusar a chave "bau" e cair no efeito generico de tesouro (1 moeda, uma
+    # vez so) que ja pertence ao bau da Vila.
+    ("bau-marinheiro", bau, (0.45, 0.45)),
     ("placa", placa, (0.30, 0.25)),
     ("varal", varal, (0.50, 0.30)),
     ("navio", navio, (0.75, 0.30)),

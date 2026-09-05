@@ -675,6 +675,10 @@ export const PRAIA_DE_CHEGADA: Mapa = {
     { nome: "pedra-solta", x: 14, y: 5 },
     { nome: "arbusto", x: 32, y: 6 },
     { nome: "pedra-solta", x: 18, y: 11 },
+    // do lado do marinheiro: as coisas do heroi, que ele tira daqui, nao do
+    // navio ancorado (inacessivel, longe na agua). So decorativo, ver
+    // "bau-marinheiro" em arte/mundo.py.
+    { nome: "bau-marinheiro", x: 7, y: 13 },
   ],
   pessoas: [{ quem: "marinheiro", sprite: "marinheiro", x: 6, y: 13 }],
   entrada: { x: 4, y: 8 },
