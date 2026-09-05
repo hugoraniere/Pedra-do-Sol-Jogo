@@ -48,23 +48,57 @@ Cancelar esta disponivel em qualquer ponto antes do passo 3, sempre.
 
 ## 3. A regra que faz tempo real e dado caberem juntos
 
-**Nunca existe erro morto.**
+**Revisao de 2026-09-04: o d6 de tres faixas saiu, entrou o d20 contra dificuldade.**
+A secao abaixo, ate a proxima linha horizontal, achava que "o sistema de papel cabe
+aqui melhor que o d20" - decisao revista de proposito, no mesmo espirito que
+`CLAUDE.md` ja registra pra permadeath e pro nome do jogo: o material de mesa e base,
+nao camisa de forca, e o Hugo pediu explicitamente algo "mais complexo e rico", com
+"sempre chances de algo diferente acontecer" nas BORDAS do resultado, nao so no meio.
+O texto historico fica riscado abaixo por transparencia, nao apagado.
 
-No Baldur's Gate um `miss` custa um turno, e isso se aguenta porque o jogo e por
-turno. Em tempo real, input perdido e frustracao pura: o jogador apertou, gastou
-recarga, e nada aconteceu.
+~~As tres faixas da mesa resolvem isso, e e por isso que o sistema de papel cabe aqui
+melhor que o d20:~~
 
-As tres faixas da mesa resolvem isso, e e por isso que o sistema de papel cabe aqui
-melhor que o d20:
+~~| Dado | Faixa | Na luta |~~
+~~|---|---|---|~~
+~~| 5 ou + | INCRIVEL | sai como o jogador imaginou, efeito cheio |~~
+~~| 3 a 4 | QUASE | sai com um problema: pega de raspao, empurra em vez de queimar, acende a grama junto |~~
+~~| 1 a 2 | OPS | acontece outra coisa, nunca "nada aconteceu" |~~
 
-| Dado | Faixa | Na luta |
+### O sistema novo: 1d20 contra um numero de dificuldade (ND)
+
+```
+1d20 + modificador (atributo/sub-atributo + situacao)  vs  ND da acao
+```
+
+O ND nao e fixo global - cada acao, cada bicho, cada obstaculo declara o proprio (o
+bicho fraco tem ND baixo, o chefe tem ND alto, pular um riacho tem ND baixo, pular um
+abismo tem ND alto). Uma rolagem, uma comparacao, cinco desfechos possiveis - a
+riqueza mora nas BORDAS do resultado, nunca no meio:
+
+| Resultado | Quando | O que significa |
 |---|---|---|
-| 5 ou + | **INCRIVEL** | sai como o jogador imaginou, efeito cheio |
-| 3 a 4 | **QUASE** | sai com um problema: pega de raspao, empurra em vez de queimar, acende a grama junto |
-| 1 a 2 | **OPS** | **acontece outra coisa**, nunca "nada aconteceu" |
+| **Critico de sucesso** | dado natural = 20 | sucede sempre, nao importa o ND - e ganha um efeito extra (dano dobrado, sem custo, revela algo a mais) |
+| **Sucesso** | total ≥ ND (sem ser critico) | funciona, limpo |
+| **Falha perto** | total < ND, faltou ate 3 pontos | chegou perto o bastante do perigo pra ele reagir - penalizacao especifica daquela acao (nunca generica) |
+| **Falha** | total < ND, faltou mais de 3 pontos | nao rolou, sem punicao extra - mas o mundo ainda pode reagir de leve (barulho, tempo perdido), nunca "nada aconteceu" de verdade |
+| **Critico de fracasso** | dado natural = 1 | o pior desfecho possivel daquela acao especifica (quebra item, se machuca, alarme, feitico vira contra quem lancou) |
 
-OPS nunca e "voce errou, tente de novo". E o mundo reagindo de um jeito que o jogador
-nao pediu. Essa unica regra e o que separa este modelo de um ARPG com taxa de acerto.
+**"Nunca existe erro morto" continua de pe, so que espalhado nos dois lados do
+resultado** (critico de sucesso E critico de fracasso), nao concentrado no meio como a
+faixa OPS fazia sozinha.
+
+**So o heroi rola - pra tudo, nao so pra atacar.** Isso e a mudanca que menos parece
+mudanca e mais muda por baixo: hoje, quando um bicho ataca, e ELE quem rola
+(`rolar(b.bonus, this.d6)` em `Combate.ts`) pra saber se acerta o heroi. Isso acaba.
+Todo bicho, todo obstaculo, toda porta passa a ter um ND fixo que representa a forca
+dele - e e o HEROI quem rola contra esse ND pra Defesa, Esquiva, ou qualquer outro
+teste que a situacao pedir. O dado sempre esta na mao de quem joga, nunca do jogo.
+
+**Isto deixa de ser so combate.** Pular um vao, arrombar uma porta, decifrar uma
+inscricao, resistir a medo - tudo isso e a MESMA rolagem, o mesmo ND, o mesmo motor de
+5 desfechos, so trocando qual atributo entra na conta. Combate para de ser um sistema
+a parte: e so o lugar onde essa rolagem acontece com mais frequencia.
 
 ---
 

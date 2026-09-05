@@ -1,9 +1,9 @@
 {
-  "name": "reino-de-aurora",
+  "name": "a-pedra-do-sol",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Jogo de aventura do Reino de Aurora, feito para o Lele jogar",
+  "description": "RPG de sobrevivencia com risco de verdade, feito para qualquer pessoa jogar",
   "scripts": {
     "dev": "vite",
     "build": "npm run verificar && tsc --noEmit && vite build",
@@ -23,6 +23,8 @@
     "verificar": "node ferramentas/verificar.mjs",
     "criatura": "node ferramentas/conferir-criatura.mjs",
     "condicoes": "node ferramentas/conferir-condicoes.mjs",
+    "derrota": "node ferramentas/conferir-derrota.mjs",
+    "teste": "node ferramentas/conferir-teste.mjs",
     "contraste": "python3 ferramentas/contraste.py",
     "ambiente": "node ferramentas/ambiente.mjs",
     "icones": "python3 arte/icones.py"
@@ -44,7 +46,7 @@
   "main": "app/principal.cjs",
   "build": {
     "appId": "br.aurora.reino",
-    "productName": "Reino de Aurora",
+    "productName": "A Pedra do Sol",
     "files": [
       "dist/**/*",
       "app/**/*",

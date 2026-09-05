@@ -1,7 +1,7 @@
 /** Estado do jogo. Uma unica fonte da verdade sobre o progresso.
  *  Quem grava e le no disco e sistemas/armazenamento.ts. */
-import { gravarEspaco, lerEspaco } from "./armazenamento";
-import { acharMaterial, acharMochila, type Atributo } from "../dados/conteudo";
+import { gravarEspaco, lerEspaco } from "./armazenamento.ts";
+import { acharMaterial, acharMochila, type Atributo } from "../dados/conteudo.ts";
 
 /** Um slot da mochila: um item (com quantidade) ou vazio. Slot tem POSICAO
  *  fixa — e o que deixa arrastar um item de lugar (`moverItem`) fazer
@@ -105,7 +105,7 @@ export const VAZIO: Estado = {
     corChapeu: 0x7b5ac4,
     armaSprite: "nenhuma",
     equipamento: { armadura: null, acessorio: null },
-    bonusDeSelo: { forca: 0, esperteza: 0, coracao: 0 },
+    bonusDeSelo: { forca: 0, destreza: 0, agilidade: 0, inteligencia: 0, vitalidade: 0 },
     poderEscolhido: "",
   },
   coracoes: 3,
@@ -398,6 +398,41 @@ export function usosGastos(acaoId: string): number {
 export function registrarUso(acaoId: string) {
   atual.usosDeAventura[acaoId] = usosGastos(acaoId) + 1;
   salvar();
+}
+
+/** Perder uma luta: zera o dinheiro e sorteia parte da mochila pra levar
+ *  junto (Fase 13, `docs/plano-de-implementacao.md`). Chave de missao (id
+ *  comecando com "chave-") nunca e sorteada - perder uma travaria o jogo sem
+ *  volta, a mesma razao que faz o dado nunca dar "nada aconteceu". No maximo
+ *  metade da mochila elegivel, arredondado pra cima, nunca mais que 3: perder
+ *  uma luta nao pode zerar a mochila inteira de uma vez.
+ *
+ *  `sorteio` entra de fora, igual `rolar()` em turnos.ts, pra dar pra testar
+ *  sem depender de Math.random. */
+export function aplicarDerrota(
+  sorteio: () => number = Math.random
+): { moedasPerdidas: number; itensPerdidos: string[] } {
+  const moedasPerdidas = atual.moedas;
+  atual.moedas = 0;
+
+  // a mochila e slot por posicao (SlotDaMochila[]) - achata pra uma unidade
+  // por posicao, igual a lista antiga fazia sozinha, senao "sortear ate 3"
+  // perderia sempre o mesmo item empilhado inteiro de uma vez.
+  const elegiveis: string[] = [];
+  atual.mochila.forEach((slot) => {
+    if (!slot || slot.item.startsWith("chave-")) return;
+    for (let i = 0; i < slot.quantidade; i++) elegiveis.push(slot.item);
+  });
+  const quantidadeAPerder = Math.min(3, Math.ceil(elegiveis.length / 2));
+  const itensPerdidos: string[] = [];
+  for (let i = 0; i < quantidadeAPerder; i++) {
+    const indice = Math.floor(sorteio() * elegiveis.length);
+    itensPerdidos.push(...elegiveis.splice(indice, 1));
+  }
+  itensPerdidos.forEach((id) => retirarDaMochila(id, 1));
+
+  salvar();
+  return { moedasPerdidas, itensPerdidos };
 }
 
 /** Um Selo de Heroi. Devolve true quando este e o TERCEIRO da leva — e a

@@ -1,19 +1,50 @@
-# Reino de Aurora, o jogo
+# A Pedra do Sol, o jogo
 
 Leia este arquivo inteiro antes da primeira alteracao. Ele vale mais que qualquer
 suposicao sua sobre o projeto.
+
+**Nome novo, decisao de 2026-09-04**: o projeto se chamava "Reino de Aurora, o
+jogo". O nome mudou para refletir uma virada de tom (ver "Divergencia
+deliberada" mais abaixo): perder dói de verdade, mesmo sem apagar o heroi. O
+nome novo e so do produto/projeto - "Reino de Aurora" continua existindo dentro da
+ficcao (o reino, os Cristais de Aurora, Vovo Aurora) exatamente como a
+referencia descreve, porque isso vem do RPG de mesa e nao e o que mudou. Se
+algum arquivo, pasta ou variavel de codigo ainda disser "reino-de-aurora" ou
+similar, e resto do nome antigo do PROJETO (nao da ficcao) esperando limpeza,
+nao um erro de leitura deste arquivo.
 
 ## O que estamos fazendo
 
 Um RPG top-down completo, para qualquer pessoa que queira jogar. Nao e um brinquedo
 educativo, nao e um presente para uma crianca especifica, nao e um exercicio. E um
 jogo que precisa se sustentar sozinho na frente de gente que ja jogou muito jogo.
+Mais especificamente: um RPG de sobrevivencia com consequencia de verdade -
+perder custa dinheiro e itens de verdade, no tom seco de jogos como Project
+Zomboid, nao um RPG confortavel que finge ter risco. Isso nao e permadeath: o
+heroi sempre continua, o save nunca acaba (ver "Divergencia deliberada").
 
 A materia-prima e um RPG de mesa que ja foi jogado de verdade, em
-`docs/referencia/sistema-do-rpg-de-mesa.md`. Ele nao e inspiracao vaga: e a fonte da
-verdade de nomes, lugares, regras e historia. **O jogo pode simplificar, mas nao deve
-contradizer.** Quando este arquivo e a referencia discordarem, a referencia ganha, e
-a divergencia vira uma decisao escrita, nao um acidente.
+`docs/referencia/sistema-do-rpg-de-mesa.md`.
+
+**Decisao de 2026-09-04: a referencia deixou de ser fonte da verdade
+inquebravel.** Ate aqui, a regra era "o jogo pode simplificar, mas nao deve
+contradizer" - qualquer divergencia era excecao, escrita e rara (foi assim que
+a permadeath entrou, ver "Divergencia deliberada" mais abaixo). A partir de
+agora o material de mesa e BASE, nao camisa de forca: nomes, lugares e o
+esqueleto do sistema vem dali, mas o jogo esta se desvinculando da mesa de
+proposito, pra contar uma historia propria - mais detalhada, mais trabalhada,
+mais otimizada como jogo - que nasce da sessao real mas nao precisa mais
+concordar com ela em cada detalhe. Magia, mecanica, nome de habilidade, tudo
+isso pode mudar quando o design pedir.
+
+O que NAO muda com esta decisao: a referencia em si nunca e reescrita. Ela
+continua existindo, intacta, como o registro historico de uma sessao de mesa
+de verdade - inclusive a ficha do heroi do Lele, com as magias que ele
+escolheu de verdade. Divergir do que esta ali e legitimo agora; apagar ou
+reescrever o que esta ali pra parecer que sempre foi diferente, nao. E cada
+divergencia que valer a pena lembrar depois continua virando uma decisao
+escrita aqui, com data e motivo - isso nao mudou, so deixou de ser excecao
+rara pra virar o modo normal de trabalhar.
 
 O jogo inteiro sao tres aventuras, oito lugares, tres Cristais de Aurora e dois
 finais. Isso e muito trabalho. O jeito de chegar la e uma fase de cada vez, cada uma
@@ -25,11 +56,15 @@ O jogador que importa e alguem que nunca ouviu falar do Reino de Aurora, senta e
 
 - **Legibilidade.** Ler a tela em um segundo e virtude em qualquer jogo. Frase curta
   e boa escrita, nao limitacao. Texto tem voz, ritmo e piada.
-- **Risco de verdade.** Da para perder. Luta perdida custa: o heroi e nocauteado,
-  acorda na ultima fogueira e perde o que estava carregando. Nao ha morte, ha
-  derrota, e ela doi o suficiente para o jogador jogar com atencao.
-- **Falha sem humilhacao.** O custo e material, nunca moral. Nada de tela de derrota
-  que julga o jogador, nada de "voce falhou". Perdeu, levanta, tenta de outro jeito.
+- **Risco de verdade.** Da para perder de verdade. Perder uma luta acorda o
+  heroi no Hospital da vila, sem o dinheiro que tinha e sem uma selecao
+  aleatoria de itens da mochila - nunca mais "so o que estava na mao". O
+  jogador joga com atencao porque o prejuizo e real, mesmo o heroi nunca
+  deixando de existir.
+- **Falha sem humilhacao, mas com peso.** O custo e material - carteira e
+  mochila, nunca a vida do heroi - mas pesa mais que a versao de mesa. Nada de
+  tela que julga, nada de "voce falhou": o jogo mostra o que foi perdido, seco
+  e sem drama, e devolve o controle na hora.
 - **Densidade.** Area grande se sustenta por quanta coisa acontece por tela, nao por
   quantas telas tem. Espaco vazio e sempre erro.
 - **O espaco se explica sozinho.** Orientacao vem de marco visivel, luz, largura de
@@ -41,26 +76,78 @@ O jogador que importa e alguem que nunca ouviu falar do Reino de Aurora, senta e
 
 ## As regras do mundo
 
-Vem do material de mesa, e sao a espinha do jogo:
+Vem do material de mesa, e sao a espinha do jogo. **Uma delas diverge de
+proposito** - ver a secao logo abaixo antes de mexer em coracao, fogueira ou
+derrota.
 
-- **Atributos:** FORCA, ESPERTEZA, CORACAO. Raca da +1, classe da +1, o jogador
-  escolhe mais +1.
-- **Teste:** 1d6 + atributo, em tres faixas. 1 a 2 **OPS** (deu errado, acontece
-  outra coisa), 3 a 4 **QUASE** (deu certo com um probleminha), 5 ou mais
-  **INCRIVEL**. Modificadores: +1 com ajuda, +1 com o item certo, -1 se for dificil.
-- **QUASE e o coracao do sistema.** Sucesso com custo. O teste raramente tranca o
-  caminho: ele cobra. E **nunca existe erro morto**: OPS faz acontecer outra coisa,
-  jamais "nada aconteceu". E essa regra que deixa dado e tempo real caberem juntos.
+### Divergencia deliberada: a fogueira nao e mais quem resgata
+
+A referencia (`docs/referencia/sistema-do-rpg-de-mesa.md`) diz: zero coracoes e
+derrota, o heroi acorda na ultima fogueira acesa e perde o que carregava na
+mao. Decisao de 2026-09-04 (revista no mesmo dia, depois de conversa com o
+Hugo - a primeira versao desta secao chegou a escrever morte permanente; nao
+e isso, ver abaixo): **este jogo diverge da referencia em dois pontos**,
+nenhum dos dois apaga o heroi nem o save:
+
+- **Onde o heroi acorda muda.** Nao e mais a ultima fogueira acesa - e o
+  **Hospital**, um lugar fixo na Vila Semente que ainda nao existe no mapa e
+  precisa ser desenhado e plantado em `src/dados/mapas.ts` antes disto
+  funcionar de verdade (ver `docs/plano-de-implementacao.md`). A fogueira
+  continua existindo e continua sendo onde se salva e descansa (enche
+  coracao) - so deixa de ser tambem o ponto de resgate depois de uma derrota.
+- **O que se perde e mais pesado.** Nao e mais so "o que carregava na mao" -
+  e **todas as moedas** e **uma selecao aleatoria de itens da mochila**. Doi
+  de verdade sem apagar progresso: mapa explorado, selos ganhos e criaturas ja
+  derrotadas continuam intactos, so a carteira e a mochila levam o golpe.
+
+A tela de derrota **nao e permadeath e nao trava o jogo**: ela mostra, seco e
+sem julgamento, quanto dinheiro e quais itens sumiram, e devolve o controle na
+hora, com o heroi ja no Hospital. Sem musica de fracasso, sem "voce perdeu",
+sem tela de game over - so o resumo do prejuizo e um botao pra seguir.
+
+### As regras propriamente ditas
+
+- **Atributos, revisao de 2026-09-04:** os tres da mesa (FORCA, ESPERTEZA, CORACAO)
+  viraram cinco - **Forca, Destreza, Agilidade, Inteligencia, Vitalidade** - porque
+  "Esperteza" fazia tres trabalhos escondidos (magia, golpe a distancia, iniciativa)
+  que mereciam nome proprio. Cada um tem sub-atributos derivados, nunca escolhidos a
+  parte: Resistencia (de Forca), Percepcao e Conhecimento (de Inteligencia), Vontade
+  (de Vitalidade). "Coracao" vira "Vitalidade" tambem porque a mesma palavra fazia
+  dois trabalhos (o atributo E os coracoes/vida) - agora sao coisas com nomes
+  diferentes. **Implementado**: `+1` de raca/classe/jogador continua igual (3
+  pontos, agora espalhados por 5 opcoes em vez de 3), golpe a distancia e
+  Destreza, magia e Inteligencia, iniciativa e defesa sao Agilidade. Os
+  sub-atributos (Resistencia, Percepcao, Conhecimento, Vontade) continuam so
+  conceito - nenhuma acao os testa ainda, isso espera as 11 magias
+  reformuladas. A criacao de personagem (mais pontos? uma Origem nova?) ainda
+  esta em desenho, nao fechada - so os 5 atributos em si foram implementados.
+- **Teste, revisao de 2026-09-04: 1d6 virou 1d20 contra dificuldade.** O sistema da
+  mesa (tres faixas fixas) saiu; entrou 1d20 + modificador contra um numero de
+  dificuldade (ND) que cada acao/bicho/obstaculo declara o proprio. Cinco desfechos
+  possiveis, a riqueza nas bordas: critico de sucesso (natural 20, sempre funciona +
+  efeito extra), sucesso, falha perto (faltou ate 3 pontos - penalizacao especifica),
+  falha (faltou mais - sem punicao extra), critico de fracasso (natural 1 - o pior
+  desfecho possivel daquela acao). **Nunca existe erro morto continua valendo**, so
+  que espalhado nos dois criticos, nao concentrado no meio como a faixa OPS fazia.
+  Detalhe completo, com a tabela e o raciocinio, em `docs/modelo-de-combate.md`.
+- **So o heroi rola - pra tudo, nao so pra atacar.** Golpe, magia, pular, arrombar,
+  decifrar, resistir a medo: mesma rolagem, mesmo ND, mesmo motor de 5 desfechos, so
+  troca o atributo. Isto deixou de ser um sistema de combate: combate e so onde essa
+  rolagem acontece com mais frequencia. Ate defesa e esquiva viraram rolagem do
+  heroi - a criatura nunca rola, tem so um ND fixo que representa sua forca.
 - **Combate: Baldur's Gate em top-down.** O jogador age em tempo real, escolhe a
   habilidade, mira vendo alcance e area de impacto, confirma, e **o dado decide o
-  resultado**. Nao e por turno e nao e por reflexo. So o heroi rola; a criatura
-  reage. O modelo inteiro esta em `docs/modelo-de-combate.md`, que e a fonte da
-  verdade desse assunto.
-- **Coracoes:** 3, o Anao comeca com 4. Zero coracoes e **derrota**: o heroi cai,
-  acorda na ultima fogueira acesa e perde o que carregava na mao. Conhecimento nunca
-  se perde. Comer e dormir enchem os coracoes.
-- **Fogueira e checkpoint.** Acender uma e permanente. A distancia entre fogueiras e
-  a regua de dificuldade da area.
+  resultado**. Nao e por turno e nao e por reflexo. O modelo inteiro esta em
+  `docs/modelo-de-combate.md`, que e a fonte da verdade desse assunto.
+- **Coracoes:** 3, o Anao comeca com 4. Zero coracoes e **derrota** (ver a
+  divergencia acima): o heroi acorda no Hospital da vila, perde todas as
+  moedas e uma selecao aleatoria de itens da mochila. Mapa, selos e
+  conhecimento nunca se perdem. Comer e dormir enchem os coracoes.
+- **Fogueira e checkpoint.** Acender uma e permanente, enche os coracoes, e a
+  distancia entre fogueiras ainda e a regua de dificuldade da area. **Nao e
+  mais para onde o heroi volta apos uma derrota** - isso agora e sempre o
+  Hospital da vila (ver a divergencia acima), nao importa onde a fogueira mais
+  proxima estava.
 - **Selos de Heroi:** a cada 3, o jogador escolhe +1 coracao, +1 num atributo, ou uma
   habilidade nova.
 

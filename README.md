@@ -1,6 +1,6 @@
-# Reino de Aurora
+# A Pedra do Sol
 
-Jogo de aventura top-down feito para o Lele, 7 anos, a partir do RPG de mesa
+RPG de sobrevivencia top-down, com risco de verdade, a partir do RPG de mesa
 que a gente criou no papel. Roda no navegador, funciona no iPad e no celular.
 
 ## Rodar

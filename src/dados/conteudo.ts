@@ -8,10 +8,16 @@
  * adicionar uma raca ou uma magia sem abrir nenhuma cena.
  */
 import type { Marca } from "../sistemas/marcas";
+import type { AlvoDeAcao } from "../sistemas/alvo";
 import type { IdCondicao } from "../sistemas/condicoes";
 import type { Periodo } from "./tempo";
 
-export type Atributo = "forca" | "esperteza" | "coracao";
+/** Revisao de 2026-09-04 (CLAUDE.md): os tres da mesa (FORCA, ESPERTEZA,
+ *  CORACAO) viraram cinco. "Esperteza" fazia tres trabalhos escondidos - agora
+ *  cada um tem nome proprio: magia vira Inteligencia, golpe a distancia vira
+ *  Destreza, iniciativa e defesa viram Agilidade. "Coracao" vira Vitalidade
+ *  porque a mesma palavra fazia dois trabalhos (o atributo E os coracoes/vida). */
+export type Atributo = "forca" | "destreza" | "agilidade" | "inteligencia" | "vitalidade";
 
 /** Escala unica pra preco e chance de drop de item (nao de magia/habilidade).
  *  Quanto mais raro, mais caro E mais dificil de cair no chao — ver
@@ -60,16 +66,26 @@ export type AcaoDeCombate = {
   /** chave de som; nem toda acao tem uma ligada ainda (ver Combate.ts) */
   som: string;
   marca?: Marca;
+  /** "livre" quando a acao age no proprio heroi ou numa casa vazia, e nao
+   *  precisa pegar ninguem pra contar como sucesso - ver sistemas/alvo.ts.
+   *  Ausente (o padrao) significa "inimigo", igual sempre foi. */
+  alvo?: AlvoDeAcao;
 };
 
+/** Icones emprestados ate arte propria existir (arte/icones.py so tem "forca"
+ *  e "esperteza" desenhados hoje) - Inteligencia, Destreza e Agilidade
+ *  reusam o icone de esperteza, Vitalidade reusa o coracao cheio. Comecar
+ *  feio de proposito, ver docs/06-fluxo-de-sprites.md. */
 export const ATRIBUTOS: Record<Atributo, { nome: string; icone: string; oQueFaz: string }> = {
-  forca: { nome: "FORCA", icone: "forca", oQueFaz: "empurrar, subir, lutar, carregar" },
-  esperteza: { nome: "ESPERTEZA", icone: "esperteza", oQueFaz: "procurar, lembrar, consertar, magia" },
-  coracao: { nome: "CORACAO", icone: "coracao_cheio", oQueFaz: "coragem, fazer amigo, sorte, animais" },
+  forca: { nome: "FORCA", icone: "forca", oQueFaz: "empurrar, subir, golpe de perto, carregar" },
+  destreza: { nome: "DESTREZA", icone: "esperteza", oQueFaz: "golpe a distancia, mira, mao firme" },
+  agilidade: { nome: "AGILIDADE", icone: "esperteza", oQueFaz: "iniciativa, esquiva, reflexo" },
+  inteligencia: { nome: "INTELIGENCIA", icone: "esperteza", oQueFaz: "magia, lembrar, consertar" },
+  vitalidade: { nome: "VITALIDADE", icone: "coracao_cheio", oQueFaz: "coragem, fazer amigo, resistir" },
 };
 
-/** A ordem em que os tres poderes aparecem na ficha de papel, de cima para baixo. */
-export const ORDEM_PODERES: Atributo[] = ["forca", "esperteza", "coracao"];
+/** A ordem em que os cinco atributos aparecem na ficha, de cima para baixo. */
+export const ORDEM_PODERES: Atributo[] = ["forca", "destreza", "agilidade", "inteligencia", "vitalidade"];
 
 // ------------------------------------------------------------------ racas
 export type Raca = {
@@ -77,7 +93,12 @@ export type Raca = {
   nome: string;
   /** o nome numa palavra so, para caber embaixo do avatar na criacao */
   curto: string;
-  bonus: Atributo;
+  /** Revisao de 2026-09-05 (docs/15-lore-e-visual-das-racas.md): duas raças
+   *  não bastam mais para justificar cinco atributos, então o bônus virou um
+   *  CICLO de cinco — cada raça soma dois atributos vizinhos (Destreza →
+   *  Agilidade → Vitalidade → Força → Inteligência → e fecha em Destreza).
+   *  Cada atributo cai em exatamente duas raças, e nenhuma dupla se repete. */
+  bonus: [Atributo, Atributo];
   dom: string;
   domTexto: string;
   /** quadro de icones.png. Nunca Desisto reusa `dado-5` (rolar de novo e o
@@ -96,7 +117,7 @@ export const RACAS: Raca[] = [
     id: "vale",
     nome: "Gente do Vale",
     curto: "Vale",
-    bonus: "coracao",
+    bonus: ["destreza", "agilidade"],
     dom: "Nunca Desisto",
     domTexto: "Uma vez por aventura voce pode rolar o dado de novo.",
     icone: "dado-5",
@@ -107,7 +128,7 @@ export const RACAS: Raca[] = [
     id: "anao",
     nome: "Anao da Fornalha",
     curto: "Anao",
-    bonus: "forca",
+    bonus: ["vitalidade", "forca"],
     dom: "Casco Duro",
     domTexto: "Voce comeca com 4 coracoes em vez de 3.",
     icone: "dom-casco-duro",
@@ -118,7 +139,7 @@ export const RACAS: Raca[] = [
     id: "elfo",
     nome: "Elfo da Folha",
     curto: "Elfo",
-    bonus: "esperteza",
+    bonus: ["inteligencia", "destreza"],
     dom: "Olhos de Coruja",
     domTexto: "Voce enxerga no escuro e de bem longe.",
     icone: "dom-olhos-de-coruja",
@@ -129,9 +150,9 @@ export const RACAS: Raca[] = [
     id: "pequenino",
     nome: "Pequenino do Trigo",
     curto: "Pequenino",
-    bonus: "coracao",
+    bonus: ["agilidade", "vitalidade"],
     dom: "Pe de Coelho",
-    domTexto: "Uma vez por aventura voce troca um OPS por um QUASE.",
+    domTexto: "Uma vez por aventura voce troca uma Falha por uma Falha Perto.",
     icone: "dom-pata-de-coelho",
     coracoes: 3,
     cor: 0xf5b62b,
@@ -140,7 +161,7 @@ export const RACAS: Raca[] = [
     id: "dragao",
     nome: "Cria de Dragao",
     curto: "Dragao",
-    bonus: "forca",
+    bonus: ["forca", "inteligencia"],
     dom: "Sopro Quentinho",
     domTexto: "Uma vez por aventura voce solta fogo pela boca.",
     icone: "acao-sopro-quentinho",
@@ -149,7 +170,7 @@ export const RACAS: Raca[] = [
     acaoDeCombate: {
       id: "sopro-quentinho", tipo: "habilidade", nome: "SOPRO QUENTINHO",
       dica: "Solta fogo pela boca. So uma vez por aventura.",
-      icone: 10, cor: 0xf5b62b, forma: "casa", alcance: 2, atributo: "coracao", som: "fogo",
+      icone: 10, cor: 0xf5b62b, forma: "casa", alcance: 2, atributo: "vitalidade", som: "fogo",
     },
   },
 ];
@@ -191,7 +212,7 @@ export const CLASSES: Classe[] = [
     id: "mago",
     nome: "Mago da Torre",
     curto: "Mago",
-    bonus: "esperteza",
+    bonus: "inteligencia",
     arma: "cajado",
     habilidade: "Tres Magias",
     habilidadeTexto: "Voce escolhe tres magias, cada uma com um uso por aventura.",
@@ -201,7 +222,7 @@ export const CLASSES: Classe[] = [
     id: "cacador",
     nome: "Cacador de Dragao",
     curto: "Cacador",
-    bonus: "esperteza",
+    bonus: "destreza",
     arma: "arco",
     habilidade: "Olho de Alvo",
     habilidadeTexto: "Voce ganha +1 no dado quando mira em alguma coisa longe.",
@@ -211,7 +232,7 @@ export const CLASSES: Classe[] = [
     id: "amigo",
     nome: "Amigo dos Bichos",
     curto: "Amigo",
-    bonus: "coracao",
+    bonus: "vitalidade",
     arma: "funda",
     habilidade: "Fala com Bichos",
     habilidadeTexto: "Voce conversa com qualquer bicho, e eles ajudam se gostarem de voce.",
@@ -232,19 +253,26 @@ export const CLASSES: Classe[] = [
 // ---------------------------------------------------------------- magias
 export type Magia = { id: string; nome: string; texto: string; cor: number };
 
+/** Revisao de 2026-09-04: oito das treze ganharam nome e clima novos, "caso a
+ *  caso" como o Hugo pediu - nao um reskin em bloco. O `id` de cada uma NAO
+ *  mudou (evita quebrar heroi.magias salvo, CLASSES.magias, TABELA_DE_MAGIA
+ *  em sistemas/acao.ts e MAGIAS_SOM em dados/sons.ts, que continuam
+ *  referenciando o id antigo) - so o que o jogador LE mudou. As que ja
+ *  soavam adultas (Voz de Trovao, Bafo Gelado, Bola de Fogo) ou ja eram so
+ *  funcionais (Cresce-Grama, Remendo) ficaram como estavam. */
 export const MAGIAS: Magia[] = [
-  { id: "luzinha", nome: "Luzinha", texto: "Uma bolinha de luz flutua e ilumina o caminho.", cor: 0xf5b62b },
+  { id: "luzinha", nome: "Fogo-Fatuo", texto: "Uma luz fraca que ilumina o escuro e revela quem estava escondido.", cor: 0xf5b62b },
   { id: "bafo-gelado", nome: "Bafo Gelado", texto: "Um sopro que congela agua, fogo e ate goblin.", cor: 0x7ec4f2 },
-  { id: "cresce-grama", nome: "Cresce-Grama", texto: "A grama cresce alta e vira escada, corda ou esconderijo.", cor: 0x3e9b62 },
-  { id: "voz-de-trovao", nome: "Voz de Trovao", texto: "Sua voz fica tao alta que todo mundo para pra ouvir.", cor: 0x4a3e64 },
-  { id: "pulo-de-sapo", nome: "Pulo de Sapo", texto: "Um pulo enorme, por cima de rio, muro ou monstro.", cor: 0x3e9b62 },
-  { id: "dedo-colante", nome: "Dedo Colante", texto: "Suas maos grudam em qualquer parede.", cor: 0xee7ba6 },
-  { id: "remendo", nome: "Remendo", texto: "Junta de volta uma coisa quebrada.", cor: 0xb08658 },
-  { id: "escudo-de-bolha", nome: "Escudo de Bolha", texto: "Uma bolha te protege de um golpe.", cor: 0x7ec4f2 },
-  { id: "cheiro-de-bolo", nome: "Cheiro de Bolo", texto: "Um cheirinho irresistivel atrai todo mundo pro mesmo lugar.", cor: 0xf5b62b },
-  { id: "fala-bicho", nome: "Fala Bicho", texto: "Voce entende e fala com qualquer bicho.", cor: 0x3e9b62 },
-  { id: "sumir-sumindo", nome: "Sumir-Sumindo", texto: "Voce fica invisivel enquanto ficar quietinho.", cor: 0x4a3e64 },
-  { id: "chama-vento", nome: "Chama-Vento", texto: "Um vento forte empurra tudo que estiver na frente.", cor: 0xcde9f8 },
+  { id: "cresce-grama", nome: "Cresce-Grama", texto: "A vegetacao cresce na hora: vira escada, corda ou esconderijo.", cor: 0x3e9b62 },
+  { id: "voz-de-trovao", nome: "Voz de Trovao", texto: "Um grito que ecoa longe o bastante pra fazer qualquer um parar.", cor: 0x4a3e64 },
+  { id: "pulo-de-sapo", nome: "Salto Longo", texto: "Um impulso que atravessa rio, muro ou inimigo de um salto so.", cor: 0x3e9b62 },
+  { id: "dedo-colante", nome: "Aderencia", texto: "As maos grudam em qualquer superficie por um instante - sobe parede, atravessa teto.", cor: 0xee7ba6 },
+  { id: "remendo", nome: "Remendo", texto: "Conserta na hora o que quebrou.", cor: 0xb08658 },
+  { id: "escudo-de-bolha", nome: "Barreira", texto: "Uma camada invisivel absorve o proximo golpe.", cor: 0x7ec4f2 },
+  { id: "cheiro-de-bolo", nome: "Cheiro de Fogueira", texto: "Um cheiro de fumaca que atrai qualquer bicho de longe.", cor: 0xf5b62b },
+  { id: "fala-bicho", nome: "Lingua Selvagem", texto: "Por um tempo, voce entende e e entendido por qualquer bicho.", cor: 0x3e9b62 },
+  { id: "sumir-sumindo", nome: "Veu de Sombra", texto: "As sombras escondem voce, enquanto ficar parado.", cor: 0x4a3e64 },
+  { id: "chama-vento", nome: "Rajada", texto: "Um vento forte empurra tudo pela frente - e alimenta o fogo que ja estava queimando.", cor: 0xcde9f8 },
   { id: "bola-de-fogo", nome: "Bola de Fogo", texto: "Uma bola de fogo que voa numa direcao. Goblin aguenta, gelo nao.", cor: 0xf2802b },
 ];
 
@@ -698,6 +726,23 @@ export const acharMaterial = (id: string) => MATERIAIS.find((m) => m.id === id);
 export const acharArmadura = (id: string) => ARMADURAS.find((a) => a.id === id);
 export const acharAcessorio = (id: string) => ACESSORIOS.find((a) => a.id === id);
 export const acharCriatura = (id: string) => BESTIARIO.find((c) => c.id === id);
+
+/** O nome legivel de qualquer id que possa acabar na mochila - comprado na
+ *  LOJA ou largado por uma criatura (`BESTIARIO[].larga`, que nao tem catalogo
+ *  de nome proprio ainda). Sem entrada na LOJA, formata o proprio id
+ *  ("teia-doce" -> "Teia Doce") em vez de mostrar a chave crua: nunca um erro
+ *  morto na tela, a mesma regra que ja vale pro dado. Usado pelo resumo de
+ *  derrota (Mundo.ts) - mais simples que `acharQualquerItem()` abaixo porque
+ *  ali so precisa do nome, nunca da categoria. */
+const PREPOSICOES_MINUSCULAS = new Set(["de", "do", "da", "dos", "das"]);
+export function nomeDoItem(id: string): string {
+  const item = acharItem(id);
+  if (item) return item.nome;
+  return id
+    .split("-")
+    .map((p, i) => (i > 0 && PREPOSICOES_MINUSCULAS.has(p) ? p : p[0]?.toUpperCase() + p.slice(1)))
+    .join(" ");
+}
 
 /** Qualquer coisa que a mochila possa guardar, com o suficiente pra
  *  desenhar uma linha nela: nome, descricao, e a categoria que decide qual
