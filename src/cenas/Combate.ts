@@ -18,6 +18,7 @@ import { alcancaveis, caminho, chaveDaCasa, distanciaEmCasas, type Casa } from "
 import { acoesDoHeroi, type AcaoDeHeroi } from "../sistemas/acao";
 import { fileira } from "../sistemas/fileira";
 import { criarAnimacoes, camadasDoHeroi, Heroi } from "../sistemas/heroi";
+import { agachar, hitstop } from "../sistemas/fx";
 import { aplicarDerrota, estado, guardar, marcarDerrotado, registrarUso, salvar, usosGastos } from "../sistemas/estado";
 import { HOSPITAL_ENTRADA, VILA } from "../dados/mapas";
 import { poderesDoHeroi } from "../sistemas/poderes";
@@ -622,7 +623,14 @@ export class Combate extends Phaser.Scene {
     // folha de sprite ganhou 8 colunas. Ate aqui toda acao usava a de conjurar,
     // entao dar uma espadada tinha o mesmo desenho que lancar uma bola de fogo.
     if (acao.tipo === "magia") this.heroi.conjurar(300);
-    else this.heroi.atacar(300);
+    else {
+      // o corpo a corpo ganha um agachar de anticipacao, junto da pose de
+      // ataque - Fase 12 (Atualizacao 3), passo 3. A distancia so entra pra
+      // nao dar o mesmo "impulso" pra quem ataca de longe (arco, funda),
+      // que ainda usa so a pose crua ate o passo 5 do plano chegar.
+      if (acao.alcance === 1) agachar(this, this.heroi, 90);
+      this.heroi.atacar(300);
+    }
 
     const slot = this.slots.find((s) => s.acao.id === acao.id)!;
     if (acao.escopo === "porLuta") slot.gastou = true;
@@ -652,6 +660,9 @@ export class Combate extends Phaser.Scene {
         tocarFicha(IMPACTOS.errou);
       } else {
         pegos.forEach((b) => this.atingir(b, cx, cy, faixa === "oba"));
+        // o martelo pesa mais que espada, cajado ou soco: o mesmo golpe corpo
+        // a corpo (passo 3 do plano), so essa arma ganha o micro-engasgo.
+        if (acao.id === "golpe-martelo") hitstop(this, 50);
         this.cameras.main.shake(90, 0.0022);
       }
       this.time.delayedCall(500, () => this.fimDaAcao());

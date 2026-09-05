@@ -1064,6 +1064,11 @@ tinha reparado porque o golpe generico (flash branco no bicho) nao denuncia
 a direcao de quem bateu.
 
 ### 1. `heroi.encarar()`, o pre-requisito de tudo abaixo
+
+> **Feita** (outra sessao nesta mesma frente, commit `4dcab86`). Conferido
+> no jogo rodando: andar para o norte e atacar um goblin a leste sem se
+> mexer vira o heroi pro leste antes do golpe.
+
 Arquivo: `src/sistemas/heroi.ts`
 Faz: extrai a conta que `mover()` ja faz (`direcaoDe(dx, dy)` + `this.olhando = dir`
 + tocar o quadro parado daquela direcao) para um metodo publico:
@@ -1079,6 +1084,9 @@ ou magia, e o herói vira para o alvo mesmo parado.
 Tamanho: P
 
 ### 2. Ligar `atacar()`/`conjurar()`/`machucar()` direito
+
+> **Feita** (outra sessao nesta mesma frente, commit `4dcab86`).
+
 Arquivo: `src/cenas/Combate.ts`, `executar()` e `atingir()`
 Faz: `executar()` chama `this.heroi.encarar(...)` primeiro, depois
 `acao.tipo === "magia" ? this.heroi.conjurar(300) : this.heroi.atacar(300)`.
@@ -1092,6 +1100,16 @@ que toda acao usa hoje.
 Tamanho: P
 
 ### 3. O golpe corpo a corpo, com peso de verdade
+
+> **Feita, versao enxuta** (esta sessao). Sem o metodo `golpeCorpoACorpo`
+> separado nem a sequencia agachar->espera->atacar->espera da spec original:
+> `agachar(this, this.heroi, 90)` roda em PARALELO com `heroi.atacar(300)`
+> (mesmo instante, nao em sequencia) pra alcance 1 (`acao.alcance === 1`), e
+> `hitstop(this, 50)` entra so pro martelo, no momento do impacto
+> (`acao.id === "golpe-martelo"`). Ficou mais simples que o plano original e
+> ja resolve o "martelo pesa mais" pedido — se um dia a sequencia com
+> `achatar` extra no impacto parecer necessaria, revisitar aqui.
+
 Arquivo: `src/cenas/Combate.ts` (novo metodo privado `golpeCorpoACorpo`)
 Vale para `espada-curta`, `martelo`, `cajado` (quando usado como arma) e
 `soco` — os quatro `golpeDaArma()`/`ACAO_SOCO` com `alcance === 1`.
