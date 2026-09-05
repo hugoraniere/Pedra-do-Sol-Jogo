@@ -1129,6 +1129,18 @@ o martelo "pesa" mais (hitstop perceptivel), sem sprite novo nenhum.
 Tamanho: P
 
 ### 4. O projetil orientado, para arco e funda
+
+> **Feita, com Graphics em vez de `Phaser.GameObjects.Triangle`** (esta
+> sessao). Um `Container` + `Graphics.fillTriangle()` girado, no lugar do
+> Triangle nativo — mesmo resultado, evita as excentricidades de origem que
+> o Triangle do Phaser tem com bounding box assimetrico. Confirmado por
+> estrutura (container criado na posicao certa, filho do tipo certo, gira
+> com `Phaser.Math.Angle.Between`) e por um teste a parte com triangulo
+> gigante (40px) provando que Container+Graphics+rotacao+depth renderizam
+> certo nesta cena. **Nao confirmei visualmente o tamanho real** (2-8px) —
+> num screenshot automatizado, um risco desse tamanho contra o fundo da
+> floresta e dificil de flagrar a olho; só dá pra ver de verdade jogando.
+
 Arquivo: `src/sistemas/fx.ts` (novo `projetilOrientado`, ao lado de `projetil`)
 Faz: hoje `projetil()` desenha um circulo — serve pra bola de fogo, nao pra
 flecha (flecha tem ponta, e a ponta tem que apontar pra onde ela vai). Sem
