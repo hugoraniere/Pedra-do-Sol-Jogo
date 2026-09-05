@@ -292,6 +292,19 @@ def poste_sino(com_sino=False):
     return im
 
 
+def pedra_solta():
+    """Placeholder: um monte pequeno de pedrinhas soltas. Existe so para
+    OBJETOS ter uma fabrica caso arte/sprites/pedra-solta.png suma -- o
+    desenho de producao vem de la (ver LEIA.md)."""
+    im = nova(16, 12)
+    sombra(im, 7, 3, 8, 11)
+    for (x, y, w, h, cor) in [
+        (3, 6, 5, 4, PEDRA), (7, 7, 5, 4, PEDRA_C), (2, 8, 4, 3, PEDRA_E),
+    ]:
+        ret(im, x, y, w, h, cor)
+    return im
+
+
 def poco():
     im = nova(28, 30)
     sombra(im, 12, 4, 14, 27)
@@ -417,6 +430,7 @@ OBJETOS = [
     ("poste-sino", lambda: poste_sino(False), (0.25, 0.14)),
     ("poste-com-sino", lambda: poste_sino(True), (0.25, 0.14)),
     ("poco", poco, (0.40, 0.45)),
+    ("pedra-solta", pedra_solta, (0.45, 0.40)),
     ("barraca", barraca_feira, (0.45, 0.40)),
     ("cerca", cerca, (0.50, 0.40)),
     ("fogueira", fogueira, (0.40, 0.40)),
