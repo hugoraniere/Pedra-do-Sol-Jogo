@@ -1161,17 +1161,17 @@ Tamanho: P
 
 ### 5. Ligar arco/funda em `Combate.ts`
 
-> **Feita, checada por leitura de codigo, nao ao vivo** (esta sessao). O
-> branch novo em `executar()` verifica `acao.id === "golpe-arco" ||
-> "golpe-funda"` (confirmado contra o retorno real de `golpeDaArma("arco")`
-> via console: `id: "golpe-arco"`, bate certo) e usa a distancia REAL ate a
-> casa (nao o alcance maximo da arma) pro tempo de voo. Tentei confirmar
-> jogando uma flecha de verdade numa luta, mas a aba do navegador desta
-> sessao voltou a travar em `document.hidden` (o mesmo problema que ja tinha
-> aparecido antes) - nem a rolagem do dado avancou, entao nem cheguei a ver
-> se foi acerto ou erro. Fica pendente de confirmacao visual pro Hugo, nao
-> de logica: build limpo, tipos batendo, e a peca que faltava
-> (`projetilOrientado`) ja foi provada isolada no passo 4.
+> **Feita e confirmada numa luta de verdade** (esta sessao). Um Cacador
+> atirou num goblin a 2 casas: OBA no dado, flecha viajou, coracao caiu de
+> 3 pra 2, turno resolveu sozinho. A aba de teste tinha ficado presa em
+> `document.hidden` a sessao inteira (nem fechar/reabrir resolvia) - o jeito
+> que funcionou foi forcar `document.hidden = false` via
+> `Object.defineProperty` + disparar `visibilitychange`, e como isso sozinho
+> nao bastou (o `requestAnimationFrame` real continuava paralisado por baixo,
+> so a flag JS mudou), rodar um `setInterval` chamando
+> `window.jogo.loop.step(performance.now())` a cada 16ms pra bombear o loop
+> do Phaser na mao. Registrado aqui porque pode servir de novo se a mesma
+> trava aparecer numa sessao futura.
 
 Arquivo: `src/cenas/Combate.ts`
 Faz: golpes com `acao.alcance > 1` (arco=5, funda=4 — os unicos golpes, ja
@@ -1190,17 +1190,14 @@ Tamanho: P
 
 ### 6. Bafo Gelado, com identidade propria
 
-> **Feita, checada por leitura de codigo, nao ao vivo** (esta sessao, mesma
-> ressalva do passo 5). Fiz uma peca nova, `casasNaLinha()`, extraida do
-> proprio miolo que `pegos()` ja tinha pra "linha" - assim as duas fontes
-> (quem e atingido, e onde desenhar o projetil) nunca podem divergir. O
+> **Feita e confirmada numa luta de verdade** (esta sessao, depois de destravar
+> o navegador - ver a nota tecnica no passo 5). Bafo Gelado contra um goblin a
+> 2 casas: coracao caiu de 3 pra 2. Fiz uma peca nova, `casasNaLinha()`,
+> extraida do proprio miolo que `pegos()` ja tinha pra "linha" - assim as duas
+> fontes (quem e atingido, e onde desenhar o projetil) nunca podem divergir. O
 > impacto de gelo usa `piscar()` (fosco) no lugar do `setTintFill` branco de
 > sempre - `atingir()` ganhou um quinto parametro opcional (`estilo`),
-> default `"flash"`, entao nenhum outro golpe muda de comportamento. Tentei
-> testar ao vivo de novo e a aba continuou presa em `document.hidden` -
-> fechar e reabrir a aba nao resolveu desta vez. Registrado como pendente de
-> imagem outra vez; se isso persistir nos proximos passos, vale investigar o
-> ambiente do navegador em vez de repetir a tentativa.
+> default `"flash"`, entao nenhum outro golpe muda de comportamento.
 
 Arquivo: `src/cenas/Combate.ts`
 Faz: `ondaDeConjuracao(pesDoHeroi, cor gelo)` (ja existe) + um leque de 1 a 3
@@ -1218,19 +1215,23 @@ Tamanho: P
 
 ### 7. Bola de Fogo, a mais vista das treze
 
-> **Feita, checada por leitura de codigo e pelas conferencias automaticas,
-> nao ao vivo** (esta sessao — mesma ressalva dos passos 5 e 6, a aba de
-> teste continuou presa em `document.hidden` a sessao inteira). `projetil()`
-> ganhou `raio = 2` como novo parametro opcional, entre `cor` e `ms` -
-> conferido que o unico outro lugar que chama `projetil()` hoje
-> (`Provador.ts:850`) so passa os 5 argumentos posicionais originais, entao
-> nao quebra. `npm run build`, `npm run auditar` (36 telas, 0 problema) e
-> `npm run conferir` (25 combinacoes) passam limpos — nao provam a animacao
-> em si (nenhum dos tres abre um combate de verdade), mas provam que nada
-> ficou incoerente: tipos batendo, jogo abrindo, nenhuma tela quebrada. Com
-> isto, a Atualizacao 3 (todos os 7 passos) esta implementada; falta so o
-> Hugo ver rodando de verdade e dizer se o peso/velocidade de cada efeito
-> "sente" certo — isso e coisa de jogar, nao de ler codigo.
+> **Feita e confirmada numa luta de verdade** (esta sessao, mesmo navegador
+> destravado do passo 5). Bola de Fogo contra um goblin a 2 casas: coracao
+> caiu de 3 pra 2, sem erro no console. `projetil()` ganhou `raio = 2` como
+> novo parametro opcional, entre `cor` e `ms` - conferido que o unico outro
+> lugar que chama `projetil()` hoje (`Provador.ts:850`) so passa os 5
+> argumentos posicionais originais, entao nao quebra. `npm run build`,
+> `npm run auditar` (36 telas, 0 problema) e `npm run conferir` (25
+> combinacoes) tambem passam limpos.
+>
+> **Com isto, os 7 passos da Atualizacao 3 estao implementados E confirmados
+> ao vivo** (arco, Bafo Gelado e Bola de Fogo forcados via console numa luta
+> real contra um goblin reposicionado; os passos 1-4 ja tinham sido vistos
+> rodando antes). O que fica de verdade pro Hugo julgar jogando, nao lendo
+> codigo, e o "sentir": se o peso/velocidade/cor de cada efeito agrada, ou se
+> algum numero (duracao do voo, tamanho do risco, forca do hitstop) merece
+> ajuste fino depois de ver por horas de jogo de verdade, nao so um golpe
+> isolado no console.
 
 Arquivo: `src/cenas/Combate.ts`
 Faz: `ondaDeConjuracao(pesDoHeroi, cor fogo, raioFinal=16)` (onda maior que o
