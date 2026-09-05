@@ -10,11 +10,12 @@
  * (os goblins daquele encontro). Esta cena so sabe LUTAR contra quem chegou.
  */
 import Phaser from "phaser";
-import { ALTURA, LARGURA, SOLIDOS, TILE, escalaDoSprite } from "../dados/config";
-import { acharCriatura, spriteDoGoblin } from "../dados/conteudo";
-import { ICONE, MOVIMENTO } from "../dados/provador";
-import { ARMAS, CRIATURAS_SOM, DADO, DESFECHO, IMPACTOS, MAGIAS_SOM, faixaDoDado } from "../dados/sons";
+import { ALTURA, LARGURA, SOLIDOS, TILE, escalaDoSprite, direcaoDe } from "../dados/config";
+import { acharCriatura, spriteDoGoblin, type Comportamento as ComportamentoNarrativo } from "../dados/conteudo";
+import { ICONE, MOVIMENTO, movimentoDaCriatura } from "../dados/provador";
+import { ARMAS, CRIATURAS_SOM, DADO, DESFECHO, FAMILIA_DA_CRIATURA, IMPACTOS, MAGIAS_SOM, faixaDoDado } from "../dados/sons";
 import { alcancaveis, caminho, chaveDaCasa, distanciaEmCasas, type Casa } from "../sistemas/alcance";
+import { decidirAcaoDaCriatura, type Comportamento } from "../sistemas/criatura";
 import { acoesDoHeroi, type AcaoDeHeroi } from "../sistemas/acao";
 import { fileira } from "../sistemas/fileira";
 import { criarAnimacoes, camadasDoHeroi, Heroi } from "../sistemas/heroi";
@@ -28,6 +29,28 @@ import type { Mundo } from "./Mundo";
 
 const SLOT = 22;
 const GAP = 2;
+
+/** Traduz o `comportamento` narrativo do bestiario (7 palavras, `conteudo.ts`)
+ *  para o modelo mecanico de 3 que `decidirAcaoDaCriatura` sabe jogar
+ *  (`sistemas/criatura.ts`, testado em `npm run criatura`). So goblin
+ *  (`"foge"`), aranha (`"ronda"`) e lobo-nevoa (`"espreita"`) tem instancia
+ *  de verdade num mapa hoje -- as outras 4 palavras ficam aproximadas ate a
+ *  criatura dona ganhar mapa de verdade, e o ajuste fino e so trocar a linha
+ *  certa aqui, sem mexer no motor de IA. */
+function comportamentoDeCombate(c: ComportamentoNarrativo): Comportamento {
+  switch (c) {
+    case "foge": return "medroso";
+    // "sumir e reaparecer" (espreita) e a HABILIDADE dela (ver
+    // atacarComoCriatura), nao um quarto estado de IA: pra decidir SE avanca
+    // ou ataca, ela se comporta como "curioso" (nunca foge por conta baixa).
+    case "espreita": return "curioso";
+    case "encara": return "curioso"; // "vem reto, nao desiste" bate com curioso
+    case "chefe": return "curioso";  // rotina propria fica pra quando tiver mapa
+    case "ronda": return "passeia";
+    case "vigia": return "passeia";
+    case "guarda": return "passeia"; // nao sai do lugar, so bate quem chega perto
+  }
+}
 
 type Fase = "montando" | "meuTurno" | "mirando" | "andando" | "vezDaCriatura" | "resolvendo";
 
@@ -44,12 +67,18 @@ type Bicho = {
   bonus: number;
   sprite: Phaser.GameObjects.Sprite;
   corpo?: Phaser.Physics.Arcade.Body;
-  tipo: "goblin" | "arbusto";
+  /** "criatura" para qualquer bicho de verdade (goblin, aranha, o que for),
+   *  "arbusto" para cenario destrutivel -- generico desde 2026-09-05, antes
+   *  todo bicho nascia carimbado "goblin" mesmo nao sendo. */
+  tipo: "criatura" | "arbusto";
   coracoes: number;
   coracoesMax: number;
   pips?: Phaser.GameObjects.Container;
   mostrarAte: number;
   rota: Casa[];
+  /** "medroso" (ver sistemas/criatura.ts): topa um golpe de surpresa, nunca
+   *  dois seguidos -- da segunda vez pra frente, foge em vez de atacar. */
+  jaAtacouDeSurpresa: boolean;
 };
 
 type Slot = {
@@ -168,7 +197,7 @@ export class Combate extends Phaser.Scene {
       // (spriteDoGoblin) sai da MESMA casa que o Mundo usou pra desenhar a
       // versao decorativa, entao os dois sempre concordam.
       const spriteChave = e.id === "goblin" ? spriteDoGoblin(casa.tx, casa.ty) : b.sprite;
-      this.porGoblin(`${e.id}-${i}`, e.id, e.chave, spriteChave, nome, 0, casa.tx, casa.ty, b.coracoes);
+      this.porCriatura(`${e.id}-${i}`, e.id, e.chave, spriteChave, nome, 0, casa.tx, casa.ty, b.coracoes);
     });
 
     // a camera de Combate so desenha o que ELE acrescenta (barra, mira, os
@@ -213,24 +242,31 @@ export class Combate extends Phaser.Scene {
   // na Fase 5 (docs/plano-de-implementacao.md), quando objetos com estado
   // existirem em Mundo.ts de verdade.
 
-  private porGoblin(
+  private porCriatura(
     id: string, bicharioId: string, chave: string, spriteChave: string, nome: string,
     bonus: number, tx: number, ty: number, coracoes: number
   ) {
     const [x, y] = this.centroDaCasa(tx, ty);
     // nasce no mundo do Mundo, nao no da Combate: sao cenas empilhadas, e cada
-    // uma desenha a sua lista inteira por cima da de baixo. Se o goblin fosse
-    // desta cena, ele cobriria o heroi sempre, nao importa o Y de cada um.
+    // uma desenha a sua lista inteira por cima da de baixo. Se a criatura
+    // fosse desta cena, ela cobriria o heroi sempre, nao importa o Y de cada.
     const s = this.mundo.physics.add.sprite(x, y, spriteChave, 0).setOrigin(0.5, 1)
       .setScale(escalaDoSprite(spriteChave));
     s.setDepth(y);
     s.play(`${spriteChave}-parado-baixo`, true);
-    s.body.setSize(10, 6).setOffset(3, 26);
+    // caixa de colisao proporcional ao quadro de VERDADE da textura (nao ao
+    // porte da ficha): o goblin sozinho desenha em 48x96 (3x, escalaDoSprite
+    // compensa so a EXIBICAO), entao ler o porte daria uma caixa errada so
+    // pra ele. As razoes vem do 10x6/offset 3,26 que ja valia pro goblin
+    // antigo (16x32).
+    const larguraQuadro = s.frame.width, alturaQuadro = s.frame.height;
+    s.body.setSize(Math.round(larguraQuadro * 0.625), Math.round(alturaQuadro * 0.1875))
+      .setOffset(Math.round(larguraQuadro * 0.1875), Math.round(alturaQuadro * 0.8125));
     this.bichos.push({
       id, bicharioId, chave, nome, bonus,
       retrato: ICONE.retrato[spriteChave.replace("goblin-", "")] ?? 1,
-      sprite: s, corpo: s.body as Phaser.Physics.Arcade.Body, tipo: "goblin",
-      coracoes, coracoesMax: coracoes, mostrarAte: 0, rota: [],
+      sprite: s, corpo: s.body as Phaser.Physics.Arcade.Body, tipo: "criatura",
+      coracoes, coracoesMax: coracoes, mostrarAte: 0, rota: [], jaAtacouDeSurpresa: false,
     });
   }
 
@@ -358,25 +394,31 @@ export class Combate extends Phaser.Scene {
   }
 
   // ================================================================== combate
-  private goblins(): Bicho[] {
-    return this.bichos.filter((b) => b.tipo === "goblin");
+  private criaturasVivas(): Bicho[] {
+    return this.bichos.filter((b) => b.tipo === "criatura");
   }
 
   private d6 = () => Phaser.Math.Between(1, 6);
 
   private comecarCombate() {
-    const lutadores = this.goblins();
+    const lutadores = this.criaturasVivas();
     if (lutadores.length === 0) return this.acabarCombate();
     this.fase = "vezDaCriatura";
     this.ordem.comecar([
       { id: "heroi", iniciativa: this.d6() + this.atributos.esperteza, movimentoMax: MOVIMENTO.heroi },
-      ...lutadores.map((g) => ({ id: g.id, iniciativa: this.d6(), movimentoMax: MOVIMENTO.goblin })),
+      ...lutadores.map((g) => ({
+        id: g.id, iniciativa: this.d6(),
+        movimentoMax: movimentoDaCriatura(acharCriatura(g.bicharioId)?.velocidade ?? 0),
+      })),
     ]);
     const minha = this.casaDoHeroi();
     const [ax, ay] = this.centroDaCasa(minha.tx, minha.ty);
     this.tweens.add({ targets: this.heroi, x: ax, y: ay, duration: 160, ease: "Quad.easeOut" });
     this.anunciar("COMBATE!");
-    tocarFicha(CRIATURAS_SOM.pequeno.nota);
+    // com mais de um tipo na mesma luta (ainda nao acontece hoje), a familia
+    // do primeiro decide o som -- aproximado de proposito, nao vale a pena
+    // tocar dois sons de entrada por cima um do outro.
+    tocarFicha(CRIATURAS_SOM[FAMILIA_DA_CRIATURA[lutadores[0]?.bicharioId] ?? "pequeno"].nota);
     this.desenharIniciativa();
     this.time.delayedCall(700, () => this.entrarNoTurno());
   }
@@ -428,52 +470,155 @@ export class Combate extends Phaser.Scene {
     });
   }
 
-  /** A vez da criatura: anda ate perto e bate. Ela NUNCA rola dado, igual a mesa. */
+  /** A vez da criatura: decide com `decidirAcaoDaCriatura` (sistemas/criatura.ts,
+   *  comportamento "medroso" -- bate uma vez de surpresa, depois foge; fraca,
+   *  foge sempre) o que faz ESTE turno, e so faz uma coisa por vez: anda OU
+   *  ataca OU foge, nunca as duas no mesmo turno. Ela nunca rola dado antes de
+   *  bater, igual a mesa -- so o RESULTADO do golpe rola. */
   private jogarCriatura(id: string) {
     const b = this.bichos.find((x) => x.id === id);
     if (!b) { this.ordem.remover(id); return this.entrarNoTurno(); }
+    const ficha = acharCriatura(b.bicharioId);
+    const aqui = this.casaDoBicho(b);
     const alvo = this.casaDoHeroi();
-    const passos = MOVIMENTO.goblin;
-    const achadas = alcancaveis(this.casaDoBicho(b), passos, (tx, ty) => this.passavel(tx, ty, b));
+    const distancia = distanciaEmCasas(aqui, alvo);
+    const comportamento = comportamentoDeCombate(ficha?.comportamento ?? "foge");
+    const intencao = decidirAcaoDaCriatura(comportamento, distancia, b.coracoes, b.coracoesMax, b.jaAtacouDeSurpresa);
+
+    if (intencao === "atacar") {
+      b.rota = [];
+      this.mostrarPips(b);
+      return this.atacarComoCriatura(b);
+    }
+    if (intencao === "esperar") {
+      // "passeia": nao sai do lugar enquanto o heroi nao chega perto.
+      this.time.delayedCall(220, () => { this.ordem.passar(); this.entrarNoTurno(); });
+      return;
+    }
+    if (intencao === "avancar" && b.bicharioId === "lobo-nevoa") {
+      // habilidade propria: em vez de andar, ele SOME e reaparece perto do
+      // heroi -- "a nevoa se junta num ponto antes de ele sair dela"
+      // (telegrafo do bestiario), e bate com ser o mais rapido dos tres.
+      return this.avancarComoNevoa(b, alvo);
+    }
+
+    const passos = movimentoDaCriatura(ficha?.velocidade ?? 0);
+    const achadas = alcancaveis(aqui, passos, (tx, ty) => this.passavel(tx, ty, b));
     let melhor: Casa | undefined;
-    let melhorDist = Infinity;
+    // "avancar" quer a casa alcancavel MAIS PERTO do heroi; "fugir" quer a
+    // MAIS LONGE -- mesma busca, comparador trocado.
+    let melhorDist = intencao === "fugir" ? -Infinity : Infinity;
     achadas.forEach((c) => {
       const d = distanciaEmCasas(c, alvo);
-      if (d < melhorDist) { melhorDist = d; melhor = { tx: c.tx, ty: c.ty }; }
+      if (intencao === "fugir" ? d > melhorDist : d < melhorDist) {
+        melhorDist = d; melhor = { tx: c.tx, ty: c.ty };
+      }
     });
     b.rota = melhor ? caminho(achadas, melhor) : [];
     this.mostrarPips(b);
 
-    const depoisDeAndar = () => {
-      if (distanciaEmCasas(this.casaDoBicho(b), this.casaDoHeroi()) <= 1) {
-        const grito = texto(this, b.sprite.x, b.sprite.y - 40, "!", { cor: 0xf5b62b, ancora: 0.5 });
-        grito.setDepth(2000);
-        this.tweens.add({ targets: b.sprite, scaleY: 0.85, scaleX: 1.15, duration: 160, yoyo: true });
-        tocarFicha(CRIATURAS_SOM.pequeno.reage);
-        this.time.delayedCall(500, () => {
-          grito.destroy();
-          const { dado, total } = rolar(b.bonus, this.d6);
-          const faixa = faixaDoDado(total);
-          tocarFicha(DADO.rola);
-          this.mostrarDado(dado, b.bonus, faixa, b.sprite.x, b.sprite.y - 40);
-          this.time.delayedCall(520, () => {
-            tocarFicha(DESFECHO[faixa]);
-            if (faixa === "ops") {
-              this.poeira(this.heroi.x, this.heroi.y - 8);
-              tocarFicha(IMPACTOS.errou);
-            } else {
-              this.heroiApanha(faixa === "oba");
-            }
-            this.time.delayedCall(420, () => { this.ordem.passar(); this.entrarNoTurno(); });
-          });
-        });
-        return;
+    if (intencao === "fugir") {
+      // de costas para o heroi: a mesma direcao que "avancar ate ele" teria,
+      // invertida -- foge olhando para onde vai, nao para tras.
+      const dir = direcaoDe(aqui.tx - alvo.tx, aqui.ty - alvo.ty) ?? "baixo";
+      b.sprite.play(`${b.sprite.texture.key}-fuga-${dir}`, true);
+    }
+
+    const aoTerminar = () => {
+      if (intencao === "fugir") {
+        const dir = direcaoDe(this.casaDoBicho(b).tx - alvo.tx, this.casaDoBicho(b).ty - alvo.ty) ?? "baixo";
+        b.sprite.play(`${b.sprite.texture.key}-parado-${dir}`, true);
       }
       this.time.delayedCall(220, () => { this.ordem.passar(); this.entrarNoTurno(); });
     };
+    if (b.rota.length === 0) return aoTerminar();
+    b.sprite.setData("aoChegar", aoTerminar);
+  }
 
-    if (b.rota.length === 0) return depoisDeAndar();
-    b.sprite.setData("aoChegar", depoisDeAndar);
+  /** Habilidade do lobo-de-nevoa: some (fade out), reaparece numa casa
+   *  livre ao lado do heroi, e volta (fade in) -- em vez de andar ate la
+   *  feito as outras. Conta como UM turno (so "avancar"): o ataque de
+   *  verdade fica pro proximo turno, ja adjacente, igual a qualquer outra
+   *  criatura. Sem vaga do lado do heroi, so passa a vez. */
+  private avancarComoNevoa(b: Bicho, alvo: Casa) {
+    const vizinhas: Casa[] = [
+      { tx: alvo.tx - 1, ty: alvo.ty }, { tx: alvo.tx + 1, ty: alvo.ty },
+      { tx: alvo.tx, ty: alvo.ty - 1 }, { tx: alvo.tx, ty: alvo.ty + 1 },
+      { tx: alvo.tx - 1, ty: alvo.ty - 1 }, { tx: alvo.tx + 1, ty: alvo.ty - 1 },
+      { tx: alvo.tx - 1, ty: alvo.ty + 1 }, { tx: alvo.tx + 1, ty: alvo.ty + 1 },
+    ].filter((c) => this.passavel(c.tx, c.ty, b));
+    const destino = vizinhas[0];
+    if (!destino) {
+      this.time.delayedCall(220, () => { this.ordem.passar(); this.entrarNoTurno(); });
+      return;
+    }
+    const [dx, dy] = this.centroDaCasa(destino.tx, destino.ty);
+    this.tweens.add({
+      targets: b.sprite, alpha: 0, duration: 260,
+      onComplete: () => {
+        b.corpo?.reset(dx, dy);
+        b.sprite.setDepth(dy);
+        this.tweens.add({ targets: b.sprite, alpha: 1, duration: 260 });
+        this.time.delayedCall(300, () => { this.ordem.passar(); this.entrarNoTurno(); });
+      },
+    });
+  }
+
+  /** O golpe da criatura: telegrafo parado, avanco, golpe, volta exata a
+   *  origem. Chamado so quando ela ja esta adjacente -- nunca no mesmo turno
+   *  em que andou (ver jogarCriatura). */
+  private atacarComoCriatura(b: Bicho) {
+    const chave = b.sprite.texture.key;
+    const baseEsc = escalaDoSprite(chave);
+    const ox = b.sprite.x, oy = b.sprite.y;
+    const dir = direcaoDe(this.heroi.x - ox, this.heroi.y - oy) ?? "baixo";
+    // o corpo e fisico (Arcade): mover so o sprite.x/y seria pisado no
+    // proximo passo de fisica. O avanco e a volta usam velocidade, igual
+    // ao empurrao de `atingir()` -- e so uma FRACAO do caminho ate o
+    // heroi, ele entra no alcance do golpe, nunca em cima do heroi.
+    // A distancia do avanco escala com o `alcance` da ficha (12 = o goblin,
+    // que fica exatamente como estava): a aranha bota mais longe, batendo
+    // com o proprio bestiario.
+    const alcanceMult = (acharCriatura(b.bicharioId)?.alcance ?? 12) / 12;
+    const velocidadeAvanco = 90 * alcanceMult;
+    const rumo = new Phaser.Math.Vector2(this.heroi.x - ox, this.heroi.y - oy).normalize();
+    const grito = texto(this, ox, oy - 40, "!", { cor: 0xf5b62b, ancora: 0.5 });
+    grito.setDepth(2000);
+    tocarFicha(CRIATURAS_SOM[FAMILIA_DA_CRIATURA[b.bicharioId] ?? "pequeno"].reage);
+    // telegrafo: levanta o porrete e para, parado no lugar -- "levanta o
+    // pau acima da cabeca e fecha os olhos" (bestiario). So depois disso
+    // ele avanca; sem a pausa o golpe vira reflexo, nao leitura.
+    b.sprite.play(`${chave}-ataque-${dir}`);
+    this.time.delayedCall(380, () => {
+      grito.destroy();
+      b.corpo?.setVelocity(rumo.x * velocidadeAvanco, rumo.y * velocidadeAvanco);
+      this.time.delayedCall(130, () => {
+        b.corpo?.setVelocity(0, 0);
+        this.tweens.add({ targets: b.sprite, scaleX: baseEsc * 1.15, scaleY: baseEsc * 0.85, duration: 90, yoyo: true });
+        const { dado, total } = rolar(b.bonus, this.d6);
+        const faixa = faixaDoDado(total);
+        tocarFicha(DADO.rola);
+        this.mostrarDado(dado, b.bonus, faixa, b.sprite.x, b.sprite.y - 40);
+        this.time.delayedCall(520, () => {
+          tocarFicha(DESFECHO[faixa]);
+          if (faixa === "ops") {
+            this.poeira(this.heroi.x, this.heroi.y - 8);
+            tocarFicha(IMPACTOS.errou);
+          } else {
+            this.heroiApanha(faixa === "oba");
+          }
+          b.jaAtacouDeSurpresa = true;
+          // volta para a posicao de origem -- "avanca, ataca, volta"
+          b.sprite.play(`${chave}-parado-${dir}`, true);
+          b.corpo?.setVelocity(-rumo.x * velocidadeAvanco, -rumo.y * velocidadeAvanco);
+          this.time.delayedCall(130, () => {
+            b.corpo?.setVelocity(0, 0);
+            b.corpo?.reset(ox, oy);   // sem deriva: volta exata, nao aproximada
+          });
+          this.time.delayedCall(420, () => { this.ordem.passar(); this.entrarNoTurno(); });
+        });
+      });
+    });
   }
 
   private heroiApanha(cheio = true) {
@@ -634,11 +779,31 @@ export class Combate extends Phaser.Scene {
     this.time.delayedCall(420, () => {
       tocarFicha(DESFECHO[faixa]);
       const pegos = this.pegos(acao, casa);
-      if (faixa === "ops" || pegos.length === 0) {
+      // mesmo com QUASE/INCRIVEL (o golpe ia acertar), uma criatura agil
+      // pode esquivar por conta propria -- `esquivaChance` (conteudo.ts),
+      // o atributo novo pedido pelo Hugo em 2026-09-05. O DADO continua
+      // sendo de quem decide o resultado; isto so filtra por cima dele.
+      // Em faixa "ops" ninguem tem chance de novo: ela ja esquivou por
+      // causa do dado, nao por sorte dupla.
+      const esquivaram = faixa === "ops"
+        ? pegos
+        : pegos.filter((b) => Math.random() < (acharCriatura(b.bicharioId)?.esquivaChance ?? 0));
+      const atingidos = pegos.filter((b) => !esquivaram.includes(b));
+      if (esquivaram.length > 0) {
+        // OPS com bicho na mira, ou esquiva de verdade: nao "nada aconteceu",
+        // ele ESQUIVOU do golpe -- e por isso que o heroi errou.
+        esquivaram.forEach((b) => {
+          const chave = b.sprite.texture.key;
+          const dir = direcaoDe(this.heroi.x - b.sprite.x, this.heroi.y - b.sprite.y) ?? "baixo";
+          b.sprite.play(`${chave}-esquiva-${dir}`);
+          this.time.delayedCall(360, () => b.sprite.play(`${chave}-parado-${dir}`, true));
+        });
+      }
+      if (atingidos.length === 0) {
         this.poeira(cx, cy - 8);
         tocarFicha(IMPACTOS.errou);
       } else {
-        pegos.forEach((b) => this.atingir(b, cx, cy, faixa === "oba"));
+        atingidos.forEach((b) => this.atingir(b, cx, cy, faixa === "oba"));
         this.cameras.main.shake(90, 0.0022);
       }
       this.time.delayedCall(500, () => this.fimDaAcao());
@@ -647,7 +812,7 @@ export class Combate extends Phaser.Scene {
 
   private fimDaAcao() {
     this.dizer("");
-    if (this.goblins().length === 0) return this.acabarCombate();
+    if (this.criaturasVivas().length === 0) return this.acabarCombate();
     if (this.ordem.acabou()) {
       this.ordem.passar();
       return this.entrarNoTurno();
@@ -702,7 +867,12 @@ export class Combate extends Phaser.Scene {
     tocarFicha(b.tipo === "arbusto" ? IMPACTOS.madeira : IMPACTOS.bicho);
     b.sprite.setTintFill(0xfff8ea);
     this.time.delayedCall(70, () => b.sprite.clearTint());
-    this.tweens.add({ targets: b.sprite, scaleY: 0.8, duration: 80, yoyo: true });
+    // relativo a escala BASE do sprite (escalaDoSprite): o goblin exibe a 1/3
+    // (arte em 48x96, mundo continua no tamanho de sempre) -- um scaleY
+    // absoluto aqui pularia de volta para quase o tamanho cheio por 80ms,
+    // um "inflar" visivel em vez de um encolher.
+    const baseEsc = escalaDoSprite(b.sprite.texture.key);
+    this.tweens.add({ targets: b.sprite, scaleY: baseEsc * 0.8, duration: 80, yoyo: true });
     if (cheio && b.corpo) {
       const fuga = new Phaser.Math.Vector2(b.sprite.x - dex, b.sprite.y - dey).normalize().scale(70);
       b.corpo.setVelocity(fuga.x, fuga.y);
@@ -720,8 +890,8 @@ export class Combate extends Phaser.Scene {
     this.bichos = this.bichos.filter((o) => o !== b);
     b.corpo?.setVelocity(0, 0);
     b.pips?.destroy();
-    if (b.tipo === "goblin") {
-      tocarFicha(CRIATURAS_SOM.pequeno.desiste);
+    if (b.tipo === "criatura") {
+      tocarFicha(CRIATURAS_SOM[FAMILIA_DA_CRIATURA[b.bicharioId] ?? "pequeno"].desiste);
       if (b.chave) {
         marcarDerrotado(b.chave);
         // tira a versao decorativa do mundo de verdade agora mesmo — nao
@@ -746,7 +916,7 @@ export class Combate extends Phaser.Scene {
     // o corpo desaba (pose `derrota`, desenhada em arte/goblin.py) em vez de
     // girar 220 graus: o giro era um efeito de codigo no lugar de um quadro
     // proprio. A direcao vem da animacao que ja estava tocando.
-    if (b.tipo === "goblin") {
+    if (b.tipo === "criatura") {
       const dir = b.sprite.anims.currentAnim?.key.split("-").pop() ?? "baixo";
       b.sprite.play(`${b.sprite.texture.key}-derrota-${dir}`);
     }

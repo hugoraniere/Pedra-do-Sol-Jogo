@@ -9,14 +9,16 @@ import { estado } from "../sistemas/estado";
 import { Controles } from "../sistemas/controles";
 import { refazerAoRedimensionar } from "../sistemas/visao";
 import { ICONE } from "../sistemas/icones";
-import { ESPACO } from "../sistemas/design";
-import { botao } from "../sistemas/botao";
+import { ESPACO, TAMANHO } from "../sistemas/design";
+import { botao, type Botao } from "../sistemas/botao";
 import { interativo } from "../sistemas/interativo";
+import type { Escolha } from "../dados/dialogos";
 
 /** `quem` e o nome que aparece na chapinha; `chave` e a entrada de DIALOGOS,
  *  que e o que a tabela VOZ usa para achar a altura da voz. Sem chave a fala
- *  ainda funciona, so sai na voz neutra. */
-type PedidoFala = { quem: string; linhas: string[]; cena: Phaser.Scene; chave?: string };
+ *  ainda funciona, so sai na voz neutra. `escolhas`, se vier, aparece como
+ *  botoes depois da ultima linha, no lugar de fechar a fala sozinha. */
+type PedidoFala = { quem: string; linhas: string[]; cena: Phaser.Scene; chave?: string; escolhas?: Escolha[] };
 
 export class Interface extends Phaser.Scene {
   private controles!: Controles;
@@ -37,6 +39,14 @@ export class Interface extends Phaser.Scene {
   /** true logo depois que uma fala abre com o botao de acao ainda segurado:
    *  bloqueia avancar a linha ate o botao ser solto uma vez. */
   private esperandoSoltarAcao = false;
+  /** as escolhas da fala ATUAL, se houver — somem depois de escolhida uma,
+   *  entao chegar ao fim das linhas de novo (a resposta escolhida) fecha
+   *  normal, sem abrir uma segunda rodada de botoes. */
+  private escolhasAtuais?: Escolha[];
+  private botoesEscolha: Botao[] = [];
+  /** true enquanto os botoes de escolha estao na tela: toque generico
+   *  (zona/tecla de acao) fica desligado, so o botao certo responde. */
+  private mostrandoEscolhas = false;
 
   constructor() {
     super("Interface");
@@ -51,6 +61,9 @@ export class Interface extends Phaser.Scene {
     this.cenaDona = undefined;
     this.escrevendo = false;
     this.maquina = undefined;
+    this.escolhasAtuais = undefined;
+    this.botoesEscolha = [];
+    this.mostrandoEscolhas = false;
     this.controles = new Controles(this);
     this.montarTopo();
     this.montarDirecional();
@@ -223,7 +236,7 @@ export class Interface extends Phaser.Scene {
       .setVisible(false)
       .setDepth(99);
     this.zona.on("pointerdown", () => {
-      if (this.caixa.visible) this.proximaLinha();
+      if (this.caixa.visible && !this.mostrandoEscolhas) this.proximaLinha();
     });
 
     this.caixa = this.add
@@ -234,9 +247,11 @@ export class Interface extends Phaser.Scene {
   }
 
   private falar(p: PedidoFala) {
+    this.limparEscolhas();
     this.cenaDona = p.cena;
     this.linhas = p.linhas;
     this.indice = 0;
+    this.escolhasAtuais = p.escolhas;
     this.vozAtual = p.chave ?? "";
     this.textoQuem.setText(p.quem);
     this.caixa.setVisible(true);
@@ -275,6 +290,11 @@ export class Interface extends Phaser.Scene {
   }
 
   private proximaLinha() {
+    // com os botoes de escolha na tela, so eles respondem — isto aqui e so
+    // uma rede de seguranca a mais, alem do `!this.mostrandoEscolhas` que ja
+    // guarda a zona e a tecla de acao: sem ela, uma chamada perdida repetia
+    // `mostrarEscolhas()` e duplicava os botoes.
+    if (this.mostrandoEscolhas) return;
     // primeiro toque completa a linha, segundo avanca. Quem le devagar nunca
     // fica esperando a maquina de escrever, e quem le rapido nao perde texto.
     if (this.escrevendo) {
@@ -288,6 +308,10 @@ export class Interface extends Phaser.Scene {
     if (this.indice >= this.linhas.length) {
       this.maquina?.remove();
       this.maquina = undefined;
+      if (this.escolhasAtuais && this.escolhasAtuais.length > 0) {
+        this.mostrarEscolhas(this.escolhasAtuais);
+        return;
+      }
       this.caixa.setVisible(false);
       this.zona.setVisible(false);
       this.atualizarTopo();
@@ -296,6 +320,51 @@ export class Interface extends Phaser.Scene {
       return;
     }
     this.escrever(this.linhas[this.indice]);
+  }
+
+  /** As respostas aparecem empilhadas por cima da caixa de fala, do mesmo
+   *  jeito que `Pausa.ts` empilha os itens do menu — altura calculada pela
+   *  contagem de opcoes, nenhum numero magico. So um nivel: escolher fecha
+   *  a lista e, se houver `resposta`, mostra essas linhas pelo mesmo
+   *  `escrever()`/`proximaLinha()` de sempre. */
+  private mostrarEscolhas(escolhas: Escolha[]) {
+    this.mostrandoEscolhas = true;
+    const alturaCaixa = 60; // o mesmo valor de montarCaixa()
+    const yCaixa = ALTURA - alturaCaixa - 4;
+    const altura = TAMANHO.botao;
+    const gap = ESPACO.sm;
+    const alturaTotal = escolhas.length * altura + (escolhas.length - 1) * gap;
+    const yInicial = yCaixa - ESPACO.md - alturaTotal;
+    const largura = LARGURA - 16;
+    escolhas.forEach((esc, i) => {
+      const y = yInicial + i * (altura + gap) + altura / 2;
+      const b = botao(this, LARGURA / 2, y, largura, altura, esc.texto, () => this.escolher(esc), "painel-creme");
+      b.setDepth(101);
+      this.botoesEscolha.push(b);
+    });
+  }
+
+  private escolher(esc: Escolha) {
+    this.limparEscolhas();
+    this.escolhasAtuais = undefined;
+    esc.efeito?.();
+    if (esc.resposta && esc.resposta.length > 0) {
+      this.linhas = esc.resposta;
+      this.indice = 0;
+      this.escrever(this.linhas[0]);
+      return;
+    }
+    this.caixa.setVisible(false);
+    this.zona.setVisible(false);
+    this.atualizarTopo();
+    tocar("fala-fecha");
+    this.cenaDona?.events.emit("dialogo-fim");
+  }
+
+  private limparEscolhas() {
+    this.mostrandoEscolhas = false;
+    this.botoesEscolha.forEach((b) => b.destroy());
+    this.botoesEscolha = [];
   }
 
   update() {
@@ -310,6 +379,8 @@ export class Interface extends Phaser.Scene {
     if (this.esperandoSoltarAcao && !this.controles.acaoSegurada()) {
       this.esperandoSoltarAcao = false;
     }
-    if (this.caixa.visible && agiu && !this.esperandoSoltarAcao) this.proximaLinha();
+    if (this.caixa.visible && !this.mostrandoEscolhas && agiu && !this.esperandoSoltarAcao) {
+      this.proximaLinha();
+    }
   }
 }

@@ -18,7 +18,10 @@ import type { Marca } from "../sistemas/marcas";
  *  Folha propria do combate, separada de ui.png. */
 export const ICONE = {
   retratoHeroi: 0,
-  retrato: { magricela: 1, gorducho: 2, moleque: 3, chefe: 4 } as Record<string, number>,
+  retrato: {
+    magricela: 1, gorducho: 2, moleque: 3, chefe: 4,
+    aranha: 27, "lobo-nevoa": 28,
+  } as Record<string, number>,
   cajado: 5, punho: 6, fogo: 7, gelo: 8, trovao: 9, sopro: 10,
   /** dado1 fica em 11: a face N e `dadoBase + N - 1` */
   dadoBase: 11,
@@ -69,8 +72,20 @@ export const ACOES_DE_PROVA: AcaoDeProva[] = [
   { id: "sopro-quentinho", tipo: "skill", nome: "SOPRO QUENTINHO", dica: "So uma vez por luta. Vale a pena guardar.", icone: ICONE.sopro, cor: 0xf5b62b, forma: "casa", alcance: 2, espera: 0, usosPorCombate: 1, atributo: "coracao", som: "fogo" },
 ];
 
-/** Quanto cada um anda por turno, em casas. */
+/** Quanto o heroi anda por turno, em casas. `goblin` fica so para o Provador
+ *  (a bancada de teste, que so simula goblins) -- o combate de verdade usa
+ *  `movimentoDaCriatura()` para qualquer criatura, incluindo o goblin. */
 export const MOVIMENTO = { heroi: 5, goblin: 3 };
+
+/** Quanto uma criatura anda por turno, a partir da `velocidade` (px/s) da
+ *  ficha dela em `BESTIARIO` -- antes so o goblin tinha numero proprio
+ *  (`MOVIMENTO.goblin`), o resto teria usado o mesmo por acidente em
+ *  `Combate.ts`. A conta reproduz o 3 do goblin (velocidade 70) sem ele
+ *  precisar continuar caso especial: `Math.round(velocidade / 24)`, nunca
+ *  menos que 2 casas. */
+export function movimentoDaCriatura(velocidade: number): number {
+  return Math.max(2, Math.round(velocidade / 24));
+}
 
 /** A quantas casas uma criatura percebe o heroi e o combate comeca. */
 export const DISTANCIA_QUE_NOTA = 5;

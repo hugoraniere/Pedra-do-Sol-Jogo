@@ -22,6 +22,8 @@ from PIL import Image
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from paleta import *  # noqa
+from aranha import ROXO_ARANHA, ROXO_ARANHA_C, ROXO_ARANHA_E  # noqa
+from lobo import NEVOA_C, NEVOA_E, OLHO  # noqa
 
 U = 16
 
@@ -55,6 +57,12 @@ LEGENDA = {
     "t": PEDRA,
     "T": PEDRA_C,
     "u": PEDRA_E,
+    "y": ROXO_ARANHA,
+    "Y": ROXO_ARANHA_C,
+    "x": ROXO_ARANHA_E,
+    "z": NEVOA_E,
+    "Z": NEVOA_C,
+    "Q": OLHO,
 }
 
 # ------------------------------------------------------------- os retratos
@@ -292,6 +300,54 @@ RETRATOS = [
     ("retrato-goblin-gorducho", GOBLIN_GORDUCHO),
     ("retrato-goblin-moleque", GOBLIN_MOLEQUE),
     ("retrato-goblin-chefe", GOBLIN_CHEFE),
+]
+
+# aranha e lobo-nevoa: fofa, nao 8 olhos pequenos (a 16px isso vira ruido, a
+# mesma licao de docs/estudo-de-bichos-e-armas.md secao 4) -- 4 olhos grandes
+# em par bastam para "isto tem muitos olhos" sem virar xadrez.
+ARANHA = [
+    "................",
+    "................",
+    "..x..........x..",
+    "...x........x...",
+    "....yyyyyyyy....",
+    "...yyyyyyyyyy...",
+    "..yyYyyyyyyYyy..",
+    "..yywkyyyykwyy..",
+    "..yykkyyyykkyy..",
+    "..yywkyyyykwyy..",
+    "...yykyyyykyy...",
+    "....yyyyyyyy....",
+    "...x.xx..xx.x...",
+    "................",
+    "................",
+    "................",
+]
+
+# lobo de nevoa: contorno so embaixo (o resto se desfaz), so os olhos acesos
+# -- a mesma regra do corpo de verdade em arte/lobo.py.
+LOBO_NEVOA = [
+    "................",
+    "................",
+    "....zZ....Zz....",
+    "...zZZZ..ZZZz...",
+    "..zZZZZZZZZZZz..",
+    ".zZZZZZZZZZZZZz.",
+    ".zZZQZZZZZZQZZz.",
+    ".zZZQZZZZZZQZZz.",
+    ".zZZZZZZZZZZZZz.",
+    ".zZZZZZZZZZZZZz.",
+    "..zZZZZZZZZZZz..",
+    "...zZZZZZZZZz...",
+    "....kkkkkkkk....",
+    "................",
+    "................",
+    "................",
+]
+
+RETRATOS_CRIATURA = [
+    ("retrato-aranha", ARANHA),
+    ("retrato-lobo-nevoa", LOBO_NEVOA),
 ]
 
 ACOES = [
@@ -581,6 +637,9 @@ def gerar(saida):
     itens += [(f"dado-{n}", face_do_dado(n)) for n in range(1, 7)]
     # no FIM, de proposito: ver o comentario acima de ATRIBUTOS_ICONES
     itens += [(n, do_texto(d)) for n, d in ATRIBUTOS_ICONES + DONS + HABILIDADES]
+    # tambem no FIM, mesma razao: retratos de criatura vieram depois que
+    # RETRATOS/ACOES ja tinham indice fixo em provador.ts
+    itens += [(n, do_texto(d)) for n, d in RETRATOS_CRIATURA]
     folha = Image.new("RGBA", (U * len(itens), U), (0, 0, 0, 0))
     for i, (_, im) in enumerate(itens):
         folha.paste(im, (i * U, 0))

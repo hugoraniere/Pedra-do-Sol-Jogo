@@ -4,7 +4,8 @@ import Phaser from "phaser";
 import { TILE, SOLIDOS, COR, ALTURA_PERSONAGEM, escalaDoSprite, direcaoDe, type NomeDirecao } from "../dados/config";
 import { MAPAS, VILA, montarChao, bordasDeGrama, plantarMata, Mapa, Saida, type Pessoa } from "../dados/mapas";
 import { acharCriatura, spriteDoGoblin } from "../dados/conteudo";
-import { DIALOGOS } from "../dados/dialogos";
+import { DIALOGOS, type Escolha } from "../dados/dialogos";
+import { concluirEtapa } from "../sistemas/missoes";
 import { estado, salvar, marcarVisitado, foiDerrotado } from "../sistemas/estado";
 import type { Encontro } from "./Combate";
 import { Controles } from "../sistemas/controles";
@@ -472,6 +473,14 @@ export class Mundo extends Phaser.Scene {
     if (!alvo) return;
     const fala = DIALOGOS[alvo.chave];
     if (!fala) return;
+    // a primeira variante cuja condicao falta ou bate e a que toca — ver o
+    // comentario no topo de dados/dialogos.ts. O `??` de baixo e so uma rede
+    // de seguranca: se ninguem escreveu uma variante sem condicao por
+    // ultimo, ainda assim alguma fala abre, nunca um interagivel mudo.
+    const variante =
+      fala.variantes.find((v) => !v.condicao || v.condicao()) ??
+      fala.variantes[fala.variantes.length - 1];
+    variante.efeito?.();
     if (alvo.chave === "bau" && marcarVisitado("bau-vila")) {
       estado().moedas += 1;
       salvar();
@@ -480,15 +489,15 @@ export class Mundo extends Phaser.Scene {
       // viram um so, e o premio e justamente o segundo
       this.time.delayedCall(220, () => tocar("moeda"));
     }
-    this.abrirFala(fala.quem, fala.linhas, alvo.chave);
+    this.abrirFala(fala.quem, variante.linhas, alvo.chave, variante.escolhas);
   }
 
-  private abrirFala(quem: string, linhas: string[], chave?: string) {
+  private abrirFala(quem: string, linhas: string[], chave?: string, escolhas?: Escolha[]) {
     this.conversando = true;
     this.heroi.mover(0, 0);
     // a chave viaja junto porque e ela, e nao o nome na chapinha, que a
     // tabela VOZ usa para achar a altura da voz do personagem
-    this.scene.get("Interface").events.emit("falar", { quem, linhas, cena: this, chave });
+    this.scene.get("Interface").events.emit("falar", { quem, linhas, cena: this, chave, escolhas });
   }
 
   update(_tempo: number, delta: number) {
@@ -670,17 +679,17 @@ export class Mundo extends Phaser.Scene {
     if (!this.interagiveis.includes(npc.interagivel)) this.interagiveis.push(npc.interagivel);
   }
 
-  /** Chegou perto demais de um goblin? O mundo para e a luta comeca.
+  /** Chegou perto demais de uma criatura? O mundo para e a luta comeca.
    *
-   *  So goblin briga por enquanto: e a unica criatura que `Combate.ts` sabe
-   *  colocar numa arena (retrato, folha de sprite parada-baixo). Aranha e
-   *  lobo de nevoa continuam so decorando ate ganharem a mesma entrada. */
+   *  Generico para o bestiario inteiro (`Combate.ts` monta a arena a partir
+   *  da ficha de qualquer `bicharioId`) -- na pratica so goblin, aranha e
+   *  lobo-de-nevoa tem instancia de verdade num mapa hoje (`dados/mapas.ts`),
+   *  entao so eles brigam. */
   private conferirEncontro() {
     if (this.conversando || this.trocandoDeMapa) return;
     const hx = Math.floor(this.heroi.x / TILE);
     const hy = Math.floor((this.heroi.y - 1) / TILE);
     const perto = this.criaturas.filter((c) => {
-      if (c.id !== "goblin") return false;
       const cx = Math.floor(c.sprite.x / TILE);
       const cy = Math.floor((c.sprite.y - 1) / TILE);
       return Math.hypot(cx - hx, cy - hy) <= DISTANCIA_DE_ENCONTRO;
@@ -1050,6 +1059,11 @@ export class Mundo extends Phaser.Scene {
     this.trocandoDeMapa = true;
     this.heroi.mover(0, 0);
     const st = estado();
+    // a terceira etapa do sino se resolve sozinha andando ate la, sem fala
+    // nem escolha — a mesma trilha que o guarda ja indica no dialogo dele
+    if (st.cena === "vila" && saida.para === "floresta") {
+      concluirEtapa("sino-da-vila", "seguir-para-floresta");
+    }
     st.cena = saida.para;
     st.lugar = destino.lugar;
     salvar();

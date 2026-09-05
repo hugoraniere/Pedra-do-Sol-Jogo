@@ -319,6 +319,12 @@ export type Criatura = {
   /** o aviso de meio segundo antes do golpe. Toda criatura tem um, e e por ele
    *  que o jogador aprende a ler a briga em vez de decorar. */
   telegrafo: string;
+  /** 0 a 1: chance dela esquivar de um golpe que ia acertar (QUASE/INCRIVEL).
+   *  Nao existe na mesa (o monstro nunca rola) -- e um atributo novo do
+   *  jogo, pedido pelo Hugo em 2026-09-05: continua sendo O DADO DO HEROI
+   *  quem decide o resultado, isto so filtra por cima dele. 0 = nunca
+   *  esquiva (o goblin, por exemplo, nao muda em nada). */
+  esquivaChance: number;
   /** o que fica no chao quando ela e vencida */
   larga: string[];
   /** em que lugares ela aparece */
@@ -331,7 +337,7 @@ export const BESTIARIO: Criatura[] = [
     fraqueza: "barulho alto de metal", fraquezaId: "barulho-metal",
     texto: "Pequeno, verde, orelhudo. Foge mais do que briga.",
     sprite: "goblin", porte: "pequeno", comportamento: "foge",
-    velocidade: 70, alcance: 12, dano: 1,
+    velocidade: 70, alcance: 12, dano: 1, esquivaChance: 0,
     telegrafo: "levanta o pau acima da cabeca e fecha os olhos",
     larga: ["moeda"], onde: ["floresta", "caverna"],
   },
@@ -340,7 +346,7 @@ export const BESTIARIO: Criatura[] = [
     fraqueza: "comer a teia e escapar", fraquezaId: "comer-teia",
     texto: "A teia dela e doce de verdade. Da pra comer.",
     sprite: "aranha", porte: "pequeno", comportamento: "ronda",
-    velocidade: 34, alcance: 14, dano: 1,
+    velocidade: 34, alcance: 14, dano: 1, esquivaChance: 0.2,
     telegrafo: "encolhe as oito pernas antes do bote",
     larga: ["teia-doce"], onde: ["floresta"],
   },
@@ -349,7 +355,7 @@ export const BESTIARIO: Criatura[] = [
     fraqueza: "agua", fraquezaId: "agua",
     texto: "Anda sozinho pelo campo procurando o dono.",
     sprite: "espantalho", porte: "medio", comportamento: "ronda",
-    velocidade: 28, alcance: 16, dano: 1,
+    velocidade: 28, alcance: 16, dano: 1, esquivaChance: 0,
     telegrafo: "gira os bracos como cata-vento",
     larga: ["palha", "moeda"], onde: ["campo", "vila"],
   },
@@ -358,7 +364,7 @@ export const BESTIARIO: Criatura[] = [
     fraqueza: "luz forte", fraquezaId: "luz",
     texto: "Aparece e some no meio da neblina.",
     sprite: "lobo-nevoa", porte: "medio", comportamento: "espreita",
-    velocidade: 78, alcance: 14, dano: 1,
+    velocidade: 78, alcance: 14, dano: 1, esquivaChance: 0.3,
     telegrafo: "a nevoa se junta num ponto antes de ele sair dela",
     larga: ["presa-de-nevoa"], onde: ["floresta"],
   },
@@ -367,7 +373,7 @@ export const BESTIARIO: Criatura[] = [
     fraqueza: "cocegas embaixo do queixo", fraquezaId: "cocegas",
     texto: "Engoliu o Cristal do Meio-dia sem querer.",
     sprite: "serpente", porte: "grande", comportamento: "guarda",
-    velocidade: 40, alcance: 20, dano: 1,
+    velocidade: 40, alcance: 20, dano: 1, esquivaChance: 0,
     telegrafo: "recolhe o pescoco em S e fica quieta demais",
     larga: ["cristal-meio-dia"], onde: ["pantano"],
   },
@@ -376,7 +382,7 @@ export const BESTIARIO: Criatura[] = [
     fraqueza: "uma boa gargalhada", fraquezaId: "riso",
     texto: "Cobra pedagio na ponte. No fundo quer companhia.",
     sprite: "grulo", porte: "grande", comportamento: "guarda",
-    velocidade: 30, alcance: 20, dano: 1,
+    velocidade: 30, alcance: 20, dano: 1, esquivaChance: 0,
     telegrafo: "bate o porrete no chao duas vezes",
     larga: ["pedagio"], onde: ["ponte"],
   },
@@ -385,7 +391,7 @@ export const BESTIARIO: Criatura[] = [
     fraqueza: "nao consegue mentir sobre o proprio nome", fraquezaId: "nome-proprio",
     texto: "Foi ela quem quebrou a Pedra do Sol.",
     sprite: "bruxa", porte: "medio", comportamento: "chefe",
-    velocidade: 55, alcance: 60, dano: 1,
+    velocidade: 55, alcance: 60, dano: 1, esquivaChance: 0,
     telegrafo: "o espinho racha o chao antes de subir",
     larga: ["cristal-anoitecer"], onde: ["torre"],
   },
@@ -394,7 +400,7 @@ export const BESTIARIO: Criatura[] = [
     fraqueza: "agua fria", fraquezaId: "agua-fria",
     texto: "Armadura vazia por dentro, cheia de cinza.",
     sprite: "cavaleiro-cinzas", porte: "grande", comportamento: "encara",
-    velocidade: 36, alcance: 18, dano: 2,
+    velocidade: 36, alcance: 18, dano: 2, esquivaChance: 0,
     telegrafo: "a viseira acende por dentro",
     larga: ["cinza"], onde: ["torre", "pico"],
   },
@@ -403,7 +409,7 @@ export const BESTIARIO: Criatura[] = [
     fraqueza: "o nome verdadeiro, Aurel", fraquezaId: "nome-verdadeiro",
     texto: "O dragao guardiao, com o coracao cheio de cinzas.",
     sprite: "brasanegra", porte: "enorme", comportamento: "chefe",
-    velocidade: 45, alcance: 90, dano: 2,
+    velocidade: 45, alcance: 90, dano: 2, esquivaChance: 0,
     telegrafo: "o peito acende de dentro para fora antes do sopro",
     larga: ["pedra-do-sol"], onde: ["pico"],
   },

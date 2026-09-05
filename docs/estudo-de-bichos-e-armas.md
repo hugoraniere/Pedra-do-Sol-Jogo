@@ -314,7 +314,13 @@ teia subindo. Esta na coluna errada, so isso.
   do roteiro, nao da arte.
 - **Os niveis de visao no celular.** Apontei tres saidas e nao escolhi: a
   escolha muda a experiencia de toque, que e area do `docs/07-design-system.md`.
-- **O corpo do goblin.** Tres tentativas, convergiu so a cabeca.
+- ~~**O corpo do goblin.** Tres tentativas, convergiu so a cabeca.~~ **Resolvido
+  em 2026-09-05:** `arte/goblin.py` foi reescrito em 48 x 96 (3x, so o goblin,
+  decisao do Hugo — ver `docs/estudo-de-resolucao.md`), com tom separando
+  tronco/membro/mao como este estudo pedia, nariz que fura a silhueta de
+  frente, orelha em folha de verdade, tanga de couro e um porrete para o
+  telegrafo de ataque. `src/cenas/Boot.ts`/`Mundo.ts`/`Combate.ts` compensam a
+  escala para ele continuar do mesmo tamanho no mundo.
 - **Os outros sete bichos do bestiario.** Quando este estudo comecou, so goblin
   e aranha existiam em arte. **Durante a sessao, outra frente desenhou os sete
   que faltavam** — `arte/lobo.py`, `serpente.py`, `espantalho.py`, `bruxa.py`,
