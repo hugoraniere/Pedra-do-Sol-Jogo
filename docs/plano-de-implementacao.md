@@ -1031,3 +1031,172 @@ primeiro existir uma lista de acoes por heroi (item 2 acima) pra ter onde
 `push` a habilidade nova escolhida. Animacao por acao continua Fase 12 —
 o Hugo pediu pra pensar nisso depois, esta ordem fica registrada aqui de
 proposito.
+
+---
+
+## Atualizacao 3 . as quatro animacoes que o Hugo pediu agora
+
+Pedido: bola de fogo, bafo gelado, golpe de espada melhor, e flecha/pedra
+viajando ate acertar. A Fase 12 (acima) ja previa isto, mas supunha uma lista
+`HABILIDADES` que a Atualizacao 2 substituiu por `acoesDoHeroi()` — o
+`switch (acao.id)` da 12.3 continua valendo (os ids sao estaveis: `soco`,
+`golpe-<armaId>`, o id de cada magia, `golpe-trovao`), so o lugar de onde a
+lista vem mudou. Esta secao substitui 12.1-12.3 **so para as quatro acoes
+abaixo**; o resto da tabela da Fase 12 (Luzinha, Escudo de Bolha, etc.)
+continua valendo do jeito que esta, sem pressa.
+
+### 0. A descoberta que muda o plano
+
+`src/sistemas/heroi.ts` ja tem `atacar()` (toca o quadro `ataque`, braco
+esticado na direcao do olhar — `arte/pessoa.py` linha ~446, ja desenhado,
+ja gerado) e `machucar()` (quadro `machucado`). **Nenhum dos dois e chamado
+em `src/cenas/Combate.ts`** — `executar()` sempre chama `this.heroi.conjurar(300)`,
+golpe ou magia, e `atingir()` nunca chama `machucar()` do lado do bicho (bicho
+nao tem pose propria, mas o HEROI apanhando tambem nunca usa `machucar()` em
+lugar nenhum do arquivo). Duas correcoes praticamente de graca antes de
+qualquer efeito novo.
+
+Segunda descoberta: `heroi.olhando` e privado e so muda dentro de `mover()`.
+Hoje, se o jogador anda para o norte e ataca um goblin a leste sem se mexer,
+o quadro de `ataque` sai com o braco esticado pro norte, olhando pro lugar
+errado. Isso ja e visivel HOJE mesmo sem nenhuma animacao nova, so ninguem
+tinha reparado porque o golpe generico (flash branco no bicho) nao denuncia
+a direcao de quem bateu.
+
+### 1. `heroi.encarar()`, o pre-requisito de tudo abaixo
+Arquivo: `src/sistemas/heroi.ts`
+Faz: extrai a conta que `mover()` ja faz (`direcaoDe(dx, dy)` + `this.olhando = dir`
++ tocar o quadro parado daquela direcao) para um metodo publico:
+```ts
+encarar(dx: number, dy: number) {
+  const dir = direcaoDe(dx, dy);
+  if (dir) { this.olhando = dir; this.tocar(this.estado); }
+}
+```
+Pronto quando: `executar()` em `Combate.ts` pode chamar
+`this.heroi.encarar(casa.tx - eu.tx, casa.ty - eu.ty)` antes de qualquer golpe
+ou magia, e o herói vira para o alvo mesmo parado.
+Tamanho: P
+
+### 2. Ligar `atacar()`/`conjurar()`/`machucar()` direito
+Arquivo: `src/cenas/Combate.ts`, `executar()` e `atingir()`
+Faz: `executar()` chama `this.heroi.encarar(...)` primeiro, depois
+`acao.tipo === "magia" ? this.heroi.conjurar(300) : this.heroi.atacar(300)`.
+`atingir()` (quando quem apanha e o heroi — hoje so bicho apanha, mas o
+combate ja preve o heroi levar golpe em outro lugar do arquivo, conferir) passa
+a chamar `this.heroi.machucar(300)` no lugar do squash generico que hoje so
+existe para bicho.
+Pronto quando: um golpe de espada mostra o braco esticado na direcao certa
+antes do flash branco no goblin — visivelmente diferente da pose de conjurar
+que toda acao usa hoje.
+Tamanho: P
+
+### 3. O golpe corpo a corpo, com peso de verdade
+Arquivo: `src/cenas/Combate.ts` (novo metodo privado `golpeCorpoACorpo`)
+Vale para `espada-curta`, `martelo`, `cajado` (quando usado como arma) e
+`soco` — os quatro `golpeDaArma()`/`ACAO_SOCO` com `alcance === 1`.
+Faz: compoe fx.ts que ja existe, sem nada novo la:
+```
+agachar(heroi, 90ms)                          -- ja existe
+espera 90ms
+heroi.atacar(300) + achatar leve no proprio heroi (1.05, 0.95, 70ms) no instante do golpe
+espera ~60ms (tempo da mao chegar no alvo, olhando a extensao do braco)
+atingir(bicho, ...) roda igual hoje (flashBranco + tremerLeve + empurrao)
+```
+Martelo ganha `hitstop(cena, 50ms)` extra no impacto (e a arma mais pesada
+das cinco — merece um micro-engasgo que cajado e soco nao tem). Numeros
+batem com a familia ja fixada na Fase 0 (hitstop 70-90ms).
+Pronto quando: martelo, espada e soco tem a MESMA pose (braco esticado) mas
+o martelo "pesa" mais (hitstop perceptivel), sem sprite novo nenhum.
+Tamanho: P
+
+### 4. O projetil orientado, para arco e funda
+Arquivo: `src/sistemas/fx.ts` (novo `projetilOrientado`, ao lado de `projetil`)
+Faz: hoje `projetil()` desenha um circulo — serve pra bola de fogo, nao pra
+flecha (flecha tem ponta, e a ponta tem que apontar pra onde ela vai). Sem
+depender de sprite novo (evita cruzar pra `arte/`, que hoje e do ambiente
+`sprites`): desenha um triangulo fino via `Phaser.GameObjects.Triangle`,
+rotacionado no angulo do trajeto, com um risco fino atras (2-3 pontos de
+rastro, reaproveitando o loop de `projetil()`):
+```ts
+export function projetilOrientado(cena, x1, y1, x2, y2, cor, largura = 3, comprimento = 7, ms = 180, onChegar?)
+```
+`funda` usa `largura=4, comprimento=4` (pedra, mais redonda) e `cor` cinza-pedra;
+`arco` usa `largura=2, comprimento=8` (flecha, mais fina e comprida) e `cor`
+marrom-madeira. Os dois numeros ja diferenciam as duas armas sem precisar de
+desenho.
+Pronto quando: atirar com arco mostra uma forma comprida e fina viajando em
+linha reta ate o goblin, girada na direcao certa mesmo em diagonal.
+Tamanho: P
+
+### 5. Ligar arco/funda em `Combate.ts`
+Arquivo: `src/cenas/Combate.ts`
+Faz: golpes com `acao.alcance > 1` (arco=5, funda=4 — os unicos golpes, ja
+que magias tem o proprio branch) pulam `golpeCorpoACorpo` e chamam:
+```
+heroi.encarar(...) + heroi.atacar(300)   -- a pose de "puxar e soltar" e a mesma do golpe corpo a corpo, serve emprestada
+projetilOrientado(cena, pesDoHeroi, casaAlvo, cor, ..., onChegar: () => atingir(bicho, ...))
+```
+O `atingir()` so roda quando o projetil CHEGA (`onChegar`), nao no instante
+do clique — e a diferenca central pedida ("ver a flecha atingindo", nao golpe
+instantaneo com bicho na mira).
+Pronto quando: com um Cacador (arco), o goblin so pisca/recua quando a flecha
+chega nele, com um atraso visivel proporcional a distancia (mais longe, mais
+demorado — `ms` de `projetilOrientado` escala com `alcance`).
+Tamanho: P
+
+### 6. Bafo Gelado, com identidade propria
+Arquivo: `src/cenas/Combate.ts`
+Faz: `ondaDeConjuracao(pesDoHeroi, cor gelo)` (ja existe) + um leque de 1 a 3
+`projetilOrientado` (um por casa da linha atingida, `TABELA_DE_MAGIA["bafo-gelado"].forma === "linha"`
+ja da a lista certa via `pegos()`), cor azul-gelo, `largura=5` (mais gordo que
+flecha, e sopro, nao dardo), saindo quase juntos (atraso de 40ms entre um e
+outro, nao ms=0 simultaneo, pra "ler" como um cone e nao uma parede). No
+impacto de cada um, `piscar(bicho, alpha 0.5, 2x)` no lugar do `flashBranco`
+generico — gelo pisca fosco, fogo pisca branco quente, a diferenca sozinha ja
+ajuda a distinguir os dois na hora.
+Pronto quando: Bafo Gelado numa fila de 3 goblins mostra 3 sopros levemente
+escalonados, todos azuis, distinguivel de Bola de Fogo so pela cor e pelo
+"fosco" do impacto.
+Tamanho: P
+
+### 7. Bola de Fogo, a mais vista das treze
+Arquivo: `src/cenas/Combate.ts`
+Faz: `ondaDeConjuracao(pesDoHeroi, cor fogo, raioFinal=16)` (onda maior que o
+padrao — e a magia mais forte do Mago) + `projetil()` (o circulo generico
+serve bem aqui, bola de fogo E redonda) cor laranja, raio do circulo 3px em
+vez do 2px padrao (props novas em `projetil`, default opcional pra nao quebrar
+quem ja chama sem esse parametro) + no `onChegar`, `estourinho(x, y, laranja,
+8, 12)` (mais particulas que o padrao — e explosao, nao golpe) + `hitstop(cena,
+60ms)`. E a unica das quatro que ganha hitstop de magia, de proposito: e o
+"big one" da classe, merece pesar mais que Bafo Gelado.
+Pronto quando: Bola de Fogo acertando um goblin trava a tela por um instante
+perceptivel e estoura em mais particulas que qualquer outro efeito atual.
+Tamanho: P
+
+### 8. De brinde: Golpe Trovao nao pode ficar igual a um golpe qualquer
+Arquivo: `src/cenas/Combate.ts`
+Nao foi pedido agora, mas caiu no colo ao mexer em `executar()`: Golpe Trovao
+(unica acao que **acerta sem rolar dado** — `docs/referencia`, Cavaleiro) hoje
+passa pelo MESMO caminho do golpe de espada comum, sem nada avisando que
+aquele golpe nunca erra. Merece o mesmo tratamento do golpe corpo a corpo (3)
++ `hitstop(cena, 90ms)` (o numero que a Fase 0 ja reserva pra faixa OBA) mesmo
+quando o dado (que nem rola) seria QUASE — a excecao fica documentada aqui pra
+nao virar duvida depois. Tamanho: P, opcional, pode ficar pra depois das 7 de cima.
+
+### Ordem e tamanho total
+
+`1 (encarar) -> 2 (ligar as 3 poses) -> 3 (golpe corpo a corpo) -> 4 (projetil
+orientado) -> 5 (arco/funda) -> 6 (bafo gelado) -> 7 (bola de fogo) -> 8
+(trovao, opcional)`. Os passos 1-2 sao pre-requisito de tudo e valem sozinhos
+mesmo se o resto parar no meio (o jogo ja fica visivelmente melhor so com o
+herói virando pro alvo e usando a pose certa). Nenhum passo precisa de sprite
+novo nem de `arte/` — os quatro efeitos inteiros saem de `fx.ts` + Graphics,
+o que evita esperar o ambiente `sprites` ou cruzar pra fora do escopo deste
+ambiente. **Nota de processo**: `AMBIENTE.md` desta pasta ainda lista so
+`acao.ts`/`marcas.ts`/`criatura.ts`/`Bestiario.ts` como territorio de
+`combate` — este bloco inteiro mexe em `Combate.ts`, `heroi.ts` e `fx.ts`,
+fora daquela lista, do mesmo jeito que a Fase 9 revisada ja mexeu. Ja foi
+sinalizado uma vez nesta sessao; registrado aqui de novo, sem travar o
+trabalho, so pra nao virar surpresa quando `combate` for pra `principal`.
+Tamanho total: G (7 pecas P em sequencia, nenhuma sozinha grande).
