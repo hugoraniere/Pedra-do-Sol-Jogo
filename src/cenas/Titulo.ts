@@ -71,7 +71,7 @@ export class Titulo extends Phaser.Scene {
     const L = LARGURA, A = ALTURA;
     const horizonte = A * 0.6;
     // a Pedra do Sol mora no pico do monte mais alto, nao flutuando no ceu
-    const picoX = L * 0.5, picoBase = horizonte + A * 0.03, picoAltura = A * 0.32;
+    const picoX = L * 0.5, picoBase = horizonte + A * 0.03, picoAltura = A * 0.16;
     const apice = picoBase - picoAltura;
     const pedraX = picoX, pedraY = apice - A * 0.015;
     const g = this.add.graphics();
@@ -146,7 +146,7 @@ export class Titulo extends Phaser.Scene {
     corpo.closePath();
     corpo.fillPath();
 
-    const xLonge = picoX + LARGURA * 0.22, xPerto = picoX - LARGURA * 0.05;
+    const xLonge = picoX + LARGURA * 0.34, xPerto = picoX + LARGURA * 0.14;
     const yVoo = apiceY - a * 0.1;
     corpo.setPosition(xLonge, yVoo);
     this.tweens.add({
