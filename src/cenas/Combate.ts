@@ -637,16 +637,15 @@ export class Combate extends Phaser.Scene {
     }
     // com zero coracoes quem manda e a tonteira: nada de machucar() aqui, senao
     // uma pose comeria a outra no mesmo quadro e nenhuma das duas apareceria.
-    // Nunca existe derrota: fica tonto, e volta com um coracao. A fogueira de
-    // verdade (CLAUDE.md) ainda nao existe; ate la este e o mesmo desfecho que
-    // o Provador ja validou.
+    // Derrota de verdade agora: cai, e o Mundo cuida de acordar na fogueira.
+    // Reusa ficarTonto() emprestado ate existir uma pose de queda propria
+    // (docs/estudo-de-animacao.md ja registra essa lacuna) — visualmente
+    // honesto, so nao e a pose exata que o design final pede.
     this.heroi.ficarTonto(1200);
-    this.anunciar("QUE TONTEIRA!", 900);
+    this.anunciar("NOCAUTEADO!", 900);
     this.time.delayedCall(1200, () => {
-      this.coracoes = 1;
-      this.atualizarCoracoes();
-      estado().coracoes = 1;
-      salvar();
+      this.scene.stop();
+      this.mundo.acordarNaFogueira();
     });
   }
 
@@ -898,9 +897,13 @@ export class Combate extends Phaser.Scene {
         // precisa esperar Mundo recarregar o mapa pra ela sumir de vez.
         this.mundo.removerCriatura(b.chave);
         const ficha = acharCriatura(b.bicharioId);
-        ficha?.larga.forEach((item) => {
-          if (item === "moeda") estado().moedas += 1;
-          else guardar(item);
+        // guardiao unico (serpente, grulo, bruxa, brasanegra) larga sempre —
+        // chance so vale pra bicho comum, que pode ser encontrado de novo.
+        // Ver docs/plano-de-itens-e-equipamento.md, secao 8.
+        ficha?.larga.forEach(({ id, chance }) => {
+          if (!ficha.unico && Math.random() > chance) return;
+          if (id === "moeda") estado().moedas += 1;
+          else guardar(id);
         });
         salvar();
       }

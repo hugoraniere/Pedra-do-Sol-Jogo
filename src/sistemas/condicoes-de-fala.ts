@@ -15,7 +15,7 @@ import { etapaConcluida } from "./missoes";
 
 export const noPeriodo = (...periodos: Periodo[]) => () => periodos.includes(periodoAtual());
 
-export const comItem = (item: string) => () => estado().mochila.includes(item);
+export const comItem = (item: string) => () => (estado().mochila[item] ?? 0) > 0;
 
 export const etapaFeita = (missaoId: string, etapaId: string) => () =>
   etapaConcluida(missaoId, etapaId);

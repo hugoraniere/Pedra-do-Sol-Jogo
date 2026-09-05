@@ -469,8 +469,14 @@ if (sons) {
   const vozes = tudo(/^\s*"?([a-z0-9-]+)"?:\s*-?\d+,/gm, bloco(sons, "export const VOZ: Record<string, number> = {", "\n};") ?? "")
     .map((m) => m[1]);
   const falantes = new Set(chavesDialogo);
+  // "fogueira" e excecao de proposito: a fala dela depende de qual instancia
+  // e se ja foi acesa, entao Mundo.tentarInteragir() monta as linhas na hora
+  // em vez de ler DIALOGOS.fogueira (que nao existe mais) — mas ainda passa
+  // chave: "fogueira" pra abrirFala(), entao a voz continua sendo usada de
+  // verdade.
+  const EXCECOES_SEM_DIALOGO = new Set(["fogueira"]);
   for (const v of vozes) {
-    if (!falantes.has(v))
+    if (!falantes.has(v) && !EXCECOES_SEM_DIALOGO.has(v))
       aviso("som", `VOZ tem "${v}" e DIALOGOS nao`, "nome trocado, ou fala que ainda nao foi escrita");
   }
   for (const f of falantes) {
