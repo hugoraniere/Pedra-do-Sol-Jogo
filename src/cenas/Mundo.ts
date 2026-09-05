@@ -501,12 +501,18 @@ export class Mundo extends Phaser.Scene {
     this.events.once("shutdown", () => calarAmbiente());
 
     // dica de movimento da Trilha de Chegada: so na primeira vez que este
-    // heroi nasce ali, antes de qualquer outra coisa acontecer.
+    // heroi nasce ali, antes de qualquer outra coisa acontecer. Atrasada um
+    // tick: `this.scene.launch("Interface")` (logo acima) so termina de
+    // montar e registrar o listener de "falar" depois deste create()
+    // encerrar — emitir na hora perdia o evento no vazio (conferido ao
+    // vivo: a caixa nascia invisivel e sem texto nenhum).
     if (st0.cena === "chegada" && marcarVisitado("dica-movimento-chegada")) {
-      this.abrirFala("Dica", [
-        "Arraste o direcional (ou use as setas) para andar.",
-        "Siga o caminho.",
-      ]);
+      this.time.delayedCall(50, () => {
+        this.abrirFala("Dica", [
+          "Arraste o direcional (ou use as setas) para andar.",
+          "Siga o caminho.",
+        ]);
+      });
     }
   }
 
