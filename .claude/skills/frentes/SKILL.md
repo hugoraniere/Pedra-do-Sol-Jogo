@@ -29,6 +29,22 @@ REGISTRO="$(dirname "$(git rev-parse --git-common-dir)")/FRENTES.md"
 
 Se `FRENTES.md` nao existir, crie com o modelo que esta no fim deste arquivo.
 
+## `npm run frente-check`, o pre-voo automatico
+
+Antes de ler os dois arquivos na mao, rode `npm run frente-check`. Ele confere
+sozinho boa parte do que esta skill pede pra olhar: entrada de `Acontecendo
+agora` apontando pra worktree que ja fechou, arquivo citado por mais de uma
+frente, `ESTADO-DO-JOGO.md` que uma entrega ja marcou como desatualizado e
+ninguem reescreveu, worktree ja juntada e pronta pra fechar, stash parado,
+numero de documento repetido, screenshot mais velho que a cena que ele deveria
+provar. Nao substitui a leitura — so evita que voce descubra na mao um problema
+que um script acha em segundo.
+
+Rode `npm run frente-check <arquivo> <arquivo>` com os arquivos que voce esta
+prestes a mexer: se algum ja estiver reivindicado por outra frente em
+`Acontecendo agora`, vira erro ali mesmo, antes de voce editar a primeira
+linha.
+
 ## `ESTADO-DO-JOGO.md`, o resumo de uma tela
 
 Mesma pasta, mesmo mecanismo (fora do git, resolvido pelo mesmo
