@@ -91,7 +91,7 @@ export const DIALOGOS: Record<string, Fala> = {
     variantes: [
       {
         id: "de-noite-na-fogueira",
-        condicao: noPeriodo("noite", "madrugada"),
+        condicao: noPeriodo("por-do-sol", "noite", "madrugada"),
         linhas: [
           "As estrelas ficam bonitas daqui, olhando o fogo.",
           "Amanha cedo eu volto pro rio. Os peixes nao esperam.",

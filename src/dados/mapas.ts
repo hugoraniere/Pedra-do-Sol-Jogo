@@ -147,42 +147,75 @@ export const VILA: Mapa = {
     { nome: "arbusto", x: 29, y: 13 },
   ],
   // As rotinas colocam cada um perto da propria casa (ver `objetos` acima) de
-  // madrugada e de noite, e no lugar de sempre de dia. O guarda fica no posto
-  // o dia inteiro — vigia nao larga a trilha por causa da hora — e o pescador
-  // troca o rio pela fogueira da praca a noite, o mesmo fogo que o dialogo da
-  // fogueira ja descreve como "alguem que passou a noite acordado aqui".
+  // madrugada e de noite, e no lugar de sempre de dia. Aurora e por-do-sol (as
+  // duas janelas curtas de transicao, ver dados/tempo.ts) por padrao herdam o
+  // ponto do vizinho mais proximo (aurora ~ manha, por-do-sol ~ tarde: quem
+  // nao tem motivo pra ser diferente so comeca/termina o dia um pouco mais
+  // cedo) — exceto onde a bio (npcs.ts) ja da um motivo pra ser diferente: a
+  // padeira acorda antes do sol pra tirar o pao do forno (fica na padaria
+  // desde a madrugada, nao em casa), o pescador tem a "manha de neblina no
+  // rio" como afinidade (aurora o poe la, nao na fogueira), e as duas
+  // criancas continuam escondidas na aurora (ainda dormindo). O guarda fica
+  // no posto o dia inteiro, madrugada e noite incluidas — vigia nao larga a
+  // trilha por causa da hora — e o pescador troca o rio pela fogueira da
+  // praca no por-do-sol/noite, o mesmo fogo que o dialogo da fogueira ja
+  // descreve como "alguem que passou a noite acordado aqui".
   pessoas: [
     {
       quem: "vovo", sprite: "vovo", x: 4, y: 8,
-      rotina: { madrugada: { x: 3, y: 6 }, manha: { x: 4, y: 8 }, tarde: { x: 4, y: 8 }, noite: { x: 3, y: 6 } },
+      rotina: {
+        madrugada: { x: 3, y: 6 }, aurora: { x: 4, y: 8 }, manha: { x: 4, y: 8 },
+        tarde: { x: 4, y: 8 }, "por-do-sol": { x: 4, y: 8 }, noite: { x: 3, y: 6 },
+      },
     },
     {
       quem: "ferreiro", sprite: "ferreiro", x: 22, y: 8,
-      rotina: { madrugada: { x: 22, y: 6 }, manha: { x: 22, y: 8 }, tarde: { x: 22, y: 8 }, noite: { x: 22, y: 6 } },
+      rotina: {
+        madrugada: { x: 22, y: 6 }, aurora: { x: 22, y: 8 }, manha: { x: 22, y: 8 },
+        tarde: { x: 22, y: 8 }, "por-do-sol": { x: 22, y: 8 }, noite: { x: 22, y: 6 },
+      },
     },
     {
       quem: "menina", sprite: "menina", x: 9, y: 14,
-      rotina: { madrugada: "escondido", manha: { x: 9, y: 14 }, tarde: { x: 9, y: 14 }, noite: "escondido" },
+      rotina: {
+        madrugada: "escondido", aurora: "escondido", manha: { x: 9, y: 14 },
+        tarde: { x: 9, y: 14 }, "por-do-sol": { x: 9, y: 14 }, noite: "escondido",
+      },
     },
     {
       quem: "pescador", sprite: "pescador", x: 6, y: 19,
-      rotina: { madrugada: { x: 16, y: 11 }, manha: { x: 6, y: 19 }, tarde: { x: 6, y: 19 }, noite: { x: 16, y: 11 } },
+      rotina: {
+        madrugada: { x: 16, y: 11 }, aurora: { x: 6, y: 19 }, manha: { x: 6, y: 19 },
+        tarde: { x: 6, y: 19 }, "por-do-sol": { x: 16, y: 11 }, noite: { x: 16, y: 11 },
+      },
     },
     {
       quem: "mercador", sprite: "mercador", x: 19, y: 10,
-      rotina: { madrugada: { x: 15, y: 6 }, manha: { x: 19, y: 10 }, tarde: { x: 19, y: 10 }, noite: { x: 15, y: 6 } },
+      rotina: {
+        madrugada: { x: 15, y: 6 }, aurora: { x: 19, y: 10 }, manha: { x: 19, y: 10 },
+        tarde: { x: 19, y: 10 }, "por-do-sol": { x: 19, y: 10 }, noite: { x: 15, y: 6 },
+      },
     },
     {
       quem: "menino", sprite: "menino", x: 25, y: 13,
-      rotina: { madrugada: "escondido", manha: { x: 25, y: 13 }, tarde: { x: 25, y: 13 }, noite: "escondido" },
+      rotina: {
+        madrugada: "escondido", aurora: "escondido", manha: { x: 25, y: 13 },
+        tarde: { x: 25, y: 13 }, "por-do-sol": { x: 25, y: 13 }, noite: "escondido",
+      },
     },
     {
       quem: "padeira", sprite: "padeira", x: 11, y: 8,
-      rotina: { madrugada: { x: 10, y: 6 }, manha: { x: 11, y: 8 }, tarde: { x: 11, y: 8 }, noite: { x: 10, y: 6 } },
+      rotina: {
+        madrugada: { x: 11, y: 8 }, aurora: { x: 11, y: 8 }, manha: { x: 11, y: 8 },
+        tarde: { x: 11, y: 8 }, "por-do-sol": { x: 10, y: 6 }, noite: { x: 10, y: 6 },
+      },
     },
     {
       quem: "guarda", sprite: "guarda", x: 29, y: 11,
-      rotina: { madrugada: { x: 30, y: 11 }, manha: { x: 29, y: 11 }, tarde: { x: 29, y: 11 }, noite: { x: 29, y: 11 } },
+      rotina: {
+        madrugada: { x: 30, y: 11 }, aurora: { x: 29, y: 11 }, manha: { x: 29, y: 11 },
+        tarde: { x: 29, y: 11 }, "por-do-sol": { x: 29, y: 11 }, noite: { x: 29, y: 11 },
+      },
     },
   ],
   entrada: { x: 15, y: 13 },

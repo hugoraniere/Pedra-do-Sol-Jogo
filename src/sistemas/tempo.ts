@@ -5,7 +5,6 @@
 import { estado } from "./estado";
 import { MINUTOS_POR_DIA, MINUTOS_REAIS_POR_DIA_DE_JOGO, PERIODOS, type Periodo } from "../dados/tempo";
 
-const DURACAO_PERIODO = MINUTOS_POR_DIA / PERIODOS.length;
 const MINUTOS_JOGO_POR_MS = MINUTOS_POR_DIA / (MINUTOS_REAIS_POR_DIA_DE_JOGO * 60000);
 
 /** Quantos minutos ja se passaram no dia simulado (0 a 1439). */
@@ -21,9 +20,26 @@ export function avancarRelogio(deltaMs: number) {
   e.relogio = (e.relogio + deltaMs * MINUTOS_JOGO_POR_MS) % MINUTOS_POR_DIA;
 }
 
+/** O indice, em `PERIODOS`, de quem esta valendo agora: o ultimo cuja
+ *  `inicio` ja passou. So funciona porque `PERIODOS` esta sempre ordenada por
+ *  `inicio` crescente comecando em 0 — nao e mais uma divisao fixa, porque as
+ *  faixas tem tamanhos diferentes (ver o comentario em dados/tempo.ts). */
+function indiceDoPeriodo(minuto: number): number {
+  for (let i = PERIODOS.length - 1; i >= 0; i--) {
+    if (minuto >= PERIODOS[i].inicio) return i;
+  }
+  return 0;
+}
+
+/** Quantos minutos o periodo `idx` dura, medindo ate o inicio do proximo (com
+ *  volta pro comeco do dia se for o ultimo da lista). */
+function duracaoDoPeriodo(idx: number): number {
+  const proximo = PERIODOS[(idx + 1) % PERIODOS.length].inicio;
+  return ((proximo - PERIODOS[idx].inicio + MINUTOS_POR_DIA) % MINUTOS_POR_DIA) || MINUTOS_POR_DIA;
+}
+
 export function periodoAtual(): Periodo {
-  const idx = Math.floor(minutoDoDia() / DURACAO_PERIODO) % PERIODOS.length;
-  return PERIODOS[idx].id;
+  return PERIODOS[indiceDoPeriodo(minutoDoDia())].id;
 }
 
 /** Quantos minutos de jogo faltam pro periodo atual acabar. */
@@ -33,11 +49,11 @@ const TRANSICAO_MIN = 90;
  *  periodo pra transicao nunca ser um corte seco. */
 export function corDoCeu(): { cor: number; alpha: number } {
   const m = minutoDoDia();
-  const idx = Math.floor(m / DURACAO_PERIODO) % PERIODOS.length;
+  const idx = indiceDoPeriodo(m);
   const atual = PERIODOS[idx];
   const proximo = PERIODOS[(idx + 1) % PERIODOS.length];
-  const decorridoNoPeriodo = m % DURACAO_PERIODO;
-  const faltam = DURACAO_PERIODO - decorridoNoPeriodo;
+  const decorridoNoPeriodo = m - atual.inicio;
+  const faltam = duracaoDoPeriodo(idx) - decorridoNoPeriodo;
   if (faltam > TRANSICAO_MIN) return { cor: atual.corCeu, alpha: atual.alphaCeu };
   const t = 1 - faltam / TRANSICAO_MIN;
   return {
