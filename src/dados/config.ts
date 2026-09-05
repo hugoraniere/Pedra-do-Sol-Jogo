@@ -46,6 +46,11 @@ export const COR = {
   /** o verde do chao, para as telas que precisam continuar o mundo */
   grama: 0x42804e,
   gramaClara: 0x68b06c,
+  /** terra do caminho e verde de conifera, usados no cenario vetorial da Titulo */
+  terra: 0xc6a06c,
+  terraEscura: 0x9e764c,
+  pinheiro: 0x4c8c68,
+  pinheiroEscuro: 0x1e483c,
 } as const;
 
 /** Indices do tileset.png, na mesma ordem de arte/tiles.py */

@@ -216,6 +216,8 @@ const PARES = {
   ouro: "OURO", vermelho: "VERMELHO", azul: "AZUL", verde: "VERDE",
   roxo: "ROXO", brasa: "BRASA", rosa: "ROSA",
   grama: "GRAMA", gramaClara: "GRAMA_C",
+  terra: "TERRA", terraEscura: "TERRA_E",
+  pinheiro: "PINHEIRO_C", pinheiroEscuro: "PINHEIRO_E",
 };
 
 const corTs = {};

@@ -1,4 +1,8 @@
 import "@fontsource/silkscreen";
+// so para o logotipo da tela inicial ("A PEDRA DO SOL"). O resto da interface
+// inteira usa a fonte de bitmap pixel a pixel (sistemas/texto.ts) -- esta e a
+// unica excecao de proposito, o mesmo lugar onde o logo.png antigo era excecao.
+import "@fontsource/baloo-2/800.css";
 import Phaser from "phaser";
 import { COR, definirTamanhoLogico } from "./dados/config";
 import { Boot } from "./cenas/Boot";
@@ -68,9 +72,16 @@ function comecar() {
   instalarPonteiro(jogo);
 }
 
-// espera a fonte de pixel carregar, senao a primeira tela sai com a fonte do sistema
+// espera a fonte de pixel carregar, senao a primeira tela sai com a fonte do sistema.
+// document.fonts.ready so cobre fonte que o navegador ja decidiu buscar, e
+// @font-face declarado sozinho nao conta -- por isso o load() explicito da
+// Baloo 2 aqui, senao a Titulo desenharia o logotipo com a fonte do sistema
+// na primeira visita (o arquivo so chegaria a tempo do segundo redesenho).
 if (document.fonts?.ready) {
-  document.fonts.ready.then(comecar);
+  Promise.all([
+    document.fonts.load('800 32px "Baloo 2"'),
+    document.fonts.ready,
+  ]).then(comecar);
 } else {
   comecar();
 }

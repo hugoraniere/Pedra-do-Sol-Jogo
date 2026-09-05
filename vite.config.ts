@@ -23,12 +23,16 @@ export default defineConfig({
       // console, o pior tipo de falha que este projeto persegue.
       workbox: {
         globPatterns: ["**/*.{js,css,html,png,mp3,woff,woff2,json,xml}"],
+        // Baloo 2 (o logotipo da Titulo) e uma familia com suporte a
+        // devanagari e vietnamita que este jogo nunca usa -- sem isto o
+        // cache offline carregava ~150 KB de fonte que nenhuma tela pede.
+        globIgnores: ["**/*devanagari*", "**/*vietnamese*"],
       },
       manifest: {
         // curto de proposito: e o nome que aparece embaixo do icone na tela
-        // do celular, e "Reino de Aurora" quebra em duas linhas ali
-        name: "Reino de Aurora",
-        short_name: "Aurora",
+        // do celular, e o nome completo quebra em duas linhas ali
+        name: "A Pedra do Sol",
+        short_name: "Pedra do Sol",
         lang: "pt-BR",
         description: "RPG para o Trovao da Floresta explorar",
         // a mesma tinta de COR.tinta em src/dados/config.ts. Fundo da tela de

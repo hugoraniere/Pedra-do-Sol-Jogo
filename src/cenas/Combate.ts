@@ -35,6 +35,7 @@ import { Ordem } from "../sistemas/turnos";
 import { aplicarMarca, type Condicao, type Marca } from "../sistemas/marcas";
 import { tem } from "../sistemas/condicoes";
 import { condicoesDados } from "../dados/condicoes-dados";
+import { definirPreferencia, preferencias } from "../sistemas/preferencias";
 import type { Mundo } from "./Mundo";
 
 const SLOT = 22;
@@ -138,6 +139,9 @@ export class Combate extends Phaser.Scene {
   private coracoesHUD: Phaser.GameObjects.Image[] = [];
   private trilhaIniciativa!: Phaser.GameObjects.Container;
   private botaoPassar!: Phaser.GameObjects.Container;
+  private fundoAutoPassar!: Phaser.GameObjects.NineSlice;
+  private marcaAutoPassar!: Phaser.GameObjects.Graphics;
+  private alvoAutoPassar!: Phaser.GameObjects.Rectangle;
   private aviso!: Phaser.GameObjects.BitmapText;
   private chapaAviso!: Phaser.GameObjects.NineSlice;
   private dicaCaixa!: Phaser.GameObjects.Container;
@@ -329,7 +333,9 @@ export class Combate extends Phaser.Scene {
     this.trilhaIniciativa = fixo(this.add.container(14 + this.coracoesMax * 11, 2));
 
     const acoes = acoesDoHeroi(estado().heroi);
-    const area = { x: 6, y: ALTURA - SLOT - 2, largura: LARGURA - 56, altura: SLOT };
+    // -56 virou -76: sobra os 20px que o toggle de passar automaticamente
+    // precisa no canto, sem disputar espaco com o ultimo slot de acao.
+    const area = { x: 6, y: ALTURA - SLOT - 2, largura: LARGURA - 76, altura: SLOT };
     const linha = fileira(area, SLOT, GAP);
     const cabem = Math.min(linha.cabem(), acoes.length);
     this.topoDaBarra = area.y - 14;
@@ -369,7 +375,35 @@ export class Combate extends Phaser.Scene {
     this.botaoPassar = fixo(this.add.container(px, py, [fundoP, txtP]));
     this.botaoPassar.setSize(44, 16).setInteractive({ useHandCursor: true });
     this.botaoPassar.on("pointerdown", () => this.passarAVez());
-    this.botaoPassar.setVisible(false);
+
+    // --------------------------------------- passar automaticamente (toggle)
+    // Nao cabe rotulo de texto do lado do PASSAR (44x16 ja ocupa o canto
+    // inteiro) — e so um quadradinho com visto, que muda de cor conforme a
+    // preferencia. O PASSAR continua existindo do jeito de sempre; isto so
+    // decide se `fimDaAcao()` chama `passarAVez()` sozinho depois que a acao
+    // do turno for usada (ver fimDaAcao()), sem exigir o clique manual.
+    const paX = px - 32;
+    const paY = py;
+    this.fundoAutoPassar = fixo(
+      this.add.nineslice(paX, paY, "painel-escuro", undefined, 18, 16, 6, 6, 6, 6).setOrigin(0.5)
+    );
+    this.marcaAutoPassar = fixo(this.add.graphics());
+    this.desenharAutoPassar(paX, paY);
+    this.alvoAutoPassar = fixo(
+      this.add.rectangle(paX, paY, 22, 22, 0x000000, 0).setInteractive({ useHandCursor: true })
+    );
+    this.alvoAutoPassar.on("pointerdown", () => {
+      definirPreferencia("passarAutomaticamente", !preferencias().passarAutomaticamente);
+      this.desenharAutoPassar(paX, paY);
+    });
+    this.alvoAutoPassar.on("pointerover", () =>
+      this.mostrarDicaLinhas(
+        ["PASSAR SOZINHO", preferencias().passarAutomaticamente ? "LIGADO" : "DESLIGADO"],
+        paX
+      )
+    );
+    this.alvoAutoPassar.on("pointerout", () => this.esconderDica());
+    this.mostrarBotaoPassar(false);
 
     this.chapaRotulo = fixo(this.add.nineslice(LARGURA / 2, this.topoDaBarra, "painel-escuro", undefined, 8, 12, 8, 8, 8, 8).setOrigin(0.5, 0));
     this.chapaRotulo.setVisible(false);
@@ -394,7 +428,13 @@ export class Combate extends Phaser.Scene {
     const linha3 = a.escopo === "porLuta" ? "UMA VEZ POR LUTA"
       : a.escopo === "porAventura" ? "UMA VEZ POR AVENTURA"
       : "TODO TURNO";
-    const linhas = [a.nome, linha2, linha3];
+    this.mostrarDicaLinhas([a.nome, linha2, linha3], xSlot);
+  }
+
+  /** O nucleo de `mostrarDica`, sem depender de uma `AcaoDeHeroi` — serve
+   *  qualquer dica de texto simples na mesma caixa, como o toggle de passar
+   *  automaticamente (que nao e uma acao do heroi, so uma preferencia). */
+  private mostrarDicaLinhas(linhas: string[], xAlvo: number) {
     const ENTRE = 2;
     const alturaTexto = linhas.length * (10 + ENTRE) - ENTRE;
     const altura = alturaTexto + 10;
@@ -403,12 +443,38 @@ export class Combate extends Phaser.Scene {
     this.dicaTexto.setLineSpacing(ENTRE);
     this.dicaTexto.setY(-altura + 5);
     this.dicaChapa.setSize(largura, altura);
-    const x = Phaser.Math.Clamp(xSlot, largura / 2 + 2, LARGURA - largura / 2 - 2);
+    const x = Phaser.Math.Clamp(xAlvo, largura / 2 + 2, LARGURA - largura / 2 - 2);
     this.dicaCaixa.setPosition(x, this.topoDaBarra - 2).setVisible(true);
   }
 
   private esconderDica() {
     this.dicaCaixa.setVisible(false);
+  }
+
+  /** Visto dourado (ligado) ou quadrado apagado (desligado) — o mesmo
+   *  vocabulario visual da borda que ja marca a acao selecionada nos slots,
+   *  so que aqui e um interruptor, nao uma selecao temporaria. */
+  private desenharAutoPassar(x: number, y: number) {
+    const ligado = preferencias().passarAutomaticamente;
+    const cor = ligado ? 0xf5b62b : 0x6b6484;
+    this.marcaAutoPassar.clear();
+    this.marcaAutoPassar.lineStyle(2, cor, 1).strokeRect(x - 6, y - 6, 12, 12);
+    if (!ligado) return;
+    this.marcaAutoPassar.lineStyle(2, cor, 1);
+    this.marcaAutoPassar.beginPath();
+    this.marcaAutoPassar.moveTo(x - 3, y);
+    this.marcaAutoPassar.lineTo(x - 1, y + 3);
+    this.marcaAutoPassar.lineTo(x + 4, y - 4);
+    this.marcaAutoPassar.strokePath();
+  }
+
+  /** PASSAR e o toggle de passar-automaticamente sempre aparecem e somem
+   *  juntos: os dois so fazem sentido durante o turno do heroi. */
+  private mostrarBotaoPassar(visivel: boolean) {
+    this.botaoPassar.setVisible(visivel);
+    this.fundoAutoPassar.setVisible(visivel);
+    this.marcaAutoPassar.setVisible(visivel);
+    this.alvoAutoPassar.setVisible(visivel);
   }
 
   private dizer(nome: string) {
@@ -474,7 +540,7 @@ export class Combate extends Phaser.Scene {
     this.desenharIniciativa();
     if (vez.id === "heroi") {
       this.fase = "meuTurno";
-      this.botaoPassar.setVisible(true);
+      this.mostrarBotaoPassar(true);
       this.anunciar("SUA VEZ", 600);
       this.calcularAlcance();
       return;
@@ -482,7 +548,7 @@ export class Combate extends Phaser.Scene {
     const dele = this.bichos.find((b) => b.id === vez.id);
     this.anunciar(`VEZ DO ${dele?.nome ?? "INIMIGO"}`, 500);
     this.fase = "vezDaCriatura";
-    this.botaoPassar.setVisible(false);
+    this.mostrarBotaoPassar(false);
     this.pincelCasas.clear();
     this.time.delayedCall(320, () => this.jogarCriatura(vez.id));
   }
@@ -498,7 +564,7 @@ export class Combate extends Phaser.Scene {
   private acabarCombate() {
     this.ordem.encerrar();
     this.fase = "resolvendo";
-    this.botaoPassar.setVisible(false);
+    this.mostrarBotaoPassar(false);
     this.pincelCasas.clear();
     this.pincel.clear();
     this.dizer("");
@@ -1059,7 +1125,15 @@ export class Combate extends Phaser.Scene {
   private fimDaAcao() {
     this.dizer("");
     if (this.criaturasVivas().length === 0) return this.acabarCombate();
-    if (this.ordem.acabou()) {
+    // ordem.acabou() so fecha o turno quando NEM movimento nem acao sobraram
+    // — sem a preferencia, ainda da pra andar depois de atacar. Com ela
+    // ligada (padrao), a acao sozinha ja basta: o jogador nao precisa clicar
+    // PASSAR so porque tinha movimento de sobra que nao pretendia usar.
+    // "acao" aqui e a unica que existe hoje (Ordem.acaoUsada); quando o
+    // combate ganhar mais de uma acao por turno, esta checagem passa a olhar
+    // todas, nao so a primeira.
+    const semAcaoDeSobra = preferencias().passarAutomaticamente && this.ordem.agora()?.acaoUsada;
+    if (this.ordem.acabou() || semAcaoDeSobra) {
       this.ordem.passar();
       return this.entrarNoTurno();
     }

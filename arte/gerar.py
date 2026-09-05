@@ -10,12 +10,14 @@ Como esta organizado:
   arte/mundo.py    objetos inteiros: casa, arvore, poco, barraca, cerca
   arte/gente.py    heroi em tres camadas, npcs e goblins, 16x32
   arte/ui.py       painel de 9 fatias e icones de interface
-  arte/titulo.py   o cenario da tela inicial
   arte/fonte.py    a fonte de bitmap, gerada a partir da Silkscreen
 
-A logo (public/assets/logo.png) e a UNICA arte que nao sai daqui: foi desenhada
-com IA, teve o fundo removido e foi reduzida a mao. Nao apague no npm run arte.
   arte/sprites/    PNG desenhado a mao, ganha do gerado se o nome bater
+
+O logotipo e o cenario da tela inicial deixaram de vir daqui: `src/cenas/
+Titulo.ts` desenha os dois em vetor (Graphics/Text), porque um PNG fixo nao
+acompanha LARGURA/ALTURA mudando de tamanho. `arte/titulo.py` e
+`public/assets/{titulo,logo}.png` saem de proposito, 2026-09-05.
 
 Regras de arte:
   . tile 16x16, personagem 16x32, objeto do tamanho que precisar
@@ -40,7 +42,6 @@ import itens as itens_arte
 import manifesto as manifesto_arte
 import mundo
 import tiles
-import titulo as titulo_arte
 import ui as ui_arte
 
 SAIDA = os.path.join(RAIZ, "..", "public", "assets")
@@ -56,10 +57,6 @@ def a_mao(nome):
     return None
 
 
-#: arte que NAO sai daqui e nao pode ser apagada na limpeza
-INTOCAVEIS = {"logo.png"}
-
-
 def limpar_orfaos(comeco):
     """Apaga PNG antigo que esta gerao nao reescreveu.
 
@@ -70,7 +67,7 @@ def limpar_orfaos(comeco):
     apagados = []
     for pasta, _, arquivos in os.walk(SAIDA):
         for nome in arquivos:
-            if not nome.endswith(".png") or nome in INTOCAVEIS:
+            if not nome.endswith(".png"):
                 continue
             caminho = os.path.join(pasta, nome)
             if os.path.getmtime(caminho) < comeco:
@@ -92,7 +89,6 @@ def main():
     # folha propria dos itens de mochila (consumivel, material, armadura,
     # acessorio) — mesma razao: assunto proprio, lista que so cresce
     indice_itens = itens_arte.gerar(SAIDA)
-    titulo_arte.gerar(SAIDA, a_mao)
     ficha_fonte = fonte_arte.gerar(SAIDA, a_mao)
     ui_arte.favicon(os.path.join(RAIZ, "..", "public", "favicon.png"))
     # os icones de instalar o jogo no celular. Ver manifest.webmanifest.

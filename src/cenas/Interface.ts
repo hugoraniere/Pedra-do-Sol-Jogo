@@ -6,6 +6,7 @@ import { AJUSTES } from "../dados/sons";
 import { letraDaFala, tocar } from "../sistemas/som";
 import { texto } from "../sistemas/texto";
 import { estado } from "../sistemas/estado";
+import { preferencias } from "../sistemas/preferencias";
 import { Controles } from "../sistemas/controles";
 import { refazerAoRedimensionar } from "../sistemas/visao";
 import { ICONE, ICONE_DO_PERIODO } from "../sistemas/icones";
@@ -160,6 +161,10 @@ export class Interface extends Phaser.Scene {
 
   // --------------------------------------------------------- direcional
   private montarDirecional() {
+    // preferencia do jogador (Pausa > CONFIGURACOES): quem joga so de
+    // teclado pode tirar as setas/botao A da tela. Controles continua
+    // ouvindo teclado normalmente — isto so decide se o desenho/toque existe.
+    if (!preferencias().controlesNaTela) return;
     const base = { x: 32, y: ALTURA - 34 };
     const setas: [number, number, number, number, number][] = [
       [0, -15, 0, -1, ICONE.setaCima],

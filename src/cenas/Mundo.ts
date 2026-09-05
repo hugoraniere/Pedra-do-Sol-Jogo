@@ -169,9 +169,17 @@ export class Mundo extends Phaser.Scene {
    *  mundo, nunca troca de cena nem de mapa. */
   private emCombate = false;
 
-  /** O ceu de dia/noite: um retangulo preso a camera, por cima do mapa
-   *  inteiro. Ver Parte B do plano — a cor/alpha vem de sistemas/tempo.ts. */
-  private overlayCeu!: Phaser.GameObjects.Rectangle;
+  /** O ceu de dia/noite: uma RenderTexture presa a camera, por cima do mapa
+   *  inteiro. Cor/alpha vem de sistemas/tempo.ts, preenchidos em cima dela;
+   *  cada fonte de luz (fogueira, e depois tocha) apaga um circulo de borda
+   *  macia nela via `erase()` — a mesma tecnica de "lanterna" do Phaser. Era
+   *  um Rectangle solido antes disto: precisou virar textura porque um
+   *  retangulo nao tem furo por dentro. */
+  private overlayCeu!: Phaser.GameObjects.RenderTexture;
+  /** Onde a luz sempre acende, de dia ou de noite — hoje so fogueira.
+   *  Populado no loop de objetos de `create()`, lido a cada quadro em
+   *  `atualizarCeu()`. */
+  private fontesDeLuz: { x: number; y: number }[] = [];
   /** So os NPCs que tem `rotina` em mapas.ts entram aqui; o resto continua
    *  100% parado, sem custo nenhum a mais. */
   private npcs: NpcComRotina[] = [];
@@ -214,7 +222,13 @@ export class Mundo extends Phaser.Scene {
     ]);
     this.controles = new Controles(this);
     this.interagiveis = [];
+    this.fontesDeLuz = [];
     this.conversando = false;
+    // sem isto, uma derrota (Combate.derrota() reinicia o Mundo direto, sem
+    // passar por sairDeCombate()) deixava o heroi travado pra sempre: o
+    // proprio campo so nasce false na CONSTRUCAO da cena, nunca de novo a
+    // cada create(), e e ele que barra todo movimento mais abaixo.
+    this.emCombate = false;
     this.solidos = this.physics.add.staticGroup();
     // oito copias escondidas, prontas para copiar textura/quadro/origem de
     // quem estiver em destaque a cada quadro. A textura aqui e so um
@@ -233,6 +247,7 @@ export class Mundo extends Phaser.Scene {
     this.saidas = mapa.saidas ?? [];
     this.trocandoDeMapa = false;
     const fichas = this.cache.json.get("objetos") as Record<string, FichaObjeto>;
+    this.garantirAnimacaoDeFogo();
 
     // ---------------------------------------------------------- chao
     const chao = montarChao(mapa.chao);
@@ -265,8 +280,16 @@ export class Mundo extends Phaser.Scene {
       // ancorado pelo pe: a base do objeto encosta no tile indicado
       const x = peca.x * TILE + TILE / 2;
       const y = peca.y * TILE + TILE;
-      const s = this.add.image(x, y, `obj-${peca.nome}`).setOrigin(0.5, 1);
+      // a fogueira tremeluz de verdade (4 quadros, ver arte/mundo.py) e e
+      // uma fonte de luz que ilumina sempre — todo o resto continua imagem
+      // parada, sem custo de animacao a mais
+      const s: Phaser.GameObjects.Image | Phaser.GameObjects.Sprite =
+        peca.nome === "fogueira"
+          ? this.add.sprite(x, y, "obj-fogueira").play("fogo-tremeluz")
+          : this.add.image(x, y, `obj-${peca.nome}`);
+      s.setOrigin(0.5, 1);
       s.setDepth(y);
+      if (peca.nome === "fogueira") this.fontesDeLuz.push({ x, y: y - ficha.h * 0.6 });
       if (peca.solido !== false && ficha.cw > 0) {
         const corpo = this.add.rectangle(x, y - ficha.ch / 2, ficha.cw, ficha.ch);
         this.solidos.add(corpo);
@@ -434,18 +457,26 @@ export class Mundo extends Phaser.Scene {
     // Preso a camera (setScrollFactor(0)), por cima do mapa inteiro e por
     // baixo da Interface: como Interface e outra Scene, lancada depois na
     // lista de main.ts, a ordem de cena ja resolve a sobreposicao sozinha,
-    // sem precisar de depth cruzando cena. Cor/alpha vem de corDoCeu().
+    // sem precisar de depth cruzando cena. Cor/alpha vem de corDoCeu(); os
+    // furos de luz vem de `fontesDeLuz`, aplicados em atualizarCeu().
+    this.garantirTexturaDeLuz();
     this.overlayCeu = this.add
-      .rectangle(0, 0, this.cameras.main.width, this.cameras.main.height, COR.tinta, 0)
+      .renderTexture(0, 0, this.cameras.main.width, this.cameras.main.height)
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setDepth(Number.MAX_SAFE_INTEGER);
     refazerAoRedimensionar(this, () =>
-      this.overlayCeu.setSize(this.cameras.main.width, this.cameras.main.height)
+      this.overlayCeu.resize(this.cameras.main.width, this.cameras.main.height)
     );
     this.atualizarCeu();
 
     this.scene.launch("Interface");
+    // garante ativa e visivel mesmo se a ultima saida de combate foi por
+    // derrota: iniciarCombate() pausa/esconde a Interface, e so a vitoria
+    // (sairDeCombate()) desfazia isso ate agora — toda entrada nova no
+    // Mundo tem que comecar de um HUD utilizavel, nao so a normal.
+    this.scene.resume("Interface");
+    this.scene.setVisible(true, "Interface");
     this.scene.get("Interface").events.on("acao", () => this.tentarInteragir());
     this.scene.get("Interface").events.on("pausar", () => this.pausar());
     if (this.derrotaPendente) this.avisarDerrota(this.derrotaPendente);
@@ -667,14 +698,57 @@ export class Mundo extends Phaser.Scene {
     this.atualizarCeu();
   }
 
-  /** A cor do ceu agora, por cima do mapa inteiro. Publico so porque a
-   *  auditoria de UI (`ferramentas/auditar-ui.mjs`) precisa fixar o relogio
-   *  antes do screenshot e forcar esta cor a acompanhar na hora, senao a
-   *  troca so apareceria no quadro seguinte. */
+  /** A cor do ceu agora, por cima do mapa inteiro, com um furo de borda
+   *  macia ao redor de cada fonte de luz (`fontesDeLuz`) — e por isso que a
+   *  fogueira ilumina de noite mesmo o resto da tela escurecendo. Publico so
+   *  porque a auditoria de UI (`ferramentas/auditar-ui.mjs`) precisa fixar o
+   *  relogio antes do screenshot e forcar esta cor a acompanhar na hora,
+   *  senao a troca so apareceria no quadro seguinte. */
   private atualizarCeu() {
     const { cor, alpha } = corDoCeu();
-    this.overlayCeu.setFillStyle(cor, 1);
-    this.overlayCeu.setAlpha(alpha);
+    this.overlayCeu.clear();
+    this.overlayCeu.fill(cor, alpha, 0, 0, this.overlayCeu.width, this.overlayCeu.height);
+    if (alpha < 0.02 || !this.fontesDeLuz.length) return;
+    const cam = this.cameras.main;
+    for (const fonte of this.fontesDeLuz) {
+      const sx = fonte.x - cam.scrollX;
+      const sy = fonte.y - cam.scrollY;
+      if (sx < -RAIO_LUZ || sy < -RAIO_LUZ || sx > cam.width + RAIO_LUZ || sy > cam.height + RAIO_LUZ) {
+        continue;
+      }
+      this.overlayCeu.erase(TEXTURA_LUZ, sx - RAIO_LUZ, sy - RAIO_LUZ);
+    }
+  }
+
+  /** A textura da "lanterna": um circulo branco com borda macia (gradiente
+   *  radial de verdade, via canvas — um Graphics com aneis concentricos nao
+   *  fecha o centro totalmente opaco). Gerada uma vez, reusada por toda
+   *  fonte de luz do jogo inteiro. */
+  private garantirTexturaDeLuz() {
+    if (this.textures.exists(TEXTURA_LUZ)) return;
+    const d = RAIO_LUZ * 2;
+    const tex = this.textures.createCanvas(TEXTURA_LUZ, d, d);
+    const ctx = tex.getContext();
+    const gradiente = ctx.createRadialGradient(RAIO_LUZ, RAIO_LUZ, 0, RAIO_LUZ, RAIO_LUZ, RAIO_LUZ);
+    gradiente.addColorStop(0, "rgba(255,255,255,1)");
+    gradiente.addColorStop(0.6, "rgba(255,255,255,0.55)");
+    gradiente.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = gradiente;
+    ctx.fillRect(0, 0, d, d);
+    tex.refresh();
+  }
+
+  /** A chama tremeluzindo: 4 quadros (arte/mundo.py) tocados em loop. So
+   *  precisa existir uma vez — `anims.create` e global ao jogo, nao por
+   *  cena, e `create()` roda de novo a cada troca de mapa. */
+  private garantirAnimacaoDeFogo() {
+    if (this.anims.exists("fogo-tremeluz")) return;
+    this.anims.create({
+      key: "fogo-tremeluz",
+      frames: ["obj-fogueira", "obj-fogueira-2", "obj-fogueira-3", "obj-fogueira-4"].map((key) => ({ key })),
+      frameRate: 6,
+      repeat: -1,
+    });
   }
 
   /** So para `ferramentas/auditar-ui.mjs`: prende o relogio num horario fixo

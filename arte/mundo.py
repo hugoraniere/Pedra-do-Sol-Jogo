@@ -411,19 +411,23 @@ def cerca(vertical=False):
     return im
 
 
-def fogueira():
+def fogueira(variante=0):
+    """4 quadros da mesma fogueira, so a chama muda (topo, altura, desvio) --
+    o jogo passa os 4 num `anims.create()` pra chama tremeluzir de verdade em
+    vez de ficar parada. A lenha embaixo nunca muda, so o fogo em cima dela."""
+    topo, altura, desvio = [(2, 9, 0), (3, 8, -1), (1, 10, 1), (4, 7, 0)][variante % 4]
     im = nova(20, 18)
     sombra(im, 9, 3, 10, 15)
     ret(im, 3, 10, 14, 4, MADEIRA_E)
     ret(im, 5, 12, 10, 3, MADEIRA)
-    for j in range(2, 11):
-        largura = max(1, 9 - abs(j - 7))
-        ret(im, 10 - largura // 2, j, largura, 1, BRASA)
-    for j in range(5, 11):
-        largura = max(1, 5 - abs(j - 8))
-        ret(im, 10 - largura // 2, j, largura, 1, OURO)
-    for j in range(7, 11):
-        px(im, 10, j, PAPEL)
+    for j in range(topo, 11):
+        largura = max(1, altura - abs(j - (topo + (altura + 1) // 2)))
+        ret(im, 10 + desvio - largura // 2, j, largura, 1, BRASA)
+    for j in range(topo + 3, 11):
+        largura = max(1, altura - 4 - abs(j - (topo + 6)))
+        ret(im, 10 + desvio - largura // 2, j, largura, 1, OURO)
+    for j in range(topo + 5, 11):
+        px(im, 10 + desvio, j, PAPEL)
     contorno_alfa(im)
     return im
 
@@ -676,6 +680,11 @@ OBJETOS = [
     ("barraca", barraca_feira, (0.45, 0.40)),
     ("cerca", cerca, (0.50, 0.40)),
     ("fogueira", fogueira, (0.40, 0.40)),
+    # os outros 3 quadros da chama tremeluzindo -- nunca plantados num mapa
+    # sozinhos, so usados junto com "fogueira" numa animacao (ver Mundo.ts)
+    ("fogueira-2", lambda: fogueira(1), (0.40, 0.40)),
+    ("fogueira-3", lambda: fogueira(2), (0.40, 0.40)),
+    ("fogueira-4", lambda: fogueira(3), (0.40, 0.40)),
     ("bau", bau, (0.45, 0.45)),
     ("placa", placa, (0.30, 0.25)),
     ("varal", varal, (0.50, 0.30)),
