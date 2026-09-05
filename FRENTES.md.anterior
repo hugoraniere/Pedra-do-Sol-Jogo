@@ -120,3 +120,53 @@ Como usar: skill `frentes` (`.claude/skills/frentes/SKILL.md`).
   (`fa96bcf`)
 - **2026-09-04 . ambiente/ficha:** a skill `frentes` e este registro, mais a
   analise de UI medida em `docs/13-analise-de-ui.md`. (`72133e0`)
+
+<!-- daqui pra baixo: entregas de 2026-09-04 movidas de FRENTES.md em
+     2026-09-05 pelo aviso "registro" do npm run frente-check, sem repetir as
+     4 que ja estavam arquivadas acima com o mesmo commit. -->
+
+- **2026-09-04 . combate no mundo (pasta principal):** o goblin da Floresta
+  briga de verdade. Chegar perto abre `Combate.ts` com o heroi real (ficha,
+  poderes, coracoes do save); vencer tira o goblin do mapa para sempre e
+  larga o que o bestiario diz, em moeda ou mochila de verdade. So goblin
+  briga por enquanto — aranha e lobo de nevoa continuam decorativos.
+  (`791b642`)
+- **2026-09-04 . consolidacao (pasta principal):** juntou floresta+ficha
+  (ja mesclados), cursor e o Provador do combate numa versao de teste unica.
+  `build`, `contraste`, `auditar` e `conferir` verdes. `principal` avancado
+  para bater com `floresta-dos-sussurros`. (`65aef66`, `9a9f1c8`, merge do
+  cursor, `5c4cd1a`, `fa8a788`, `83dab37`)
+- **2026-09-04 . criacao-e-fonte:** a fonte ganhou minuscula de verdade, haste,
+  perna que desce e avanco proporcional (a Silkscreen saiu). Raca e classe
+  viraram vitrine de cinco bonecos vestidos. O nome foi para o ultimo passo,
+  junto da aparencia. Seis passos de criacao viraram quatro. (`65aef66`)
+- **2026-09-04 . pesquisa de sprites:** estudos de resolucao, bichos, armas,
+  animacao e cenario que orientam a proxima leva de arte, mais a skill
+  `desenhar-sprite`. (`9a9f1c8`)
+- **2026-09-04 . cursor:** o cursor do jogo desenhado (`arte/cursor.py`) e o
+  plano de interface do mouse fechado com o Hugo (`docs/interface-do-mouse.md`):
+  o botao A e o disco direcional saem da tela, entra apontar e clicar.
+- **2026-09-04 . combate:** a bancada `Provador`, para testar o gesto de
+  escolher alvo e confirmar antes do sistema de combate de verdade existir.
+  Icones de retrato/acao/dado (`arte/icones.py`). (`5c4cd1a`)
+- **2026-09-04 . floresta:** o bestiario inteiro. As nove criaturas com ficha
+  completa (comportamento, velocidade, alcance, dano, telegrafo, o que largam e
+  onde vivem) e as sete que nao tinham desenho. O `fraquezaId` transforma a
+  fraqueza do RPG de mesa em chave que o codigo compara: nenhuma das nove e tipo
+  de dano, sao todas conhecimento. `npm run bestiario` monta a folha para olhar.
+  (`4789327`)
+- **2026-09-04 . floresta:** a Floresta dos Sussurros, 120 x 84 tiles, com
+  transicao de mapa reaproveitavel e a letra `T` que planta oitocentas arvores
+  sem nenhuma escrita a mao. A ferramenta de esboco prova o mapa antes de alguem
+  jogar. (`8dbdc75`)
+- **2026-09-04 . floresta:** a premissa reescrita. O jogo deixou de ser para uma
+  crianca de sete anos e passou a ser um jogo completo, com derrota de verdade e
+  o sistema do RPG de mesa que estava no papel e nunca virou codigo. Modelo de
+  combate fechado em `docs/modelo-de-combate.md`. (`bc64ca8`)
+- **2026-09-04 . claude/upbeat-roentgen-c5c80a:** a criacao de personagem que se
+  mede, consertando a grade que subia por cima do boneco na visao PERTO. Trouxe a
+  tipografia junto e virou o proprio `principal`. (`d6c2ac8`)
+- **2026-09-04 . ambiente/ficha:** o nome do heroi deixa de ser sorteado no
+  percurso da auditoria. Nove screenshots que mudavam a cada rodada agora saem
+  identicos ao pixel, e um diff de PNG volta a significar que a tela mudou.
+  (`ccbec6e`)
