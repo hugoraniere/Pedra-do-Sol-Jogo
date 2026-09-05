@@ -46,10 +46,14 @@ export function poderEscolhidoDoHeroi(heroi: Heroi): Atributo {
   return acharRaca(heroi.raca).bonus[0];
 }
 
-/** O total dos tres poderes: origem mais o +1 do jogador. */
+/** O total dos tres poderes: origem, mais o +1 da criacao, mais qualquer
+ *  Selo de Heroi ja trocado por poder (`estado().heroi.bonusDeSelo`). */
 export function poderesDoHeroi(heroi: Heroi): Poderes {
   const poderes = poderesDaOrigem(heroi.raca, heroi.classe);
   poderes[poderEscolhidoDoHeroi(heroi)] += 1;
+  (Object.keys(poderes) as Atributo[]).forEach((a) => {
+    poderes[a] += heroi.bonusDeSelo?.[a] ?? 0;
+  });
   return poderes;
 }
 

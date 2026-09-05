@@ -333,6 +333,24 @@ def madeira_chao():
     return im
 
 
+def parede_interior():
+    """Parede da Casa de Cura, por dentro. Mesmo tom quente da parede da casa
+    por fora (CR_PAREDE em arte/mundo.py), para o interior nao parecer outro
+    predio. Tabua vertical de periodo 4 fecha sem costura a cada 16 px, e o
+    rodape de madeira ancora a parede no chao, como parede_caverna() faz com
+    pedra."""
+    im = nova()
+    base, clara, escura = (232, 214, 178), (246, 234, 206), (196, 172, 134)
+    ret(im, 0, 0, T, T, base)
+    for i in range(0, T, 4):
+        ret(im, i, 0, 1, T, escura)
+    for i in range(2, T, 4):
+        ret(im, i, 0, 1, T, clara)
+    ret(im, 0, T - 3, T, 3, MADEIRA_E)
+    ret(im, 0, T - 3, T, 1, MADEIRA)
+    return im
+
+
 # ------------------------------------------- a Floresta dos Sussurros
 # A mata usa uma familia de verde propria, mais escura e mais fria que a grama da
 # vila. Trocar so o brilho nao bastava: a floresta ficava com cara de vila mal
@@ -559,6 +577,7 @@ TILES = [
     ("areia2", areia(1)),
     ("areia3", areia(2)),
     *[(nome, beira(lados, i, perfil=_PERFIL_PEQUENO)) for i, (nome, lados) in enumerate(BEIRAS_FINA)],
+    ("parede-interior", parede_interior()),
 ]
 
 

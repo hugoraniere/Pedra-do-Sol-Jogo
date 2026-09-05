@@ -215,12 +215,6 @@ export const DIALOGOS: Record<string, Fala> = {
       },
     ],
   },
-  fogueira: {
-    quem: "A fogueira da praca",
-    variantes: [
-      { id: "padrao", linhas: ["Ainda esta quentinha. Alguem passou a noite acordado aqui."] },
-    ],
-  },
   bau: {
     quem: "Um bau",
     variantes: [

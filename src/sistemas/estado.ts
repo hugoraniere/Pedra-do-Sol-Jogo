@@ -1,6 +1,7 @@
 /** Estado do jogo. Uma unica fonte da verdade sobre o progresso.
  *  Quem grava e le no disco e sistemas/armazenamento.ts. */
 import { gravarEspaco, lerEspaco } from "./armazenamento.ts";
+import { acharMaterial, type Atributo } from "../dados/conteudo.ts";
 
 export type Heroi = {
   nome: string;
@@ -16,6 +17,16 @@ export type Heroi = {
   chapeu: string;
   corChapeu: number;
   armaSprite: string;
+  /** Armadura e acessorio equipados agora — achados ou comprados depois da
+   *  criacao, `null` quando o slot esta vazio. A arma continua em
+   *  `armaSprite` (ja existia); estes dois sao novos, ver
+   *  docs/plano-de-itens-e-equipamento.md. */
+  equipamento: { armadura: string | null; acessorio: string | null };
+  /** +1 permanente por Selo de Heroi escolhido em cada poder, ALEM do +1 da
+   *  criacao (`poderEscolhido`). Fica no heroi, nao no estado do save-slot em
+   *  geral, porque e progressao do PERSONAGEM — o mesmo motivo de
+   *  `poderEscolhido` morar aqui. Ver sistemas/poderes.ts. */
+  bonusDeSelo: Record<Atributo, number>;
   /** O +1 que o jogador coloca onde quiser, o passo 4 do manual impresso.
    *
    *  Guardamos a ESCOLHA, e nao o total dos tres poderes. O total sai de
@@ -32,7 +43,11 @@ export type Estado = {
   coracoesMax: number;
   moedas: number;
   selos: number;
-  mochila: string[];
+  /** posse de item, com contagem — chave e o id (de `LOJA`, `MATERIAIS`, ou
+   *  um item de historia como "pano-goblin"), valor e quantos tem. Save
+   *  antigo guardava so uma lista de posse (sem contar); `abrirEspaco()`
+   *  migra pra `{ id: 1 }` cada, uma vez, na leitura. */
+  mochila: Record<string, number>;
   visitados: string[];
   /** chave estavel de cada criatura ja vencida (`${cena}:${indice}` no mapa),
    *  para ela nao voltar a existir quando o jogador reentra no lugar */
@@ -46,6 +61,12 @@ export type Estado = {
    *  NPC (o mesmo de dialogos.ts/npcs.ts). So sobe: escolha errada nunca
    *  desconta, so nao rende o ponto — ver sistemas/missoes.ts. */
   afinidades: Record<string, number>;
+  /** chave estavel `${cena}:${x},${y}` (tile) de cada fogueira ja acesa, na
+   *  ordem em que foram acesas — a ULTIMA e onde o heroi acorda ao cair.
+   *  Nao confundir com o "acesa/apagada" de docs/mundo-que-reage.md (marca
+   *  elemental de fogo/agua, sistema diferente que ainda nao existe): isto
+   *  aqui e o checkpoint, permanente, nunca apagado por magia nenhuma. */
+  fogueirasAcesas: string[];
   criadoEm: number;
   atualizadoEm: number;
   /** quantas vezes cada acao de escopo "porAventura" (magia, dom de raca) ja
@@ -73,13 +94,15 @@ export const VAZIO: Estado = {
     chapeu: "nenhum",
     corChapeu: 0x7b5ac4,
     armaSprite: "nenhuma",
+    equipamento: { armadura: null, acessorio: null },
+    bonusDeSelo: { forca: 0, destreza: 0, agilidade: 0, inteligencia: 0, vitalidade: 0 },
     poderEscolhido: "",
   },
   coracoes: 3,
   coracoesMax: 3,
   moedas: 5,
   selos: 0,
-  mochila: [],
+  mochila: {},
   visitados: [],
   derrotados: [],
   cena: "vila",
@@ -88,6 +111,9 @@ export const VAZIO: Estado = {
   // 480 = 8h, o heroi chega de manha
   relogio: 480,
   afinidades: {},
+  // a vila comeca com a propria fogueira ja acesa: ninguem cai sem ter pra
+  // onde acordar, mesmo antes de acender qualquer uma por conta propria
+  fogueirasAcesas: ["vila:16,10"],
   criadoEm: 0,
   atualizadoEm: 0,
   usosDeAventura: {},
@@ -123,6 +149,14 @@ export function abrirEspaco(espaco: number): boolean {
   // VAZIO, entao um save gravado antes de um campo novo existir voltaria sem
   // ele. Aqui o heroi antigo ganha os campos que nasceram depois dele.
   atual.heroi = { ...copia(VAZIO.heroi), ...(lido.heroi ?? {}) };
+  // save antigo guardava mochila como lista (so posse, sem contagem) — um
+  // array sobrescreveria o {} novo do VAZIO no espalhamento acima. Migra pra
+  // contagem 1 cada, uma vez, na leitura.
+  if (Array.isArray(lido.mochila)) {
+    const antiga = lido.mochila as unknown as string[];
+    atual.mochila = {};
+    for (const item of antiga) atual.mochila[item] = (atual.mochila[item] ?? 0) + 1;
+  }
   inicioDaSessao = Date.now();
   return true;
 }
@@ -137,8 +171,50 @@ export function salvar() {
   gravarEspaco(atual.espaco, atual);
 }
 
-export function guardar(item: string) {
-  if (!atual.mochila.includes(item)) atual.mochila.push(item);
+export function guardar(item: string, quantidade = 1) {
+  atual.mochila[item] = (atual.mochila[item] ?? 0) + quantidade;
+  salvar();
+}
+
+/** Tira `quantidade` de um item da mochila, sem salvar sozinha — quem chama
+ *  decide o resto da transacao (usar, vender) antes de salvar uma vez so. */
+function retirarDaMochila(item: string, quantidade: number): boolean {
+  const posse = atual.mochila[item] ?? 0;
+  if (posse < quantidade) return false;
+  const restante = posse - quantidade;
+  if (restante <= 0) delete atual.mochila[item];
+  else atual.mochila[item] = restante;
+  return true;
+}
+
+/** Consome um consumivel fora de combate (a Fase 6, uso em luta, e outro
+ *  assunto — ver docs/plano-de-itens-e-equipamento.md). Devolve false sem
+ *  gastar nada se nao houver o suficiente na mochila. O EFEITO em si (encher
+ *  coracao, etc.) ainda nao existe: isto so cuida da posse. */
+export function usar(item: string, quantidade = 1): boolean {
+  if (!retirarDaMochila(item, quantidade)) return false;
+  salvar();
+  return true;
+}
+
+/** Troca material por moeda, pelo preco de `MATERIAIS` em conteudo.ts.
+ *  Devolve false sem gastar nada se o item nao for um material conhecido ou
+ *  faltar quantidade. */
+export function venderMaterial(item: string, quantidade = 1): boolean {
+  const material = acharMaterial(item);
+  if (!material) return false;
+  if (!retirarDaMochila(item, quantidade)) return false;
+  atual.moedas += material.preco * quantidade;
+  salvar();
+  return true;
+}
+
+/** Poe ou tira algo de um slot de equipamento. `itemId: null` esvazia o
+ *  slot. A arma continua morando em `heroi.armaSprite` (ja existia); isto
+ *  so unifica os tres numa mesma porta de entrada. */
+export function equipar(slot: "arma" | "armadura" | "acessorio", itemId: string | null) {
+  if (slot === "arma") atual.heroi.armaSprite = itemId ?? "nenhuma";
+  else atual.heroi.equipamento[slot] = itemId;
   salvar();
 }
 
@@ -159,6 +235,27 @@ export function mudarAfinidade(npcId: string, delta: number) {
 
 export function afinidadeCom(npcId: string): number {
   return atual.afinidades[npcId] ?? 0;
+}
+
+export function foiAcesa(chave: string): boolean {
+  return atual.fogueirasAcesas.includes(chave);
+}
+
+/** Acender e permanente: uma fogueira ja acesa nunca sai da lista, nem apaga.
+ *  Chamar de novo numa ja acesa NAO e no-op: ela sobe pro fim da lista, porque
+ *  descansar ali agora e o que a torna o ponto de retorno, nao so o fato dela
+ *  ja ter sido acesa uma vez antes. */
+export function acenderFogueira(chave: string) {
+  const i = atual.fogueirasAcesas.indexOf(chave);
+  if (i !== -1) atual.fogueirasAcesas.splice(i, 1);
+  atual.fogueirasAcesas.push(chave);
+  salvar();
+}
+
+/** Onde o heroi acorda se cair agora. A lista sempre tem pelo menos a
+ *  fogueira da vila (ver `VAZIO`), entao isto nunca devolve vazio. */
+export function ultimaFogueiraAcesa(): string {
+  return atual.fogueirasAcesas[atual.fogueirasAcesas.length - 1];
 }
 
 export function foiDerrotado(chave: string): boolean {
@@ -198,15 +295,53 @@ export function aplicarDerrota(
   const moedasPerdidas = atual.moedas;
   atual.moedas = 0;
 
-  const elegiveis = atual.mochila.filter((id) => !id.startsWith("chave-"));
-  const quantidade = Math.min(3, Math.ceil(elegiveis.length / 2));
+  // a mochila e Record<id, quantidade> (Fase B do plano de itens) - achata
+  // pra uma unidade por posicao, igual a lista antiga fazia sozinha, senao
+  // "sortear ate 3" perderia sempre o mesmo item empilhado inteiro.
+  const elegiveis: string[] = [];
+  Object.entries(atual.mochila).forEach(([id, quantidade]) => {
+    if (id.startsWith("chave-")) return;
+    for (let i = 0; i < quantidade; i++) elegiveis.push(id);
+  });
+  const quantidadeAPerder = Math.min(3, Math.ceil(elegiveis.length / 2));
   const itensPerdidos: string[] = [];
-  for (let i = 0; i < quantidade; i++) {
+  for (let i = 0; i < quantidadeAPerder; i++) {
     const indice = Math.floor(sorteio() * elegiveis.length);
     itensPerdidos.push(...elegiveis.splice(indice, 1));
   }
-  atual.mochila = atual.mochila.filter((id) => !itensPerdidos.includes(id));
+  itensPerdidos.forEach((id) => retirarDaMochila(id, 1));
 
   salvar();
   return { moedasPerdidas, itensPerdidos };
+}
+
+/** Um Selo de Heroi. Devolve true quando este e o TERCEIRO da leva — e a
+ *  hora de abrir a tela de escolha (ver sistemas/poderes.ts,
+ *  `selosParaProximaEscolha`, e `src/cenas/EscolhaDeSelo.ts`). */
+export function ganharSelo(): boolean {
+  atual.selos += 1;
+  salvar();
+  return atual.selos % 3 === 0;
+}
+
+/** Uma das tres escolhas do Selo de Heroi: +1 coracao permanente, ja
+ *  curado — o premio e sentir o alivio na hora, nao so no proximo descanso. */
+export function ganharCoracaoExtra() {
+  atual.coracoesMax += 1;
+  atual.coracoes = atual.coracoesMax;
+  salvar();
+}
+
+/** A segunda escolha: +1 permanente num poder, alem do da criacao. */
+export function ganharBonusDeAtributo(atributo: Atributo) {
+  atual.heroi.bonusDeSelo[atributo] = (atual.heroi.bonusDeSelo[atributo] ?? 0) + 1;
+  salvar();
+}
+
+/** A terceira escolha: aprende uma magia nova, pro resto do jogo — nao so
+ *  desta aventura. Nao faz nada se ja souber (nunca deveria acontecer, quem
+ *  oferece a escolha ja filtra as conhecidas). */
+export function aprenderMagia(magiaId: string) {
+  if (!atual.heroi.magias.includes(magiaId)) atual.heroi.magias.push(magiaId);
+  salvar();
 }

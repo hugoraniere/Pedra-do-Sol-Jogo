@@ -19,7 +19,7 @@
  * colunas dividem. Ver docs/07-design-system.md.
  */
 import Phaser from "phaser";
-import { ALTURA_PERSONAGEM, COR } from "../dados/config";
+import { ALTURA_PERSONAGEM, COR, SPRITE_DA_ARMA } from "../dados/config";
 import {
   ATRIBUTOS,
   ORDEM_PODERES,
@@ -27,8 +27,10 @@ import {
   acharClasse,
   acharMagia,
   acharRaca,
+  acharQualquerItem,
 } from "../dados/conteudo";
-import { estado } from "../sistemas/estado";
+import { estado, equipar, venderMaterial } from "../sistemas/estado";
+import { temEfeitoForaDeCombate, usarConsumivel } from "../sistemas/consumiveis";
 import { MISSOES } from "../dados/missoes";
 import { missaoAceita, etapaAtual } from "../sistemas/missoes";
 import { Heroi, camadasDoHeroi, criarAnimacoes } from "../sistemas/heroi";
@@ -137,6 +139,92 @@ export class Ficha extends Phaser.Scene {
       grupos: [[paragrafo(recado)]],
     });
 
+    // cada item possuido vira um grupo: titulo (com a contagem, quando da
+    // pra empilhar), descricao, e a acao que faz sentido pra categoria dele.
+    // Reusa os mesmos tres tipos de Bloco que EU/PODERES/MENU ja usam — a
+    // mochila nao precisa de grade nem de hover: a descricao ja fica sempre
+    // visivel, o que serve melhor um jogo de toque do que passar o mouse
+    // por cima teria servido.
+    const grupoDoItem = (id: string, quantidade: number): Grupo => {
+      const info = acharQualquerItem(id);
+      const valor = quantidade > 1 ? `x${quantidade}` : undefined;
+      const titulo: Bloco = { tipo: "titulo", conteudo: info.nome.toUpperCase(), valor };
+
+      if (info.categoria === "consumivel") {
+        const podeUsar = temEfeitoForaDeCombate(id) && st.coracoes < st.coracoesMax;
+        const semEfeitoAinda = !temEfeitoForaDeCombate(id);
+        const texto = semEfeitoAinda
+          ? `${info.texto} (sem efeito fora de combate ainda)`
+          : podeUsar
+            ? info.texto
+            : `${info.texto} (coracoes ja estao cheios)`;
+        const grupo: Grupo = [titulo, paragrafo(texto)];
+        if (podeUsar) {
+          grupo.push({
+            tipo: "acao", rotulo: "USAR",
+            aoTocar: () => { usarConsumivel(id); this.desenhar(); },
+          });
+        }
+        return grupo;
+      }
+
+      if (info.categoria === "material") {
+        return [
+          titulo,
+          paragrafo(info.texto),
+          {
+            tipo: "acao", rotulo: `VENDER 1 (+${info.preco} moedas)`,
+            aoTocar: () => { venderMaterial(id, 1); this.desenhar(); },
+          },
+        ];
+      }
+
+      if (info.categoria === "armadura" || info.categoria === "acessorio") {
+        const equipado = st.heroi.equipamento[info.categoria] === id;
+        const texto = info.origem ? `${info.bonus} (${info.origem})` : info.bonus;
+        return [
+          titulo,
+          paragrafo(texto),
+          {
+            tipo: "acao", rotulo: equipado ? "DESEQUIPAR" : "EQUIPAR",
+            aoTocar: () => { equipar(info.categoria, equipado ? null : id); this.desenhar(); },
+          },
+        ];
+      }
+
+      if (info.categoria === "arma") {
+        const base = info.origem ? `${info.bonus} (${info.origem})` : info.bonus;
+        const spriteDaArma = SPRITE_DA_ARMA[id];
+        if (spriteDaArma) {
+          const equipada = st.heroi.armaSprite === spriteDaArma;
+          return [
+            titulo, paragrafo(base),
+            {
+              tipo: "acao", rotulo: equipada ? "DESEMPUNHAR" : "EMPUNHAR",
+              aoTocar: () => { equipar("arma", equipada ? null : spriteDaArma); this.desenhar(); },
+            },
+          ];
+        }
+        // as 6 armas "encontradas" e escudo/machado/adaga/lendarias ainda
+        // nao tem sprite proprio (SPRITE_DA_ARMA, config.ts) — equipar
+        // quebraria a camada visual do heroi. Ver docs/plano-de-itens-e-
+        // equipamento.md, Fase C.
+        return [titulo, paragrafo(`${base}. Ainda nao da pra equipar (sem desenho proprio ainda).`)];
+      }
+
+      return [titulo, paragrafo("Item de historia. Guarde para quando fizer sentido usar.")];
+    };
+
+    const paginaMochila = (): Pagina => {
+      const posses = Object.entries(st.mochila).filter(([, quantidade]) => quantidade > 0);
+      if (posses.length === 0) {
+        return emConstrucao(
+          "A mochila ainda esta vazia. Ache, ganhe ou compre alguma coisa pra ver aqui."
+        );
+      }
+      return { grupos: posses.map(([id, quantidade]) => grupoDoItem(id, quantidade)) };
+    };
+
     // uma missao so aparece aqui depois de aceita (etapas[0] concluida) —
     // o diario e o registro do que o jogador ja sabe, nunca um spoiler do
     // que ainda vai encontrar
@@ -186,7 +274,7 @@ export class Ficha extends Phaser.Scene {
           ],
         ],
       },
-      emConstrucao("A mochila ainda esta vazia. Um dia vai ter aqui o que voce guardar."),
+      paginaMochila(),
       paginaDiario(),
       {
         // MENU: ponte para a Pausa, ate ela virar conteudo desta mesma janela

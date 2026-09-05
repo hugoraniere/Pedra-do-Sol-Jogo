@@ -21,7 +21,9 @@ import { acoesDoHeroi, type AcaoDeHeroi } from "../sistemas/acao";
 import { fileira } from "../sistemas/fileira";
 import { criarAnimacoes, camadasDoHeroi, Heroi } from "../sistemas/heroi";
 import { agachar, estourinho, hitstop, ondaDeConjuracao, piscar, popIn, projetil, projetilOrientado, textoFlutuante } from "../sistemas/fx";
-import { aplicarDerrota, estado, guardar, marcarDerrotado, registrarUso, salvar, usosGastos } from "../sistemas/estado";
+import {
+  aplicarDerrota, estado, guardar, marcarDerrotado, registrarUso, salvar, usosGastos, ganharSelo,
+} from "../sistemas/estado";
 import { HOSPITAL_ENTRADA, VILA } from "../dados/mapas";
 import { poderesDoHeroi } from "../sistemas/poderes";
 import type { Atributo } from "../dados/conteudo";
@@ -153,6 +155,9 @@ export class Combate extends Phaser.Scene {
   private mundo!: Mundo;
   private largura = 0;
   private altura = 0;
+  /** selos no INICIO desta luta, pra saber ao final se algum selo ganho aqui
+   *  completou uma leva de 3 (e por isso deve abrir a tela de escolha). */
+  private selosNoInicio = 0;
 
   constructor() {
     super("Combate");
@@ -183,6 +188,7 @@ export class Combate extends Phaser.Scene {
     this.coracoesMax = st0.coracoesMax;
     this.coracoes = st0.coracoes;
     this.atributos = poderesDoHeroi(ficha);
+    this.selosNoInicio = st0.selos;
 
     // goblin nao tem textura propria ("goblin" sozinho nunca foi carregado) -
     // os 3 corpos de verdade entram todos aqui, e cada instancia escolhe o
@@ -498,6 +504,16 @@ export class Combate extends Phaser.Scene {
     this.time.delayedCall(700, () => {
       this.scene.stop();
       this.mundo.sairDeCombate();
+      // cruzou uma leva de 3 selos nesta luta? a tela de escolha abre por
+      // cima do Mundo, que sairDeCombate() acabou de liberar — congela os
+      // dois de novo, mesmo padrao que Mundo.pausar() usa pra Pausa
+      const antes = Math.floor(this.selosNoInicio / 3);
+      const agora = Math.floor(estado().selos / 3);
+      if (agora > antes) {
+        this.scene.pause("Mundo");
+        this.scene.pause("Interface");
+        this.scene.launch("EscolhaDeSelo");
+      }
     });
   }
 
@@ -1178,11 +1194,18 @@ export class Combate extends Phaser.Scene {
         // precisa esperar Mundo recarregar o mapa pra ela sumir de vez.
         this.mundo.removerCriatura(b.chave);
         const ficha = acharCriatura(b.bicharioId);
-        ficha?.larga.forEach((item) => {
-          if (item === "moeda") estado().moedas += 1;
-          else guardar(item);
+        // guardiao unico (serpente, grulo, bruxa, brasanegra) larga sempre —
+        // chance so vale pra bicho comum, que pode ser encontrado de novo.
+        // Ver docs/plano-de-itens-e-equipamento.md, secao 8.
+        ficha?.larga.forEach(({ id, chance }) => {
+          if (!ficha.unico && Math.random() > chance) return;
+          if (id === "moeda") estado().moedas += 1;
+          else guardar(id);
         });
         salvar();
+        // um Selo de Heroi por criatura vencida — o sistema de progressao do
+        // proprio RPG de mesa (CLAUDE.md), sem inventar experiencia nenhuma
+        ganharSelo();
       }
     }
     this.ordem.remover(b.id);
@@ -1223,9 +1246,10 @@ export class Combate extends Phaser.Scene {
         this.mundo.removerCriatura(b.chave);
         if (comLoot) {
           const ficha = acharCriatura(b.bicharioId);
-          ficha?.larga.forEach((item) => {
-            if (item === "moeda") estado().moedas += 1;
-            else guardar(item);
+          ficha?.larga.forEach(({ id, chance }) => {
+            if (!ficha.unico && Math.random() > chance) return;
+            if (id === "moeda") estado().moedas += 1;
+            else guardar(id);
           });
         }
         salvar();

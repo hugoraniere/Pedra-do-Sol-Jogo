@@ -47,6 +47,8 @@ const LETRA_TILE: Record<string, number[]> = {
   r: [T.areiaPedra],
   d: [T.areiaMancha],
   k: [T.areiaPegada],
+  // interior: parede da Casa de Cura (ver arte/tiles.py)
+  W: [T.paredeInterior],
 };
 
 export type Peca = { nome: string; x: number; y: number; solido?: boolean };
@@ -189,6 +191,38 @@ export const VILA: Mapa = {
   // "A trilha do leste vai pra Floresta dos Sussurros", diz a placa da vila
   saidas: [
     { x: 35, y: 11, w: 1, h: 2, para: "floresta", entrada: { x: 3, y: 42 } },
+    // a porta da Casa de Cura, bem em frente a casa-vovo (x:2,y:4 em objetos)
+    { x: 2, y: 7, w: 2, h: 1, para: "casa-cura", entrada: { x: 3, y: 5 } },
+  ],
+};
+
+/** O comodo da Vovo Aurora, por dentro. Ver docs/14-casa-de-cura.md: um
+ *  comodo so, pequeno de proposito, sem cama pro heroi -- a fogueira continua
+ *  o unico lugar que revive de verdade.
+ *
+ *  8 x 7 tiles. Parede em W (solida), chao de madeira em m. A brecha na
+ *  parede sul (linha 6, colunas 3-4) e a porta: pisar nela volta pra Vila,
+ *  bem no lugar de onde se entrou. */
+export const CASA_CURA: Mapa = {
+  chao: [
+    "WWWWWWWW",
+    "WmmmmmmW",
+    "WmmmmmmW",
+    "WmmmmmmW",
+    "WmmmmmmW",
+    "WmmmmmmW",
+    "WWWmmWWW",
+  ],
+  objetos: [
+    { nome: "cama", x: 1, y: 1 },
+    { nome: "prateleira-pocoes", x: 4, y: 0 },
+    { nome: "caldeirao", x: 4, y: 4 },
+  ],
+  pessoas: [],
+  entrada: { x: 3, y: 4 },
+  lugar: "Casa de Cura",
+  saidas: [
+    { x: 3, y: 6, w: 2, h: 1, para: "vila", entrada: { x: 3, y: 9 } },
   ],
 };
 
@@ -324,6 +358,12 @@ export const FLORESTA: Mapa = {
   // floresta, e o Lobo de Nevoa, que so existe neste mapa. Posicoes escolhidas
   // pelos lugares do plano: a Teia Doce a leste, o riacho no meio, o planalto
   // ao norte, onde ficam as sentinelas.
+  //
+  // POPULACAO ENGROSSADA A PEDIDO DO HUGO (2026-09-05), so pra ter combate
+  // sobrando pra testar -- nada de lugar novo no mapa, so mais goblin/aranha/
+  // lobo-nevoa (os tres que brigam de verdade hoje) espalhados pelo campo
+  // aberto ao sul, que nao tinha nenhum. Decisao mais simples possivel: sem
+  // criatura nova, sem posicionamento fino, so quantidade.
   criaturas: [
     { id: "aranha", x: 92, y: 40 },
     { id: "aranha", x: 97, y: 44 },
@@ -333,6 +373,28 @@ export const FLORESTA: Mapa = {
     { id: "goblin", x: 72, y: 14 },
     { id: "goblin", x: 78, y: 16 },
     { id: "goblin", x: 104, y: 12 },
+    { id: "goblin", x: 30, y: 10 },
+    { id: "aranha", x: 50, y: 11 },
+    { id: "lobo-nevoa", x: 85, y: 13 },
+    { id: "goblin", x: 60, y: 17 },
+    { id: "aranha", x: 90, y: 18 },
+    { id: "lobo-nevoa", x: 35, y: 20 },
+    { id: "goblin", x: 75, y: 21 },
+    { id: "aranha", x: 45, y: 15 },
+    { id: "goblin", x: 20, y: 50 },
+    { id: "aranha", x: 40, y: 52 },
+    { id: "lobo-nevoa", x: 60, y: 55 },
+    { id: "goblin", x: 80, y: 58 },
+    { id: "aranha", x: 25, y: 60 },
+    { id: "lobo-nevoa", x: 50, y: 62 },
+    { id: "goblin", x: 70, y: 65 },
+    { id: "aranha", x: 90, y: 68 },
+    { id: "lobo-nevoa", x: 30, y: 70 },
+    { id: "goblin", x: 55, y: 72 },
+    { id: "aranha", x: 75, y: 75 },
+    { id: "lobo-nevoa", x: 95, y: 77 },
+    { id: "goblin", x: 20, y: 80 },
+    { id: "aranha", x: 45, y: 82 },
   ],
   entrada: { x: 3, y: 42 },
   lugar: "Floresta dos Sussurros",
@@ -353,6 +415,7 @@ export const FLORESTA: Mapa = {
 export const MAPAS: Record<string, Mapa> = {
   vila: VILA,
   floresta: FLORESTA,
+  "casa-cura": CASA_CURA,
 };
 
 export type ChaoPronto = number[][];
