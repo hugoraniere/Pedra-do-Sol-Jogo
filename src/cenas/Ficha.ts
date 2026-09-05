@@ -430,20 +430,28 @@ export class Ficha extends Phaser.Scene {
     const st = estado();
     const [rVida, rMoedas, rSelos] = colunas(linha, [4, 2, 2], ESPACO.sm);
 
-    // os coracoes encostados um no outro leem como uma barra so, que e o que
-    // uma crianca de 7 anos entende sem ninguem explicar
-    const passo = Math.min(LADO_ICONE - 5, Math.floor(rVida.largura / st.coracoesMax));
-    for (let i = 0; i < st.coracoesMax; i++) {
-      marcar(
-        this.add.image(
-          rVida.x + passo / 2 + i * passo,
-          meio(rVida),
-          "ui",
-          i < st.coracoes ? ICONE.coracaoCheio : ICONE.coracaoVazio
-        ),
-        "icone"
-      );
-    }
+    // vida virou numero de verdade (sistemas/dado.ts) - uma fileira de
+    // coracoes nao cabia mais depois que a vida passou de 10. Mesma barra
+    // colorida do HUD do mundo e do combate (Interface.ts, Combate.ts):
+    // verde acima de metade, laranja ate um quarto, vermelho abaixo disso.
+    const alturaBarra = 10;
+    const yBarra = meio(rVida) - alturaBarra / 2;
+    marcar(this.add.rectangle(rVida.x, yBarra, rVida.largura, alturaBarra, 0x2c2440).setOrigin(0, 0), "icone");
+    const fracao = Math.max(0, Math.min(1, st.coracoes / st.coracoesMax));
+    const corBarra = fracao > 0.5 ? 0x3e9b62 : fracao > 0.25 ? 0xf5b62b : 0xe2483d;
+    marcar(
+      this.add.rectangle(
+        rVida.x + 1, yBarra + 1, Math.max(1, (rVida.largura - 2) * fracao), alturaBarra - 2, corBarra
+      ).setOrigin(0, 0),
+      "icone"
+    );
+    marcar(
+      texto(this, rVida.x + rVida.largura / 2, meio(rVida), `${Math.max(0, st.coracoes)}/${st.coracoesMax}`, {
+        cor: 0xfff8ea, ancora: 0.5, ancoraY: 0.5,
+      }),
+      "texto",
+      `${st.coracoes}/${st.coracoesMax}`
+    );
 
     ([
       [rMoedas, ICONE.moeda, st.moedas],
