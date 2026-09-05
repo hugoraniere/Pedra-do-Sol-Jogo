@@ -69,12 +69,26 @@ export type Pessoa = { quem: string; sprite: string; x: number; y: number; rotin
  *  brigar. */
 export type Bicho = { id: string; x: number; y: number };
 
-/** Uma borda que leva a outro mapa. Encostar nela troca de lugar.
- *  A area e em tile, e `entrada` e onde o heroi aparece do outro lado. */
+/** Uma borda que leva a outro mapa.
+ *
+ *  Sem `porta`: encostar nela ja troca de lugar sozinho — e assim que toda
+ *  SAIDA de comodo (voltar pra Vila) e a trilha pra Floresta sempre
+ *  funcionaram, e continuam. Bom pra sair: ninguem quer confirmar que quer
+ *  ir embora.
+ *
+ *  Com `porta`: a entrada de um predio (Casa de Cura, Ferraria...) vira
+ *  interagivel de verdade — precisa de botao/clique, igual pessoa ou bau,
+ *  com destaque na casa quando o heroi chega perto. So andar por cima nao
+ *  basta mais. `porta` e o tile (x,y) do OBJETO da casa em `objetos`
+ *  (mapas.ts), pra Mundo.ts achar QUAL sprite ganha o destaque.
+ *
+ *  A area de `x,y,w,h` e em tile, e `entrada` e onde o heroi aparece do
+ *  outro lado, com ou sem `porta`. */
 export type Saida = {
   x: number; y: number; w: number; h: number;
   para: string;
   entrada: { x: number; y: number };
+  porta?: { x: number; y: number };
 };
 
 export type Mapa = {
@@ -229,16 +243,18 @@ export const VILA: Mapa = {
   // "A trilha do leste vai pra Floresta dos Sussurros", diz a placa da vila
   saidas: [
     { x: 35, y: 11, w: 1, h: 2, para: "floresta", entrada: { x: 3, y: 42 } },
-    // a porta da Casa de Cura, bem em frente a casa-vovo (x:2,y:4 em objetos)
-    { x: 2, y: 7, w: 2, h: 1, para: "casa-cura", entrada: { x: 3, y: 5 } },
+    // a porta da Casa de Cura, bem em frente a casa-vovo (x:2,y:4 em objetos).
+    // `porta` liga a saida ao objeto: entrar vira acao de verdade (botao ou
+    // clique, com destaque na casa), sair continua so andar ate aqui.
+    { x: 2, y: 7, w: 2, h: 1, para: "casa-cura", entrada: { x: 3, y: 5 }, porta: { x: 2, y: 4 } },
     // as outras 4 casas: mesma regra da Casa de Cura, porta 3 linhas abaixo
     // do objeto (x:objeto, y:objeto+3), pra dar espaco de chegar andando
-    { x: 9, y: 7, w: 2, h: 1, para: "casa-padeira-interior", entrada: { x: 4, y: 6 } },
-    { x: 14, y: 7, w: 2, h: 1, para: "casa-grande-interior", entrada: { x: 5, y: 7 } },
-    { x: 21, y: 7, w: 2, h: 1, para: "ferraria-interior", entrada: { x: 5, y: 7 } },
-    { x: 23, y: 19, w: 2, h: 1, para: "casa-pequena-interior", entrada: { x: 4, y: 6 } },
+    { x: 9, y: 7, w: 2, h: 1, para: "casa-padeira-interior", entrada: { x: 4, y: 6 }, porta: { x: 9, y: 4 } },
+    { x: 14, y: 7, w: 2, h: 1, para: "casa-grande-interior", entrada: { x: 5, y: 7 }, porta: { x: 14, y: 4 } },
+    { x: 21, y: 7, w: 2, h: 1, para: "ferraria-interior", entrada: { x: 5, y: 7 }, porta: { x: 21, y: 4 } },
+    { x: 23, y: 19, w: 2, h: 1, para: "casa-pequena-interior", entrada: { x: 4, y: 6 }, porta: { x: 23, y: 16 } },
     // a terceira casa-pequena (x27,y4) so tinha decoracao ate aqui
-    { x: 27, y: 7, w: 2, h: 1, para: "casa-guarda-interior", entrada: { x: 4, y: 6 } },
+    { x: 27, y: 7, w: 2, h: 1, para: "casa-guarda-interior", entrada: { x: 4, y: 6 }, porta: { x: 27, y: 4 } },
   ],
 };
 

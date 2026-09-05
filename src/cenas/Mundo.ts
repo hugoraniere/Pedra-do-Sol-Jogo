@@ -40,16 +40,21 @@ type FichaObjeto = { w: number; h: number; cw: number; ch: number };
  *  toda a area visivel dele errava, e caia na caixa solida por baixo,
  *  travando o clique-no-chao tambem. */
 type Interagivel = {
-  x: number; y: number; chave: string; tipo: "pessoa" | "objeto";
+  x: number; y: number; chave: string; tipo: "pessoa" | "objeto" | "porta";
   largura: number; altura: number;
   /** o sprite de verdade, para o destaque copiar textura, quadro e origem
-   *  dele — nunca desenhar um retangulo generico por cima. */
+   *  dele — nunca desenhar um retangulo generico por cima. Pra tipo
+   *  "porta", e a CASA (a entrada em si nao tem sprite proprio): o predio
+   *  inteiro ganha o contorno, nao so a soleira. */
   obj: Phaser.GameObjects.Image | Phaser.GameObjects.Sprite;
   /** posicao em TILE (nao pixel), so preenchida pra objetos do mapa. Existe
    *  pra distinguir instancias do mesmo `nome` (varias fogueiras no mesmo
    *  mapa sao indistinguiveis so pelo `chave`) sem precisar de indice de
    *  array, que nao e estavel entre `mapa.objetos` e o array plantado. */
   tileX?: number; tileY?: number;
+  /** so pra tipo "porta": pra onde ela leva. `tentarInteragir()` chama
+   *  `trocarDeMapa()` com isto em vez de abrir fala. */
+  saidaPorta?: Saida;
 };
 type Ponto = { x: number; y: number };
 
@@ -181,8 +186,18 @@ export class Mundo extends Phaser.Scene {
    *  cada fonte de luz (fogueira, e depois tocha) apaga um circulo de borda
    *  macia nela via `erase()` — a mesma tecnica de "lanterna" do Phaser. Era
    *  um Rectangle solido antes disto: precisou virar textura porque um
-   *  retangulo nao tem furo por dentro. */
+   *  retangulo nao tem furo por dentro. So existe quando `usaLuzDeVerdade`
+   *  e true — ver o campo, e por que o Rectangle continua existindo. */
   private overlayCeu!: Phaser.GameObjects.RenderTexture;
+  /** O ceu simples, sem furo de luz — o Rectangle solido de sempre, pra
+   *  quando `usaLuzDeVerdade` e false. `RenderTexture.clear()`/`erase()`
+   *  presumem WebGL por dentro (`this.renderer.gl`) e derrubam o jogo
+   *  inteiro no Canvas renderer (`npm run auditar` achou isto, rodando sem
+   *  GPU) — sem WebGL, ninguem ganha luz de fonte, mas ninguem trava
+   *  tambem. `type: Phaser.AUTO` em main.ts pode cair em Canvas em
+   *  qualquer navegador sem WebGL de verdade, nao so em auditoria. */
+  private overlayCeuSimples!: Phaser.GameObjects.Rectangle;
+  private usaLuzDeVerdade = false;
   /** Onde a luz sempre acende, de dia ou de noite — hoje so fogueira.
    *  Populado no loop de objetos de `create()`, lido a cada quadro em
    *  `atualizarCeu()`. */
@@ -282,6 +297,9 @@ export class Mundo extends Phaser.Scene {
     // de plantarMata(), que le a letra T do desenho: sem isso a floresta teria
     // umas oitocentas arvores escritas na unha em mapas.ts.
     const pecas = [...mapa.objetos, ...plantarMata(mapa.chao, mapa.objetos)];
+    // pra achar o sprite da casa quando uma Saida.porta apontar pra ela,
+    // logo depois deste loop — ver o bloco "portas" abaixo
+    const spritesPorTile = new Map<string, Phaser.GameObjects.Image | Phaser.GameObjects.Sprite>();
     pecas.forEach((peca) => {
       const ficha = fichas?.[peca.nome];
       if (!ficha) return;
@@ -298,6 +316,7 @@ export class Mundo extends Phaser.Scene {
           : this.add.image(x, y, `obj-${peca.nome}`);
       s.setOrigin(0.5, 1);
       s.setDepth(y);
+      spritesPorTile.set(`${peca.x},${peca.y}`, s);
       if (peca.nome === "fogueira") this.fontesDeLuz.push({ x, y: y - ficha.h * 0.6 });
       // o navio balanca sozinho, de vez em quando — nunca o tempo todo, pra
       // nao ler como agitado demais numa agua parada. Cada ciclo se
@@ -330,6 +349,28 @@ export class Mundo extends Phaser.Scene {
           tileX: peca.x, tileY: peca.y,
         });
       }
+    });
+
+    // ------------------------------------------------------- portas
+    // Entrar num predio virou acao de verdade (botao/clique), igual pessoa
+    // ou bau: precisa de destaque, e destaque precisa de um sprite pra
+    // copiar — por isso so as Saida com `porta` (ver dados/mapas.ts) viram
+    // interagivel aqui, achando a casa pelo tile em `spritesPorTile`. Sair
+    // continua so andar ate a saida (`conferirSaida()` pula as com `porta`).
+    this.saidas.forEach((saida) => {
+      if (!saida.porta) return;
+      const casa = spritesPorTile.get(`${saida.porta.x},${saida.porta.y}`);
+      if (!casa) return; // casa fora do mapa? saida sem destaque, nunca sem funcionar
+      this.interagiveis.push({
+        x: (saida.x + saida.w / 2) * TILE,
+        y: (saida.y + saida.h / 2) * TILE,
+        chave: `porta:${saida.para}`,
+        tipo: "porta",
+        largura: saida.w * TILE,
+        altura: saida.h * TILE,
+        obj: casa,
+        saidaPorta: saida,
+      });
     });
 
     // --------------------------------------------------- som do lugar
@@ -481,16 +522,33 @@ export class Mundo extends Phaser.Scene {
     // baixo da Interface: como Interface e outra Scene, lancada depois na
     // lista de main.ts, a ordem de cena ja resolve a sobreposicao sozinha,
     // sem precisar de depth cruzando cena. Cor/alpha vem de corDoCeu(); os
-    // furos de luz vem de `fontesDeLuz`, aplicados em atualizarCeu().
-    this.garantirTexturaDeLuz();
-    this.overlayCeu = this.add
-      .renderTexture(0, 0, this.cameras.main.width, this.cameras.main.height)
+    // furos de luz vem de `fontesDeLuz`, aplicados em atualizarCeu() — so
+    // com WebGL de verdade, ver `usaLuzDeVerdade`. O Rectangle simples
+    // nasce SEMPRE, mesmo com WebGL: e a rede de seguranca se o contexto
+    // sumir DEPOIS deste ponto (`npm run auditar`, sem GPU, pegou isso —
+    // `renderer.type` dizia WEBGL na criacao, mas `renderer.gl` virou nulo
+    // bem depois, no meio do jogo). `atualizarCeu()` tenta a RenderTexture
+    // primeiro e cai pra este Rectangle sozinho se ela falhar.
+    this.overlayCeuSimples = this.add
+      .rectangle(0, 0, this.cameras.main.width, this.cameras.main.height, COR.tinta, 0)
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setDepth(Number.MAX_SAFE_INTEGER);
     refazerAoRedimensionar(this, () =>
-      this.overlayCeu.resize(this.cameras.main.width, this.cameras.main.height)
+      this.overlayCeuSimples.setSize(this.cameras.main.width, this.cameras.main.height)
     );
+    this.usaLuzDeVerdade = !!(this.renderer as Phaser.Renderer.WebGL.WebGLRenderer).gl;
+    if (this.usaLuzDeVerdade) {
+      this.garantirTexturaDeLuz();
+      this.overlayCeu = this.add
+        .renderTexture(0, 0, this.cameras.main.width, this.cameras.main.height)
+        .setOrigin(0, 0)
+        .setScrollFactor(0)
+        .setDepth(Number.MAX_SAFE_INTEGER);
+      refazerAoRedimensionar(this, () =>
+        this.overlayCeu.resize(this.cameras.main.width, this.cameras.main.height)
+      );
+    }
     this.atualizarCeu();
 
     this.scene.launch("Interface");
@@ -582,6 +640,12 @@ export class Mundo extends Phaser.Scene {
       );
     }
     if (!alvo) return;
+    // entrar num predio: acao de verdade, sem fala nem lookup em DIALOGOS —
+    // ver o tipo "porta" em Interagivel e o bloco "portas" em create().
+    if (alvo.tipo === "porta" && alvo.saidaPorta) {
+      this.trocarDeMapa(alvo.saidaPorta);
+      return;
+    }
     // item largado no chao (docs/plano-de-itens-e-equipamento.md, secao
     // 17.5): apanhar nao e conversa, entao resolve e sai ANTES do lookup em
     // DIALOGOS — mesmo padrao que fogueira/bau ja usam, so que sem abrir
@@ -736,18 +800,38 @@ export class Mundo extends Phaser.Scene {
    *  senao a troca so apareceria no quadro seguinte. */
   private atualizarCeu() {
     const { cor, alpha } = corDoCeu();
-    this.overlayCeu.clear();
-    this.overlayCeu.fill(cor, alpha, 0, 0, this.overlayCeu.width, this.overlayCeu.height);
-    if (alpha < 0.02 || !this.fontesDeLuz.length) return;
-    const cam = this.cameras.main;
-    for (const fonte of this.fontesDeLuz) {
-      const sx = fonte.x - cam.scrollX;
-      const sy = fonte.y - cam.scrollY;
-      if (sx < -RAIO_LUZ || sy < -RAIO_LUZ || sx > cam.width + RAIO_LUZ || sy > cam.height + RAIO_LUZ) {
-        continue;
+    if (this.usaLuzDeVerdade) {
+      try {
+        this.overlayCeu.clear();
+        this.overlayCeu.fill(cor, alpha, 0, 0, this.overlayCeu.width, this.overlayCeu.height);
+        if (alpha >= 0.02 && this.fontesDeLuz.length) {
+          const cam = this.cameras.main;
+          for (const fonte of this.fontesDeLuz) {
+            const sx = fonte.x - cam.scrollX;
+            const sy = fonte.y - cam.scrollY;
+            if (
+              sx < -RAIO_LUZ || sy < -RAIO_LUZ ||
+              sx > cam.width + RAIO_LUZ || sy > cam.height + RAIO_LUZ
+            ) {
+              continue;
+            }
+            this.overlayCeu.erase(TEXTURA_LUZ, sx - RAIO_LUZ, sy - RAIO_LUZ);
+          }
+        }
+        return;
+      } catch (erro) {
+        // o contexto WebGL sumiu DEPOIS do create() (raro num jogo de
+        // verdade, mas `npm run auditar` sem GPU pega isso) — desiste da
+        // luz de fonte pro resto desta cena, sem travar o jogo. O
+        // Rectangle simples ja existe (nasceu junto, ver create()), so
+        // falta cair pra ele a partir de agora.
+        console.warn("Luz de fonte desligada: contexto WebGL sumiu.", erro);
+        this.usaLuzDeVerdade = false;
+        this.overlayCeu.setVisible(false);
       }
-      this.overlayCeu.erase(TEXTURA_LUZ, sx - RAIO_LUZ, sy - RAIO_LUZ);
     }
+    this.overlayCeuSimples.setFillStyle(cor, 1);
+    this.overlayCeuSimples.setAlpha(alpha);
   }
 
   /** A textura da "lanterna": um circulo branco com borda macia (gradiente
@@ -804,8 +888,9 @@ export class Mundo extends Phaser.Scene {
    *  tom a cada rodada de auditoria por causa da hora, nao da UI. */
   travarRelogioParaAuditoria(minuto: number) {
     // a cena existe registrada no scene manager mesmo fora do ar (titulo,
-    // criacao...); so mexe no ceu se `create()` ja rodou de verdade.
-    if (!this.overlayCeu) return;
+    // criacao...); so mexe no ceu se `create()` ja rodou de verdade. Um dos
+    // dois campos existe dependendo de `usaLuzDeVerdade` — nunca os dois.
+    if (!this.overlayCeu && !this.overlayCeuSimples) return;
     estado().relogio = minuto;
     this.atualizarCeu();
   }
@@ -1233,7 +1318,7 @@ export class Mundo extends Phaser.Scene {
     const { x: wx, y: wy } = this.mundoXY(p);
     const alvo = this.interagiveis.find((i) => this.dentroDoAlvo(wx, wy, i));
     if (alvo) {
-      definirEstado(alvo.tipo === "pessoa" ? "falar" : "olhar");
+      definirEstado(alvo.tipo === "pessoa" ? "falar" : alvo.tipo === "porta" ? "andar" : "olhar");
       return;
     }
     const tx = Math.floor(wx / TILE);
@@ -1371,21 +1456,32 @@ export class Mundo extends Phaser.Scene {
     }
   }
 
-  /** Encostou numa borda que leva a outro lugar? Entao troca de mapa.
-   *
-   *  A troca acontece com a tela esmaecendo, e nao de um quadro para o outro:
-   *  corte seco em cima de uma tela cheia de arvore faz o jogador perder de
-   *  vista o proprio heroi. */
+  /** Encostou numa borda que leva a outro lugar, e ela NAO precisa de acao?
+   *  Entao troca de mapa sozinho. Toda Saida com `porta` (a entrada de um
+   *  predio) fica de fora daqui de proposito — essa so troca de mapa via
+   *  `tentarInteragir()`, com destaque e botao/clique, igual qualquer outro
+   *  interagivel. Sair de um predio nunca tem `porta`, entao continua
+   *  automatico: ninguem precisa confirmar que quer ir embora. */
   private conferirSaida() {
     if (this.trocandoDeMapa) return;
     const tx = Math.floor(this.heroi.x / TILE);
     const ty = Math.floor(this.heroi.y / TILE);
     const saida = this.saidas.find(
-      (s) => tx >= s.x && tx < s.x + s.w && ty >= s.y && ty < s.y + s.h
+      (s) => !s.porta && tx >= s.x && tx < s.x + s.w && ty >= s.y && ty < s.y + s.h
     );
-    if (!saida) return;
+    if (saida) this.trocarDeMapa(saida);
+  }
+
+  /** A troca de mapa em si, com a tela esmaecendo, e nao de um quadro para o
+   *  outro: corte seco em cima de uma tela cheia de arvore faz o jogador
+   *  perder de vista o proprio heroi. Chamada por `conferirSaida()` (saida
+   *  automatica) e por `tentarInteragir()` (entrada de predio, com `porta`).
+   *  Chamava `irPara()` antes disto — renomeado por causa do `irPara(wx,wy)`
+   *  que ja existia (anda ate um clique no chao), coisa bem diferente. */
+  private trocarDeMapa(saida: Saida) {
+    if (this.trocandoDeMapa) return;
     const destino = MAPAS[saida.para];
-    if (!destino) return;   // lugar ainda nao construido: a borda simplesmente nao leva a nada
+    if (!destino) return;   // lugar ainda nao construido: a porta simplesmente nao leva a nada
 
     this.trocandoDeMapa = true;
     this.heroi.mover(0, 0);
