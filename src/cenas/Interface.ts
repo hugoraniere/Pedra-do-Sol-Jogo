@@ -14,6 +14,10 @@ import { botao, type Botao } from "../sistemas/botao";
 import { interativo } from "../sistemas/interativo";
 import type { Escolha } from "../dados/dialogos";
 
+/** largura da barra de vida do HUD, em px - vida virou numero de verdade
+ *  (sistemas/dado.ts), uma fileira de icones nao cabe mais nela. */
+const LARGURA_VIDA = 50;
+
 /** `quem` e o nome que aparece na chapinha; `chave` e a entrada de DIALOGOS,
  *  que e o que a tabela VOZ usa para achar a altura da voz. Sem chave a fala
  *  ainda funciona, so sai na voz neutra. `escolhas`, se vier, aparece como
@@ -33,7 +37,8 @@ export class Interface extends Phaser.Scene {
   private linhaCheia = "";
   private vozAtual = "";
   private maquina?: Phaser.Time.TimerEvent;
-  private coracoes: Phaser.GameObjects.Image[] = [];
+  private barraVidaFrente!: Phaser.GameObjects.Rectangle;
+  private textoVida!: Phaser.GameObjects.BitmapText;
   private textoMoedas!: Phaser.GameObjects.BitmapText;
   private textoSelos!: Phaser.GameObjects.BitmapText;
   /** true logo depois que uma fala abre com o botao de acao ainda segurado:
@@ -53,9 +58,6 @@ export class Interface extends Phaser.Scene {
   }
 
   create() {
-    // create roda de novo em cada restart, e a instancia da cena e a mesma:
-    // sem zerar, os coracoes velhos ficariam na lista apontando para o nada
-    this.coracoes = [];
     this.linhas = [];
     this.indice = 0;
     this.cenaDona = undefined;
@@ -76,11 +78,10 @@ export class Interface extends Phaser.Scene {
   // ---------------------------------------------------------------- topo
   private montarTopo() {
     this.add.nineslice(2, 1, "painel-escuro", undefined, LARGURA - 4, 16, 8, 8, 8, 8).setOrigin(0);
-    const st = estado();
-    for (let i = 0; i < st.coracoesMax; i++) {
-      this.coracoes.push(this.add.image(10 + i * 11, 9, "ui", ICONE.coracaoCheio));
-    }
-    const xMoeda = 14 + st.coracoesMax * 11;
+    this.add.rectangle(8, 4, LARGURA_VIDA, 10, 0x2c2440).setOrigin(0);
+    this.barraVidaFrente = this.add.rectangle(9, 5, LARGURA_VIDA - 2, 8, 0x3e9b62).setOrigin(0);
+    this.textoVida = texto(this, 8 + LARGURA_VIDA / 2, 5, "", { cor: 0xfff8ea, ancora: 0.5 });
+    const xMoeda = 14 + LARGURA_VIDA;
     this.add.image(xMoeda, 9, "ui", ICONE.moeda);
     this.textoMoedas = texto(this, xMoeda + 9, 5, "0", { cor: 0xfff8ea });
     this.add.image(xMoeda + 32, 9, "ui", ICONE.selo);
@@ -142,9 +143,10 @@ export class Interface extends Phaser.Scene {
 
   atualizarTopo() {
     const st = estado();
-    this.coracoes.forEach((c, i) =>
-      c.setFrame(i < st.coracoes ? ICONE.coracaoCheio : ICONE.coracaoVazio)
-    );
+    const fracao = Phaser.Math.Clamp(st.coracoes / st.coracoesMax, 0, 1);
+    this.barraVidaFrente.width = Math.max(1, (LARGURA_VIDA - 2) * fracao);
+    this.barraVidaFrente.fillColor = fracao > 0.5 ? 0x3e9b62 : fracao > 0.25 ? 0xf5b62b : 0xe2483d;
+    this.textoVida.setText(`${Math.max(0, st.coracoes)}/${st.coracoesMax}`);
     this.textoMoedas.setText(String(st.moedas));
     this.textoSelos.setText(String(st.selos));
   }

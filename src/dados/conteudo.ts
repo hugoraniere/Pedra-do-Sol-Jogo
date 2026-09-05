@@ -10,6 +10,7 @@
 import type { Marca } from "../sistemas/marcas";
 import type { AlvoDeAcao } from "../sistemas/alvo";
 import type { IdCondicao } from "../sistemas/condicoes";
+import type { Dado } from "../sistemas/dado";
 
 /** Revisao de 2026-09-04 (CLAUDE.md): os tres da mesa (FORCA, ESPERTEZA,
  *  CORACAO) viraram cinco. "Esperteza" fazia tres trabalhos escondidos - agora
@@ -69,6 +70,10 @@ export type AcaoDeCombate = {
    *  precisa pegar ninguem pra contar como sucesso - ver sistemas/alvo.ts.
    *  Ausente (o padrao) significa "inimigo", igual sempre foi. */
   alvo?: AlvoDeAcao;
+  /** o dado de dano (sistemas/dado.ts) - ausente nas acoes que nunca causam
+   *  dano (as autolancadas, Salto Longo, Remendo, Lingua Selvagem). Dobra
+   *  no critico de sucesso. */
+  dado?: Dado;
 };
 
 /** Icones emprestados ate arte propria existir (arte/icones.py so tem "forca"
@@ -543,6 +548,10 @@ export const PORTES: Record<Porte, { largura: number; altura: number }> = {
 export type Criatura = {
   id: string;
   nome: string;
+  /** vida numerica de verdade (revisao de 2026-09-05) - nao mais 1 a 10
+   *  coracoes de icone, escala junto com o dano em dado que o heroi agora
+   *  causa (sistemas/dado.ts). Nome do campo ficou o mesmo de proposito,
+   *  pra nao precisar renomear toda leitura espalhada pelo jogo. */
   coracoes: number;
   /** a frase do livro, para o jogador ler */
   fraqueza: string;
@@ -557,8 +566,9 @@ export type Criatura = {
   velocidade: number;
   /** distancia do golpe, em px */
   alcance: number;
-  /** coracoes por golpe */
-  dano: number;
+  /** o dado de dano dela (sistemas/dado.ts) - antes era um numero fixo de
+   *  coracoes (1 pra quase tudo, 2 nos guardioes), sem nenhuma variancia. */
+  dano: Dado;
   /** o ND (10 + isto) pra acertar ela E pra ela acertar o heroi - o combate
    *  inteiro so tem um numero de dificuldade por bicho, os dois sentidos
    *  usam o mesmo. Revisao de 2026-09-05: nao deriva de `coracoes` (vida e
@@ -594,57 +604,57 @@ export type Criatura = {
 
 export const BESTIARIO: Criatura[] = [
   {
-    id: "goblin", nome: "Goblin da Fumaca", coracoes: 1,
+    id: "goblin", nome: "Goblin da Fumaca", coracoes: 5,
     fraqueza: "barulho alto de metal", fraquezaId: "barulho-metal",
     texto: "Pequeno, verde, orelhudo. Foge mais do que briga.",
     sprite: "goblin", porte: "pequeno", comportamento: "foge",
-    velocidade: 70, alcance: 12, dano: 1, bonus: 0, esquivaChance: 0,
+    velocidade: 70, alcance: 12, dano: { quantidade: 1, lados: 3 }, bonus: 0, esquivaChance: 0,
     telegrafo: "levanta o pau acima da cabeca e fecha os olhos",
     larga: [{ id: "moeda", chance: 0.7 }], onde: ["floresta", "caverna"],
   },
   {
-    id: "aranha", nome: "Aranha da Teia Doce", coracoes: 2,
+    id: "aranha", nome: "Aranha da Teia Doce", coracoes: 8,
     fraqueza: "comer a teia e escapar", fraquezaId: "comer-teia",
     texto: "A teia dela e doce de verdade. Da pra comer.",
     sprite: "aranha", porte: "pequeno", comportamento: "ronda",
-    velocidade: 34, alcance: 14, dano: 1, bonus: 1, esquivaChance: 0.2,
+    velocidade: 34, alcance: 14, dano: { quantidade: 1, lados: 4 }, bonus: 1, esquivaChance: 0.2,
     telegrafo: "encolhe as oito pernas antes do bote",
     larga: [{ id: "teia-doce", chance: 0.55 }, { id: "anel-teia", chance: 0.04 }], onde: ["floresta"],
   },
   {
-    id: "espantalho", nome: "Espantalho Andarilho", coracoes: 2,
+    id: "espantalho", nome: "Espantalho Andarilho", coracoes: 8,
     fraqueza: "agua", fraquezaId: "agua",
     texto: "Anda sozinho pelo campo procurando o dono.",
     sprite: "espantalho", porte: "medio", comportamento: "ronda",
-    velocidade: 28, alcance: 16, dano: 1, bonus: 1, esquivaChance: 0,
+    velocidade: 28, alcance: 16, dano: { quantidade: 1, lados: 4 }, bonus: 1, esquivaChance: 0,
     telegrafo: "gira os bracos como cata-vento",
     larga: [{ id: "palha", chance: 0.6 }, { id: "moeda", chance: 0.25 }], onde: ["campo", "vila"],
   },
   {
-    id: "lobo-nevoa", nome: "Lobo de Nevoa", coracoes: 2,
+    id: "lobo-nevoa", nome: "Lobo de Nevoa", coracoes: 9,
     fraqueza: "luz forte", fraquezaId: "luz",
     texto: "Aparece e some no meio da neblina.",
     sprite: "lobo-nevoa", porte: "medio", comportamento: "espreita",
-    velocidade: 78, alcance: 14, dano: 1, bonus: 1, esquivaChance: 0.3,
+    velocidade: 78, alcance: 14, dano: { quantidade: 1, lados: 4 }, bonus: 1, esquivaChance: 0.3,
     telegrafo: "a nevoa se junta num ponto antes de ele sair dela",
     larga: [{ id: "presa-de-nevoa", chance: 0.35 }, { id: "presa-lapidada", chance: 0.05 }], onde: ["floresta"],
   },
   {
-    id: "serpente", nome: "Serpente do Pantano", coracoes: 3,
+    id: "serpente", nome: "Serpente do Pantano", coracoes: 12,
     fraqueza: "cocegas embaixo do queixo", fraquezaId: "cocegas",
     texto: "Engoliu o Cristal do Meio-dia sem querer.",
     sprite: "serpente", porte: "grande", comportamento: "guarda",
-    velocidade: 40, alcance: 20, dano: 1, bonus: 2, esquivaChance: 0,
+    velocidade: 40, alcance: 20, dano: { quantidade: 1, lados: 6 }, bonus: 2, esquivaChance: 0,
     telegrafo: "recolhe o pescoco em S e fica quieta demais",
     larga: [{ id: "cristal-meio-dia", chance: 1 }, { id: "manto-pantano", chance: 1 }],
     unico: true, onde: ["pantano"],
   },
   {
-    id: "grulo", nome: "Grulo, o Troll", coracoes: 4,
+    id: "grulo", nome: "Grulo, o Troll", coracoes: 16,
     fraqueza: "uma boa gargalhada", fraquezaId: "riso",
     texto: "Cobra pedagio na ponte. No fundo quer companhia.",
     sprite: "grulo", porte: "grande", comportamento: "guarda",
-    velocidade: 30, alcance: 20, dano: 1, bonus: 2, esquivaChance: 0,
+    velocidade: 30, alcance: 20, dano: { quantidade: 1, lados: 6 }, bonus: 2, esquivaChance: 0,
     telegrafo: "bate o porrete no chao duas vezes",
     // as tres saidas da Fase 3 sao todas pacificas (pagar, charada, fazer
     // rir) — nao ha final "vencer na luta" no roadmap, so o troco de
@@ -655,30 +665,30 @@ export const BESTIARIO: Criatura[] = [
     unico: true, onde: ["ponte"],
   },
   {
-    id: "bruxa", nome: "Bruxa Espinho", coracoes: 3,
+    id: "bruxa", nome: "Bruxa Espinho", coracoes: 14,
     fraqueza: "nao consegue mentir sobre o proprio nome", fraquezaId: "nome-proprio",
     texto: "Foi ela quem quebrou a Pedra do Sol.",
     sprite: "bruxa", porte: "medio", comportamento: "chefe",
-    velocidade: 55, alcance: 60, dano: 1, bonus: 3, esquivaChance: 0,
+    velocidade: 55, alcance: 60, dano: { quantidade: 1, lados: 8 }, bonus: 3, esquivaChance: 0,
     telegrafo: "o espinho racha o chao antes de subir",
     larga: [{ id: "cristal-anoitecer", chance: 1 }, { id: "cajado-bruxa-espinho", chance: 1 }],
     unico: true, onde: ["torre"],
   },
   {
-    id: "cavaleiro-cinzas", nome: "Cavaleiro de Cinzas", coracoes: 5,
+    id: "cavaleiro-cinzas", nome: "Cavaleiro de Cinzas", coracoes: 20,
     fraqueza: "agua fria", fraquezaId: "agua-fria",
     texto: "Armadura vazia por dentro, cheia de cinza.",
     sprite: "cavaleiro-cinzas", porte: "grande", comportamento: "encara",
-    velocidade: 36, alcance: 18, dano: 2, bonus: 3, esquivaChance: 0,
+    velocidade: 36, alcance: 18, dano: { quantidade: 2, lados: 4 }, bonus: 3, esquivaChance: 0,
     telegrafo: "a viseira acende por dentro",
     larga: [{ id: "cinza", chance: 0.45 }], onde: ["torre", "pico"],
   },
   {
-    id: "brasanegra", nome: "Brasanegra", coracoes: 10,
+    id: "brasanegra", nome: "Brasanegra", coracoes: 40,
     fraqueza: "o nome verdadeiro, Aurel", fraquezaId: "nome-verdadeiro",
     texto: "O dragao guardiao, com o coracao cheio de cinzas.",
     sprite: "brasanegra", porte: "enorme", comportamento: "chefe",
-    velocidade: 45, alcance: 90, dano: 2, bonus: 5, esquivaChance: 0,
+    velocidade: 45, alcance: 90, dano: { quantidade: 2, lados: 6 }, bonus: 5, esquivaChance: 0,
     telegrafo: "o peito acende de dentro para fora antes do sopro",
     larga: [{ id: "pedra-do-sol", chance: 1 }], unico: true, onde: ["pico"],
   },

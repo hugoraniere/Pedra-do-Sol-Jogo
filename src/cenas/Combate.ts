@@ -29,12 +29,16 @@ import { tocar, tocarFicha } from "../sistemas/som";
 import { texto } from "../sistemas/texto";
 import { Ordem } from "../sistemas/turnos";
 import { aplicarMarca, type Condicao, type Marca } from "../sistemas/marcas";
+import { rolarDado, dobrar } from "../sistemas/dado";
 import { tem } from "../sistemas/condicoes";
 import { condicoesDados } from "../dados/condicoes-dados";
 import type { Mundo } from "./Mundo";
 
 const SLOT = 22;
 const GAP = 2;
+/** largura da barra de vida do heroi, em px - vida virou numero de verdade
+ *  (sistemas/dado.ts), uma fileira de icones nao cabe mais nela. */
+const LARGURA_VIDA = 60;
 
 /** Traduz o `comportamento` narrativo do bestiario (7 palavras, `conteudo.ts`)
  *  para o modelo mecanico de 3 que `decidirAcaoDaCriatura` sabe jogar
@@ -131,7 +135,8 @@ export class Combate extends Phaser.Scene {
   private rotulo!: Phaser.GameObjects.BitmapText;
   private chapaRotulo!: Phaser.GameObjects.NineSlice;
   private pipsMovimento: Phaser.GameObjects.Graphics[] = [];
-  private coracoesHUD: Phaser.GameObjects.Image[] = [];
+  private barraVidaFrente!: Phaser.GameObjects.Rectangle;
+  private textoVida!: Phaser.GameObjects.BitmapText;
   private trilhaIniciativa!: Phaser.GameObjects.Container;
   private botaoPassar!: Phaser.GameObjects.Container;
   private aviso!: Phaser.GameObjects.BitmapText;
@@ -167,7 +172,6 @@ export class Combate extends Phaser.Scene {
     this.bichos = [];
     this.slots = [];
     this.pipsMovimento = [];
-    this.coracoesHUD = [];
     this.ordem = new Ordem();
     this.fase = "montando";
     this.escolhida = undefined;
@@ -309,10 +313,11 @@ export class Combate extends Phaser.Scene {
     };
 
     fixo(this.add.nineslice(2, 1, "painel-escuro", undefined, LARGURA - 4, 22, 8, 8, 8, 8).setOrigin(0));
-    for (let i = 0; i < this.coracoesMax; i++) {
-      this.coracoesHUD.push(fixo(this.add.image(11 + i * 11, 12, "ui", 0)));
-    }
-    this.trilhaIniciativa = fixo(this.add.container(14 + this.coracoesMax * 11, 2));
+    fixo(this.add.rectangle(8, 5, LARGURA_VIDA, 12, 0x2c2440).setOrigin(0));
+    this.barraVidaFrente = fixo(this.add.rectangle(9, 6, LARGURA_VIDA - 2, 10, 0x3e9b62).setOrigin(0));
+    this.textoVida = fixo(texto(this, 8 + LARGURA_VIDA / 2, 6, "", { cor: 0xfff8ea, ancora: 0.5 }));
+    this.atualizarCoracoes();
+    this.trilhaIniciativa = fixo(this.add.container(14 + LARGURA_VIDA, 2));
 
     const acoes = acoesDoHeroi(estado().heroi);
     const area = { x: 6, y: ALTURA - SLOT - 2, largura: LARGURA - 56, altura: SLOT };
@@ -430,6 +435,20 @@ export class Combate extends Phaser.Scene {
 
   /** Revisao de 2026-09-04 (docs/modelo-de-combate.md secao 3): 1d20, nao 1d6. */
   private d20 = () => Phaser.Math.Between(1, 20);
+  /** o dado de DANO (sistemas/dado.ts) pede um sorteio de 0 a 1, diferente
+   *  do d20 acima (que ja devolve o numero inteiro final) - por isso um
+   *  segundo gerador, nao reuso do mesmo. */
+  private sorteioDeDano = () => Math.random();
+
+  /** Quanto uma acao pesa quando acerta: o dado dela (arma ou magia) mais o
+   *  atributo que ela testa, dobrando os dados no critico de sucesso - a
+   *  mesma regra do D&D (docs/modelo-de-combate.md secao 3, "dano dobrado").
+   *  Sem dado (as autolancadas, que nunca causam dano), devolve 0. */
+  private danoDaAcao(acao: AcaoDeHeroi, bonus: number, critico: boolean): number {
+    if (!acao.dado) return 0;
+    const dado = critico ? dobrar(acao.dado) : acao.dado;
+    return Math.max(1, rolarDado(dado, this.sorteioDeDano) + bonus);
+  }
 
   private comecarCombate() {
     const lutadores = this.criaturasVivas();
@@ -646,7 +665,13 @@ export class Combate extends Phaser.Scene {
             this.poeira(this.heroi.x, this.heroi.y - 8);
             tocarFicha(IMPACTOS.errou);
           } else {
-            this.heroiApanha(acharCriatura(b.bicharioId)?.dano ?? 1, resultado.desfecho === "critico-fracasso");
+            {
+              const ficha = acharCriatura(b.bicharioId);
+              const critico = resultado.desfecho === "critico-fracasso";
+              const dado = ficha?.dano ?? { quantidade: 1, lados: 3 };
+              const dano = rolarDado(critico ? dobrar(dado) : dado, this.sorteioDeDano);
+              this.heroiApanha(dano, critico);
+            }
           }
           b.jaAtacouDeSurpresa = true;
           // volta para a posicao de origem -- "avanca, ataca, volta"
@@ -720,8 +745,14 @@ export class Combate extends Phaser.Scene {
     });
   }
 
+  /** verde acima de metade, laranja entre metade e um quarto, vermelho
+   *  abaixo disso - a mesma leitura de "cor avisa gravidade" que motivou a
+   *  pesquisa (Project Zomboid), so com a paleta do jogo. */
   private atualizarCoracoes() {
-    this.coracoesHUD.forEach((c, i) => c.setFrame(i < this.coracoes ? 0 : 1));
+    const fracao = Phaser.Math.Clamp(this.coracoes / this.coracoesMax, 0, 1);
+    this.barraVidaFrente.width = Math.max(1, (LARGURA_VIDA - 2) * fracao);
+    this.barraVidaFrente.fillColor = fracao > 0.5 ? 0x3e9b62 : fracao > 0.25 ? 0xf5b62b : 0xe2483d;
+    this.textoVida.setText(`${Math.max(0, this.coracoes)}/${this.coracoesMax}`);
   }
 
   // ==================================================================== a vez
@@ -895,6 +926,7 @@ export class Combate extends Phaser.Scene {
       // acertaria. No critico de sucesso ninguem esquiva: critico "sempre
       // funciona" (docs/modelo-de-combate.md secao 3) nao abre excecao.
       const critico = resultado.desfecho === "critico-sucesso";
+      const dano = this.danoDaAcao(acao, bonus, critico);
       const esquivaram = critico
         ? []
         : pegos.filter((b) => Math.random() < (acharCriatura(b.bicharioId)?.esquivaChance ?? 0));
@@ -924,7 +956,7 @@ export class Combate extends Phaser.Scene {
           ? [0x96a2b8, 4, 4]
           : [0xa87a4e, 2, 8];
         projetilOrientado(this, this.heroi.x, this.heroi.y - 8, cx, cy, corProjetil, largura, comprimento, ms, () => {
-          atingidos.forEach((b) => this.atingir(b, cx, cy, resultado.desfecho === "critico-sucesso"));
+          atingidos.forEach((b) => this.atingir(b, cx, cy, dano, critico));
           this.cameras.main.shake(90, 0.0022);
           this.time.delayedCall(500, () => this.fimDaAcao());
         });
@@ -942,7 +974,7 @@ export class Combate extends Phaser.Scene {
               atingidos
                 .filter((b) => this.mesmaCasa(this.casaDoBicho(b), c.tx, c.ty))
                 .forEach((b) => {
-                  this.atingir(b, px, py, resultado.desfecho === "critico-sucesso", "gelo");
+                  this.atingir(b, px, py, dano, critico, "gelo");
                   if (acao.marca) this.aplicarMarcaNoBicho(b, acao.marca);
                 });
             });
@@ -960,7 +992,7 @@ export class Combate extends Phaser.Scene {
         ondaDeConjuracao(this, this.heroi.x, this.heroi.y, 0xf2802b, 16);
         projetil(this, this.heroi.x, this.heroi.y - 8, cx, cy, 0xf2802b, 3, 220, () => {
           atingidos.forEach((b) => {
-            this.atingir(b, cx, cy, resultado.desfecho === "critico-sucesso");
+            this.atingir(b, cx, cy, dano, critico);
             if (acao.marca) this.aplicarMarcaNoBicho(b, acao.marca);
           });
           estourinho(this, cx, cy, 0xf2802b, 8, 12);
@@ -985,7 +1017,7 @@ export class Combate extends Phaser.Scene {
         const ventoDx = Math.sign(casa.tx - minhaCasa.tx);
         const ventoDy = Math.sign(casa.ty - minhaCasa.ty);
         atingidos.forEach((b) => {
-          this.atingir(b, cx, cy, resultado.desfecho === "critico-sucesso");
+          this.atingir(b, cx, cy, dano, critico);
           this.empurrarBicho(b, ventoDx, ventoDy, 2);
         });
         this.cameras.main.shake(90, 0.0022);
@@ -997,7 +1029,7 @@ export class Combate extends Phaser.Scene {
         ondaDeConjuracao(this, this.heroi.x, this.heroi.y, acao.cor, 10);
       } else {
         atingidos.forEach((b) => {
-          this.atingir(b, cx, cy, resultado.desfecho === "critico-sucesso");
+          this.atingir(b, cx, cy, dano, critico);
           // e aqui que as magias sem animacao propria (Cresce-Grama, Voz de
           // Trovao, Cheiro de Fogueira...) ganham reacao de verdade, mesmo
           // sem projetil dedicado - o dano generico continua, a marca por
@@ -1100,7 +1132,7 @@ export class Combate extends Phaser.Scene {
   /** `estilo` muda so o sinal visual do impacto: "flash" (branco, quente -
    *  golpe e fogo) ou "gelo" (pisca fosco, `piscar()` de fx.ts) - a mesma
    *  distincao que faz o jogador ler "isso foi frio" sem precisar de texto. */
-  private atingir(b: Bicho, dex: number, dey: number, cheio: boolean, estilo: "flash" | "gelo" = "flash") {
+  private atingir(b: Bicho, dex: number, dey: number, dano: number, cheio: boolean, estilo: "flash" | "gelo" = "flash") {
     tocarFicha(b.tipo === "arbusto" ? IMPACTOS.madeira : IMPACTOS.bicho);
     if (estilo === "gelo") {
       piscar(this, b.sprite, 90, 2, 0.5);
@@ -1119,10 +1151,7 @@ export class Combate extends Phaser.Scene {
       b.corpo.setVelocity(fuga.x, fuga.y);
       this.time.delayedCall(140, () => b.corpo?.setVelocity(0, 0));
     }
-    // critico de sucesso "sempre funciona + efeito extra" (docs/modelo-de-
-    // combate.md secao 3) - o extra e 1 coracao a mais de dano, nao so o
-    // mesmo golpe com fogos de artificio.
-    b.coracoes -= cheio ? 2 : 1;
+    b.coracoes -= dano;
     this.mostrarPips(b);
     if (b.coracoes <= 0) this.desistir(b);
   }
@@ -1298,18 +1327,19 @@ export class Combate extends Phaser.Scene {
   }
 
   // ===================================================== vida sobre a cabeca
+  /** Barra, nao mais fileira de pip por coracao - com vida virando numero de
+   *  verdade (sistemas/dado.ts, ate 30+ no Brasanegra) uma fileira de
+   *  quadradinhos nao cabia mais acima da cabeca de ninguem. */
   private mostrarPips(b: Bicho) {
     if (b.tipo === "arbusto") return;
     b.mostrarAte = this.time.now + 3000;
     b.pips?.destroy();
+    const largura = 30;
+    const fracao = Phaser.Math.Clamp(b.coracoes / b.coracoesMax, 0, 1);
+    const cor = fracao > 0.5 ? 0x3e9b62 : fracao > 0.25 ? 0xf5b62b : 0xe2483d;
     const g = this.add.graphics();
-    const largura = b.coracoesMax * 6 - 2;
     g.fillStyle(0x2c2440, 0.8).fillRect(-largura / 2 - 2, -2, largura + 4, 9);
-    for (let i = 0; i < b.coracoesMax; i++) {
-      const x = -largura / 2 + i * 6;
-      if (i < b.coracoes) g.fillStyle(0xe2483d, 1).fillRect(x, 0, 5, 5);
-      else g.lineStyle(1, 0xfff8ea, 0.55).strokeRect(x + 0.5, 0.5, 4, 4);
-    }
+    g.fillStyle(cor, 1).fillRect(-largura / 2, 0, Math.max(1, largura * fracao), 5);
     b.pips = this.add.container(b.sprite.x, b.sprite.y - 36, [g]).setDepth(2000);
     b.pips.setScale(0.6);
     this.tweens.add({ targets: b.pips, scale: 1, duration: 140, ease: "Back.easeOut" });
