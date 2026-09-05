@@ -793,6 +793,22 @@ export class Combate extends Phaser.Scene {
         this.saltar(casa);
       } else if (acao.id === "remendo") {
         this.curarComRemendo(resultado.desfecho === "critico-sucesso");
+      } else if (acao.id === "chama-vento") {
+        // Rajada "empurra tudo pela frente" (conteudo.ts) - alem do dano
+        // generico, quem for atingido anda 2 casas na mesma direcao do
+        // vento, parando na primeira parede/bicho/borda do mapa. A outra
+        // metade do texto ("alimenta o fogo que ja estava queimando") espera
+        // "queimando" existir de verdade - isso e Fase 4 (superficie de
+        // fogo, ver o cabecalho de sistemas/marcas.ts), nao esta feio de
+        // proposito, so ainda nao tem com o que interagir.
+        const minhaCasa = this.casaDoHeroi();
+        const ventoDx = Math.sign(casa.tx - minhaCasa.tx);
+        const ventoDy = Math.sign(casa.ty - minhaCasa.ty);
+        pegos.forEach((b) => {
+          this.atingir(b, cx, cy, resultado.desfecho === "critico-sucesso");
+          this.empurrarBicho(b, ventoDx, ventoDy, 2);
+        });
+        this.cameras.main.shake(90, 0.0022);
       } else if (semAlvoNecessario) {
         // Escudo de Bolha, Veu de Sombra, Aderencia: a marca vira condicao no
         // proprio heroi, nunca em quem calhou de estar perto - "aoRedor
@@ -802,10 +818,10 @@ export class Combate extends Phaser.Scene {
       } else {
         pegos.forEach((b) => {
           this.atingir(b, cx, cy, resultado.desfecho === "critico-sucesso");
-          // e aqui que as 11 magias sem animacao propria (Cresce-Grama, Voz
-          // de Trovao, Cheiro de Fogueira, Rajada...) ganham reacao de
-          // verdade, mesmo sem projetil dedicado - o dano generico continua,
-          // a marca por cima e o que muda de verdade.
+          // e aqui que as magias sem animacao propria (Cresce-Grama, Voz de
+          // Trovao, Cheiro de Fogueira...) ganham reacao de verdade, mesmo
+          // sem projetil dedicado - o dano generico continua, a marca por
+          // cima e o que muda de verdade.
           if (acao.marca) this.aplicarMarcaNoBicho(b, acao.marca);
         });
         // o martelo pesa mais que espada, cajado ou soco: o mesmo golpe corpo
@@ -921,6 +937,25 @@ export class Combate extends Phaser.Scene {
     b.coracoes -= 1;
     this.mostrarPips(b);
     if (b.coracoes <= 0) this.desistir(b);
+  }
+
+  /** O empurrao de Rajada: anda uma casa de cada vez na direcao do vento ate
+   *  travar (parede, outro bicho, borda do mapa) - fisico, nao magico, entao
+   *  nunca atravessa nada (diferente de Salto Longo, que e o heroi pulando
+   *  de proposito). Se a primeira casa ja estiver bloqueada, o bicho so nao
+   *  anda - nunca um erro, so um empurrao que nao pegou espaco. */
+  private empurrarBicho(b: Bicho, dx: number, dy: number, casas: number) {
+    if (dx === 0 && dy === 0) return;
+    let atual = this.casaDoBicho(b);
+    for (let i = 0; i < casas; i++) {
+      const prox = { tx: atual.tx + dx, ty: atual.ty + dy };
+      if (!this.passavel(prox.tx, prox.ty, b)) break;
+      atual = prox;
+    }
+    const [px, py] = this.centroDaCasa(atual.tx, atual.ty);
+    if (px === b.sprite.x && py === b.sprite.y) return;
+    b.corpo?.setVelocity(0, 0);
+    this.tweens.add({ targets: b.sprite, x: px, y: py, duration: 160, ease: "Sine.easeOut" });
   }
 
   /** Some do combate E do mapa de verdade. `chave` e a mesma que `Mundo.ts`
