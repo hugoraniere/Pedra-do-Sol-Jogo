@@ -14,7 +14,7 @@ Problemas encontrados: 0
 | 07-criacao-heroi | Criacao:105 Som:0 Ponteiro:1 | 0 |
 | 08-criacao-heroi-com-nome | Criacao:105 Som:0 Ponteiro:1 | 0 |
 | 09-criacao-com-arma | Criacao:107 Som:0 Ponteiro:1 | 0 |
-| 10-mundo | Mundo:87 Interface:37 Som:0 Ponteiro:1 | 0 |
+| 10-mundo | Mundo:89 Interface:37 Som:0 Ponteiro:1 | 0 |
 | 11-janela-eu | Interface:37 Ficha:52 Som:0 Ponteiro:1 | 0 |
 | 11-janela-poderes | Interface:37 Ficha:43 Som:0 Ponteiro:1 | 0 |
 | 11-janela-magias | Interface:37 Ficha:36 Som:0 Ponteiro:1 | 0 |

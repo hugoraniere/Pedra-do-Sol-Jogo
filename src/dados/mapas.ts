@@ -110,6 +110,7 @@ export const VILA: Mapa = {
     { nome: "casa-pequena", x: 23, y: 16 },
     { nome: "varal", x: 4, y: 13 },
     { nome: "bau", x: 26, y: 20 },
+    { nome: "hospital", x: 29, y: 21 },
     { nome: "cerca", x: 19, y: 15 },
     { nome: "cerca", x: 20, y: 15 },
     { nome: "cerca", x: 21, y: 15 },
@@ -143,6 +144,12 @@ export const VILA: Mapa = {
     { x: 35, y: 11, w: 1, h: 2, para: "floresta", entrada: { x: 3, y: 42 } },
   ],
 };
+
+/** Onde o heroi acorda depois de uma derrota (Fase 13,
+ *  docs/plano-de-implementacao.md - CLAUDE.md, "Divergencia deliberada").
+ *  Um tile a frente da porta do predio "hospital" (ver VILA.objetos), que e
+ *  ancorado pelo pe em (29, 21) - a mesma conta de qualquer Saida.entrada. */
+export const HOSPITAL_ENTRADA = { x: 29, y: 22 };
 
 /** A Floresta dos Sussurros, 120 x 84 tiles.
  *

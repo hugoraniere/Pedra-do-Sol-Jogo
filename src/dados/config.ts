@@ -246,7 +246,7 @@ export const ARANHAS_SPRITE = ["filhote", "pequena", "media", "matriarca"] as co
 /** Objetos do mundo, um PNG cada em public/assets/objetos/.
  *  A lista tem que bater com OBJETOS em arte/mundo.py. */
 export const OBJETOS = [
-  "casa-pequena", "casa-grande", "ferraria", "casa-vovo",
+  "casa-pequena", "casa-grande", "ferraria", "casa-vovo", "hospital",
   "arvore", "arvore-escura", "arbusto",
   "poste-sino", "poste-com-sino", "poco", "barraca", "cerca",
   "fogueira", "bau", "placa", "varal",

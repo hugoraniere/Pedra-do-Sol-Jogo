@@ -417,6 +417,21 @@ export const acharArma = (id: string) => ARMAS.find((a) => a.id === id);
 export const acharItem = (id: string) => LOJA.find((i) => i.id === id);
 export const acharCriatura = (id: string) => BESTIARIO.find((c) => c.id === id);
 
+/** O nome legivel de qualquer id que possa acabar na mochila - comprado na
+ *  LOJA ou largado por uma criatura (`BESTIARIO[].larga`, que nao tem catalogo
+ *  de nome proprio ainda). Sem entrada na LOJA, formata o proprio id
+ *  ("teia-doce" -> "Teia Doce") em vez de mostrar a chave crua: nunca um erro
+ *  morto na tela, a mesma regra que ja vale pro dado. */
+const PREPOSICOES_MINUSCULAS = new Set(["de", "do", "da", "dos", "das"]);
+export function nomeDoItem(id: string): string {
+  const item = acharItem(id);
+  if (item) return item.nome;
+  return id
+    .split("-")
+    .map((p, i) => (i > 0 && PREPOSICOES_MINUSCULAS.has(p) ? p : p[0]?.toUpperCase() + p.slice(1)))
+    .join(" ");
+}
+
 /** O Goblin da Fumaca e UMA criatura no bestiario (mesma vida, mesma
  *  fraqueza), mas a arte desenhou 3 corpos - magricela, gorducho, moleque -
  *  pra tres goblins na mesma tela nao parecerem copia colada (retratos ja

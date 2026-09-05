@@ -1200,3 +1200,139 @@ fora daquela lista, do mesmo jeito que a Fase 9 revisada ja mexeu. Ja foi
 sinalizado uma vez nesta sessao; registrado aqui de novo, sem travar o
 trabalho, so pra nao virar surpresa quando `combate` for pra `principal`.
 Tamanho total: G (7 pecas P em sequencia, nenhuma sozinha grande).
+
+---
+
+## FASE 13 . O Hospital e a derrota de verdade
+
+Implementa a "Divergencia deliberada" do `CLAUDE.md`: zero coracoes acorda o
+heroi no Hospital, sem as moedas e sem uma selecao aleatoria da mochila. Hoje
+`Combate.ts` ja tem o LUGAR exato onde isto entra — so nunca foi ligado a
+nada de verdade.
+
+### 13.0 O que ja existe e resolve metade do trabalho sozinho
+
+Achados ao ler o codigo antes de planejar, pra nao inventar o que ja tem dono:
+
+- `heroiApanha()` (`src/cenas/Combate.ts:478-505`) **ja e o lugar certo**: com
+  `coracoes <= 0` ele hoje faz o heroi ficar tonto e volta sozinho com 1
+  coracao, com um comentario dizendo literalmente "a fogueira de verdade
+  (CLAUDE.md) ainda nao existe; ate la este e o mesmo desfecho que o Provador
+  ja validou". E exatamente este bloco que sai.
+- **Teletransportar entre mapas ja existe, pronto pra reusar.** `Mundo.ts`
+  troca de mapa (`conferirSaida()`, linha ~825) assim: grava
+  `estado().cena`/`estado().lugar`, funde a tela (`fadeOut`/`fadeIn`) e chama
+  `this.scene.restart({ entrada: {x, y} })` — o `init()` da cena (linha 134)
+  ja aceita essa `entrada` forcada e poe o heroi la em vez do ponto padrao do
+  mapa. Levar o heroi da Floresta ate o Hospital na Vila e a MESMA chamada,
+  so disparada pela derrota em vez de encostar numa borda de mapa. `Combate.ts`
+  ja guarda `this.mundo` (a cena Mundo de verdade, nao uma copia) desde a
+  Fase 9, entao da pra chamar direto.
+- **Mochila e um conjunto, nao um inventario com quantidade.** `guardar()`
+  (`estado.ts`) so faz `push` se o item ainda nao esta la — cada id aparece no
+  maximo uma vez. "Perder um item aleatorio" e literalmente remover uma string
+  do array `mochila`, sem conta de quantidade pra fazer.
+- **Nao existe cena de interior.** Casa, ferraria, etc. sao so decoracao no
+  mapa de fora (lista `objetos` em `mapas.ts`) com um NPC andando por perto —
+  ninguem "entra". O Hospital segue o mesmo molde: um predio novo desenhado no
+  mapa da Vila, nao uma cena propria. Mais simples, e nada no jogo hoje precisa
+  de interior pra funcionar.
+
+### 13.1 O predio, na Vila Semente
+Arquivo: `arte/mundo.py` (nova funcao `hospital()`, no mesmo molde de `casa()`/
+`ferraria()` — reusa o desenho de casa com cor propria, branco com uma cruz
+vermelha na fachada, pra ser reconhecivel de longe sem placa) + `src/dados/mapas.ts`
+(uma entrada nova em `VILA.objetos`, tipo `{ nome: "hospital", x, y }`, e uma
+constante exportada `HOSPITAL_ENTRADA: { x, y }` com o tile bem na frente da
+porta, no mesmo espirito de `VILA.entrada`).
+Faz: a posicao exata dentro do mapa de 36x24 fica pra quem for desenhar (tem
+vao livre perto da placa em x30/y12 e ao redor de x30/y18 — olhando o `chao`
+desenhado, nao adivinhando por grep). Sem sobrepor nenhum objeto ja plantado.
+Pronto quando: `npm run arte` gera `hospital.png` e o predio aparece na Vila
+Semente, visualmente distinto de casa/ferraria a distancia.
+Tamanho: P (arte) + P (mapa). **Fora do escopo declarado desta pasta**
+(`arte/` e `mapas.ts` nao estao no `AMBIENTE.md` de `combate`) — mesma
+ressalva ja registrada nas fases anteriores.
+
+### 13.2 A funcao pura de derrota
+Arquivo: `src/sistemas/estado.ts` (nova, ao lado de `marcarDerrotado`/`registrarUso`)
+Faz:
+```ts
+export function aplicarDerrota(): { moedasPerdidas: number; itensPerdidos: string[] } {
+  const moedasPerdidas = atual.moedas;
+  atual.moedas = 0;
+  const elegiveis = atual.mochila.filter((id) => !id.startsWith("chave-"));
+  const quantidade = Math.min(3, Math.ceil(elegiveis.length / 2));
+  const itensPerdidos: string[] = [];
+  for (let i = 0; i < quantidade; i++) {
+    const id = elegiveis.splice(Math.floor(Math.random() * elegiveis.length), 1)[0];
+    if (id) { itensPerdidos.push(id); atual.mochila = atual.mochila.filter((x) => x !== id); }
+  }
+  salvar();
+  return { moedasPerdidas, itensPerdidos };
+}
+```
+Duas decisoes de numero, registradas aqui porque ninguem tinha decidido ainda:
+**itens que comecam com `chave-` nunca sao sorteados** (perder uma chave de
+missao pode travar o jogo sem volta — contradiz "nunca existe erro morto", a
+mesma regra que ja vale pro dado) e **a quantidade sorteada e metade da
+mochila elegivel, arredondada pra cima, no maximo 3** (nunca zera a mochila
+inteira numa derrota so — isso seria uma punicao desproporcional a perder uma
+luta so).
+Pronto quando: teste puro (`ferramentas/conferir-derrota.mjs`, no molde de
+`conferir-condicoes.mjs`) com mochila de 5 itens incluindo `chave-mestra`
+confirma que a chave nunca sai e que `moedas` sempre zera.
+Tamanho: P
+
+### 13.3 Ligar em `Combate.ts`: `heroiApanha()` de verdade
+Arquivo: `src/cenas/Combate.ts`, `heroiApanha()`
+Faz: troca o bloco final (linhas ~492-504, "Nunca existe derrota... coracoes = 1")
+por:
+```
+this.heroi.ficarTonto(1200);         // continua — a pose de tonteira ainda serve
+this.time.delayedCall(1200, () => {
+  const { moedasPerdidas, itensPerdidos } = aplicarDerrota();
+  this.coracoes = this.coracoesMax;   // o Hospital cura cheio, nao deixa em 1
+  estado().coracoes = this.coracoes;
+  estado().cena = "vila";
+  estado().lugar = VILA.lugar;
+  salvar();
+  this.cameras.main.fadeOut(220, 0, 0, 0);
+  this.cameras.main.once("camerafadeoutcomplete", () => {
+    this.scene.stop();
+    this.mundo.scene.restart({ entrada: HOSPITAL_ENTRADA });
+    // o resumo do prejuizo (13.4) dispara dali, depois do fadeIn concluir
+  });
+});
+```
+**Decisao nova, registrada aqui**: o Hospital cura os coracoes pro maximo ao
+acordar — acordar ferido de novo, no mesmo golpe que ja custou dinheiro e
+item, seria punir a mesma derrota duas vezes.
+Pronto quando: perder uma luta em QUALQUER mapa (Floresta inclusive, nao so
+Vila) devolve o jogador a porta do Hospital na Vila Semente, coracao cheio,
+mochila e moedas com o corte de 13.2 aplicado.
+Tamanho: M
+
+### 13.4 O resumo do prejuizo, sem julgamento
+Arquivo: a decidir por quem tem `Interface.ts`/`Mundo.ts` no dominio (fora de
+`combate`) — a forma mais simples e um painel unico, no molde de
+`mostrarAviso()` que `Titulo.ts` ja tem (nineslice + texto + some sozinho ou
+no toque).
+Faz: mostra, uma vez, assim que o fade-in do Hospital terminar: quantas
+moedas e quais itens sumiram (nome, nao id — puxar de `LOJA`/bestiario pra
+achar o nome legivel). Tom neutro, informativo, sem titulo "DERROTA", sem
+musica triste — a mesma regra de "falha sem humilhacao" que o `CLAUDE.md` ja
+descreve. Um toque/clique/espaco fecha, e o jogo segue normal dali, sem outra
+tela no meio.
+Pronto quando: perder uma luta com 4 itens na mochila mostra o aviso certo
+("Perdeu 12 moedas e: Pocao, Isca") e some ao toque, sem travar o mundo.
+Tamanho: P
+
+### Ordem e o que fica de fora, de proposito
+
+`13.1 -> 13.2 -> 13.3 -> 13.4`. 13.2 e pura e nao depende de nada, pode comecar
+ja. 13.1 e o unico que cruza pra fora do escopo desta pasta (arte + mapas). Fica
+fora deste bloco, de proposito: uma cena de interior pro Hospital (nada no jogo
+precisa disso ainda), qualquer NPC medico com fala propria (pode vir depois,
+como qualquer outro NPC da vila), e persistir "quantas vezes ja morreu" nas
+estatisticas do heroi (ninguem pediu isso ainda).

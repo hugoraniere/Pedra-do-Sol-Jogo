@@ -69,13 +69,16 @@ def porta(im, x, y, w=10, h=14, cor=MADEIRA_E):
         px(im, x + i, y - 1, TINTA)
 
 
-def casa(w_tiles=3, h_px=64, cor_telha=(TELHA, TELHA_C, TELHA_E), com_chamine=True):
+def casa(w_tiles=3, h_px=64, cor_telha=(TELHA, TELHA_C, TELHA_E), com_chamine=True, cor_parede=None):
     w = w_tiles * 16
     im = nova(w, h_px)
     sombra(im, w / 2 - 1, 4, w / 2, h_px - 4)
     alt_telhado = 22
     topo = h_px - 4 - 34 - alt_telhado
-    parede(im, 3, topo + alt_telhado, w - 6, 34, CR_PAREDE, CR_PAREDE_C, CR_PAREDE_E)
+    # cor_parede=None e a MESMA parede creme de sempre - so o Hospital (abaixo)
+    # pede outra, pra parede tambem contar na hora de reconhecer o predio, nao
+    # so o telhado.
+    parede(im, 3, topo + alt_telhado, w - 6, 34, *(cor_parede or (CR_PAREDE, CR_PAREDE_C, CR_PAREDE_E)))
     porta(im, w // 2 - 5, topo + alt_telhado + 20)
     janela(im, 8, topo + alt_telhado + 6)
     if w >= 48:
@@ -116,6 +119,23 @@ def ferraria():
 
 def casa_vovo():
     im = casa(4, 68, (ROXO, ROXO_C, (86, 60, 148)))
+    return im
+
+
+def hospital():
+    """Fase 13, docs/plano-de-implementacao.md - CLAUDE.md, "Divergencia
+    deliberada": onde o heroi acorda depois de uma derrota. Parede branca (a
+    unica casa da vila que nao e creme) e uma cruz vermelha na fachada, pra
+    reconhecer de longe sem precisar de placa - a mesma logica de silhueta
+    que ja separa magricela/gorducho/moleque a 16px."""
+    im = casa(4, 68, (PEDRA, PEDRA_C, PEDRA_E), com_chamine=False,
+              cor_parede=(PAPEL, PAPEL_2, PEDRA_C))
+    # a cruz mora na unica tira de parede que a casa() generica deixa livre:
+    # entre o pe das janelas e o topo da porta.
+    cx = im.width // 2
+    ret(im, cx - 1, 44, 3, 6, TELHA)
+    ret(im, cx - 3, 46, 7, 2, TELHA)
+    contorno_alfa(im)
     return im
 
 
@@ -408,6 +428,7 @@ OBJETOS = [
     ("casa-grande", casa_grande, (0.10, 0.55)),
     ("ferraria", ferraria, (0.10, 0.55)),
     ("casa-vovo", casa_vovo, (0.10, 0.55)),
+    ("hospital", hospital, (0.10, 0.55)),
     ("arvore", lambda: arvore(0), (0.22, 0.10)),
     ("arvore-2", lambda: arvore(1), (0.22, 0.10)),
     ("arvore-3", lambda: arvore(2), (0.22, 0.10)),

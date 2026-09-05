@@ -3,7 +3,7 @@
 import Phaser from "phaser";
 import { TILE, SOLIDOS, COR, ALTURA_PERSONAGEM } from "../dados/config";
 import { MAPAS, VILA, montarChao, bordasDeGrama, plantarMata, Mapa, Saida } from "../dados/mapas";
-import { acharCriatura, spriteDoGoblin } from "../dados/conteudo";
+import { acharCriatura, nomeDoItem, spriteDoGoblin } from "../dados/conteudo";
 import { DIALOGOS } from "../dados/dialogos";
 import { estado, salvar, marcarVisitado, foiDerrotado } from "../sistemas/estado";
 import type { Encontro } from "./Combate";
@@ -126,13 +126,21 @@ export class Mundo extends Phaser.Scene {
   /** De onde o heroi entra. Vazio quer dizer "a entrada de sempre do mapa";
    *  quem chega de outro lugar manda o tile pelo qual apareceu. */
   private entradaForcada?: { x: number; y: number };
+  /** Fase 13.4: o resumo do prejuizo de uma derrota, pra mostrar assim que a
+   *  tela acender de novo no Hospital. `Combate.ts` manda isto junto da
+   *  `entrada`; undefined em qualquer outra troca de mapa normal. */
+  private derrotaPendente?: { moedasPerdidas: number; itensPerdidos: string[] };
 
   constructor() {
     super("Mundo");
   }
 
-  init(dados?: { entrada?: { x: number; y: number } }) {
+  init(dados?: {
+    entrada?: { x: number; y: number };
+    derrota?: { moedasPerdidas: number; itensPerdidos: string[] };
+  }) {
     this.entradaForcada = dados?.entrada;
+    this.derrotaPendente = dados?.derrota;
   }
 
   create() {
@@ -340,6 +348,7 @@ export class Mundo extends Phaser.Scene {
     this.scene.launch("Interface");
     this.scene.get("Interface").events.on("acao", () => this.tentarInteragir());
     this.scene.get("Interface").events.on("pausar", () => this.pausar());
+    if (this.derrotaPendente) this.avisarDerrota(this.derrotaPendente);
     this.input.on("pointerdown", (p: Phaser.Input.Pointer) => this.aoPressionarNoMundo(p));
     this.input.on("pointerup", () => this.aoSoltarNoMundo());
     this.input.on("pointermove", (p: Phaser.Input.Pointer) => this.atualizarCursorDoMundo(p));
@@ -399,6 +408,33 @@ export class Mundo extends Phaser.Scene {
     // a chave viaja junto porque e ela, e nao o nome na chapinha, que a
     // tabela VOZ usa para achar a altura da voz do personagem
     this.scene.get("Interface").events.emit("falar", { quem, linhas, cena: this, chave });
+  }
+
+  /** Fase 13.4: o aviso do prejuizo de uma derrota, factual e sem julgamento
+   *  (CLAUDE.md, "Falha sem humilhacao, mas com peso"). Espera a tela acender
+   *  de novo no Hospital antes de abrir a fala - mostrar em cima do fade
+   *  preto deixaria o jogador lendo sem nem saber onde esta. Sem `entradaForcada`
+   *  (nao devia acontecer numa derrota de verdade, mas sem rede de seguranca
+   *  o aviso nunca apareceria) mostra na hora, sem esperar um fade que nao vem. */
+  private avisarDerrota(p: { moedasPerdidas: number; itensPerdidos: string[] }) {
+    const mostrar = () => this.abrirFala("HOSPITAL", this.linhasDeDerrota(p));
+    if (this.entradaForcada) this.cameras.main.once("camerafadeincomplete", mostrar);
+    else mostrar();
+  }
+
+  private linhasDeDerrota(p: { moedasPerdidas: number; itensPerdidos: string[] }): string[] {
+    const nomes = p.itensPerdidos.map(nomeDoItem);
+    let prejuizo: string;
+    if (p.moedasPerdidas > 0 && nomes.length > 0) {
+      prejuizo = `Perdeu ${p.moedasPerdidas} moedas e: ${nomes.join(", ")}.`;
+    } else if (p.moedasPerdidas > 0) {
+      prejuizo = `Perdeu ${p.moedasPerdidas} moedas.`;
+    } else if (nomes.length > 0) {
+      prejuizo = `Perdeu: ${nomes.join(", ")}.`;
+    } else {
+      prejuizo = "Nao tinha nada pra perder desta vez.";
+    }
+    return ["Voce acorda no Hospital, sem lembrar do golpe final.", prejuizo];
   }
 
   update() {

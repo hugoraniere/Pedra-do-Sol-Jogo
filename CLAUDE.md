@@ -5,8 +5,8 @@ suposicao sua sobre o projeto.
 
 **Nome novo, decisao de 2026-09-04**: o projeto se chamava "Reino de Aurora, o
 jogo". O nome mudou para refletir uma virada de tom (ver "Divergencia
-deliberada" mais abaixo): risco de verdade, sem rede de seguranca. O nome novo
-e so do produto/projeto - "Reino de Aurora" continua existindo dentro da
+deliberada" mais abaixo): perder dói de verdade, mesmo sem apagar o heroi. O
+nome novo e so do produto/projeto - "Reino de Aurora" continua existindo dentro da
 ficcao (o reino, os Cristais de Aurora, Vovo Aurora) exatamente como a
 referencia descreve, porque isso vem do RPG de mesa e nao e o que mudou. Se
 algum arquivo, pasta ou variavel de codigo ainda disser "reino-de-aurora" ou
@@ -18,8 +18,10 @@ nao um erro de leitura deste arquivo.
 Um RPG top-down completo, para qualquer pessoa que queira jogar. Nao e um brinquedo
 educativo, nao e um presente para uma crianca especifica, nao e um exercicio. E um
 jogo que precisa se sustentar sozinho na frente de gente que ja jogou muito jogo.
-Mais especificamente: um RPG de sobrevivencia com consequencia de verdade, no
-espirito de Project Zomboid - nao um RPG confortavel que finge ter risco.
+Mais especificamente: um RPG de sobrevivencia com consequencia de verdade -
+perder custa dinheiro e itens de verdade, no tom seco de jogos como Project
+Zomboid, nao um RPG confortavel que finge ter risco. Isso nao e permadeath: o
+heroi sempre continua, o save nunca acaba (ver "Divergencia deliberada").
 
 A materia-prima e um RPG de mesa que ja foi jogado de verdade, em
 `docs/referencia/sistema-do-rpg-de-mesa.md`. Ele nao e inspiracao vaga: e a fonte da
@@ -37,13 +39,15 @@ O jogador que importa e alguem que nunca ouviu falar do Reino de Aurora, senta e
 
 - **Legibilidade.** Ler a tela em um segundo e virtude em qualquer jogo. Frase curta
   e boa escrita, nao limitacao. Texto tem voz, ritmo e piada.
-- **Risco de verdade.** Da para morrer, de verdade. Zero coracoes e o fim daquele
-  heroi - sem fogueira que resgata, sem "acorda e tenta de novo". O jogador joga
-  com atencao porque a consequencia e real, nao porque o jogo finge que e.
-- **Falha sem humilhacao, mas com peso.** Morrer nao e uma tela que julga o
-  jogador: sem "voce falhou", sem sermao, contado seco e sem drama, do jeito que
-  Project Zomboid conta. O luto e do jogador, nunca do jogo. Mas o custo nao e
-  mais so material - a proxima tentativa comeca um heroi novo, do zero.
+- **Risco de verdade.** Da para perder de verdade. Perder uma luta acorda o
+  heroi no Hospital da vila, sem o dinheiro que tinha e sem uma selecao
+  aleatoria de itens da mochila - nunca mais "so o que estava na mao". O
+  jogador joga com atencao porque o prejuizo e real, mesmo o heroi nunca
+  deixando de existir.
+- **Falha sem humilhacao, mas com peso.** O custo e material - carteira e
+  mochila, nunca a vida do heroi - mas pesa mais que a versao de mesa. Nada de
+  tela que julga, nada de "voce falhou": o jogo mostra o que foi perdido, seco
+  e sem drama, e devolve o controle na hora.
 - **Densidade.** Area grande se sustenta por quanta coisa acontece por tela, nao por
   quantas telas tem. Espaco vazio e sempre erro.
 - **O espaco se explica sozinho.** Orientacao vem de marco visivel, luz, largura de
@@ -59,43 +63,30 @@ Vem do material de mesa, e sao a espinha do jogo. **Uma delas diverge de
 proposito** - ver a secao logo abaixo antes de mexer em coracao, fogueira ou
 derrota.
 
-### Divergencia deliberada: a fogueira nao ressuscita mais
+### Divergencia deliberada: a fogueira nao e mais quem resgata
 
 A referencia (`docs/referencia/sistema-do-rpg-de-mesa.md`) diz: zero coracoes e
-derrota, o heroi acorda na ultima fogueira e perde o que carregava na mao.
-Decisao de 2026-09-04: **este jogo diverge dessa regra, de proposito**. Aqui
-zero coracoes e morte de verdade - sem resgate, sem "acorda em outro lugar". A
-referencia continua sendo o registro fiel do RPG de mesa como foi jogado, e
-**nao muda**; a adaptacao digital, a partir desta decisao, conta uma historia
-mais dura que a sessao de mesa contou, no espirito de jogos de sobrevivencia
-como Project Zomboid: sem rede de seguranca, sem humilhar o jogador quando a
-sorte vira contra ele, so o fim, seco.
+derrota, o heroi acorda na ultima fogueira acesa e perde o que carregava na
+mao. Decisao de 2026-09-04 (revista no mesmo dia, depois de conversa com o
+Hugo - a primeira versao desta secao chegou a escrever morte permanente; nao
+e isso, ver abaixo): **este jogo diverge da referencia em dois pontos**,
+nenhum dos dois apaga o heroi nem o save:
 
-As tres perguntas que esta secao deixava em aberto (fechadas em 2026-09-04,
-mesmo dia, a pedido do Hugo antes de seguir pra qualquer outra coisa):
+- **Onde o heroi acorda muda.** Nao e mais a ultima fogueira acesa - e o
+  **Hospital**, um lugar fixo na Vila Semente que ainda nao existe no mapa e
+  precisa ser desenhado e plantado em `src/dados/mapas.ts` antes disto
+  funcionar de verdade (ver `docs/plano-de-implementacao.md`). A fogueira
+  continua existindo e continua sendo onde se salva e descansa (enche
+  coracao) - so deixa de ser tambem o ponto de resgate depois de uma derrota.
+- **O que se perde e mais pesado.** Nao e mais so "o que carregava na mao" -
+  e **todas as moedas** e **uma selecao aleatoria de itens da mochila**. Doi
+  de verdade sem apagar progresso: mapa explorado, selos ganhos e criaturas ja
+  derrotadas continuam intactos, so a carteira e a mochila levam o golpe.
 
-- **O espaco de save vira uma lapide, nunca some sozinho.** Morrer marca aquele
-  `Estado` como `encerrado: true` e grava `mortoPor: string` (o id de quem deu
-  o golpe final - `Combate.ts` ja sabe disso). Ele some da lista de "CONTINUAR"
-  na tela de titulo, mas continua aparecendo em CARREGAR JOGO — nome, raca,
-  classe, o que o derrubou, quanto tempo durou — ate o jogador apagar pelo
-  mesmo botao que ja existe hoje para espaco cheio. Ninguem perde a chance de
-  ver o que aconteceu antes de o espaco liberar pra um heroi novo.
-- **Cada morte e um recomeco limpo, nao um mundo persistente.** Hoje `Estado`
-  e uma coisa so: heroi e mundo (mapa visitado, criaturas derrotadas) morrem
-  juntos, nao existe "o que o mundo aprendeu" separado de "quem sou eu".
-  Separar os dois — um heroi novo explorando um mundo que lembra do anterior —
-  e uma reforma de arquitetura grande demais pra decidir no meio deste bloco;
-  fica registrada aqui como ideia futura, nao como trabalho desta fase. Heroi
-  novo no mesmo espaco comeca do zero, igual "novo jogo" ja comeca hoje.
-- **A tela de morte e uma lapide, nao um "game over".** Sem musica de derrota,
-  sem "voce perdeu". A cena desbota pra cinza (nunca pra preto — preto e
-  "carregando", cinza e "sem vida"), o heroi fica caido e imovel, nunca
-  levanta sozinho. Um texto factual, sem julgamento, no mesmo tom seco que
-  Project Zomboid usa pra contar a causa da morte: nome do heroi, o que o
-  derrubou, ha quanto tempo a aventura durava. Um unico botao, "VOLTAR AO
-  TITULO" — nunca "tentar de novo" na mesma tela, isso contradiria a
-  permanencia que este bloco inteiro existe pra garantir.
+A tela de derrota **nao e permadeath e nao trava o jogo**: ela mostra, seco e
+sem julgamento, quanto dinheiro e quais itens sumiram, e devolve o controle na
+hora, com o heroi ja no Hospital. Sem musica de fracasso, sem "voce perdeu",
+sem tela de game over - so o resumo do prejuizo e um botao pra seguir.
 
 ### As regras propriamente ditas
 
@@ -112,13 +103,15 @@ mesmo dia, a pedido do Hugo antes de seguir pra qualquer outra coisa):
   resultado**. Nao e por turno e nao e por reflexo. So o heroi rola; a criatura
   reage. O modelo inteiro esta em `docs/modelo-de-combate.md`, que e a fonte da
   verdade desse assunto.
-- **Coracoes:** 3, o Anao comeca com 4. Zero coracoes e **morte** (ver a
-  divergencia acima): o heroi cai ali, para sempre. Comer e dormir enchem os
-  coracoes; nada enche uma vida perdida.
-- **Fogueira e onde se salva e descansa, nao onde se ressuscita.** Acender uma
-  e permanente, e enche os coracoes, mas morrer nunca devolve o heroi la. A
-  distancia entre fogueiras ainda e a regua de dificuldade da area, e agora
-  pesa mais: todo trecho sem fogueira e um trecho sem margem de erro.
+- **Coracoes:** 3, o Anao comeca com 4. Zero coracoes e **derrota** (ver a
+  divergencia acima): o heroi acorda no Hospital da vila, perde todas as
+  moedas e uma selecao aleatoria de itens da mochila. Mapa, selos e
+  conhecimento nunca se perdem. Comer e dormir enchem os coracoes.
+- **Fogueira e checkpoint.** Acender uma e permanente, enche os coracoes, e a
+  distancia entre fogueiras ainda e a regua de dificuldade da area. **Nao e
+  mais para onde o heroi volta apos uma derrota** - isso agora e sempre o
+  Hospital da vila (ver a divergencia acima), nao importa onde a fogueira mais
+  proxima estava.
 - **Selos de Heroi:** a cada 3, o jogador escolhe +1 coracao, +1 num atributo, ou uma
   habilidade nova.
 

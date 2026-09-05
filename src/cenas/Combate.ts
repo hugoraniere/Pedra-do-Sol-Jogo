@@ -18,7 +18,8 @@ import { alcancaveis, caminho, chaveDaCasa, distanciaEmCasas, type Casa } from "
 import { acoesDoHeroi, type AcaoDeHeroi } from "../sistemas/acao";
 import { fileira } from "../sistemas/fileira";
 import { criarAnimacoes, camadasDoHeroi, Heroi } from "../sistemas/heroi";
-import { estado, guardar, marcarDerrotado, registrarUso, salvar, usosGastos } from "../sistemas/estado";
+import { aplicarDerrota, estado, guardar, marcarDerrotado, registrarUso, salvar, usosGastos } from "../sistemas/estado";
+import { HOSPITAL_ENTRADA, VILA } from "../dados/mapas";
 import { poderesDoHeroi } from "../sistemas/poderes";
 import type { Atributo } from "../dados/conteudo";
 import { tocar, tocarFicha } from "../sistemas/som";
@@ -491,16 +492,29 @@ export class Combate extends Phaser.Scene {
     }
     // com zero coracoes quem manda e a tonteira: nada de machucar() aqui, senao
     // uma pose comeria a outra no mesmo quadro e nenhuma das duas apareceria.
-    // Nunca existe derrota: fica tonto, e volta com um coracao. A fogueira de
-    // verdade (CLAUDE.md) ainda nao existe; ate la este e o mesmo desfecho que
-    // o Provador ja validou.
     this.heroi.ficarTonto(1200);
     this.anunciar("QUE TONTEIRA!", 900);
-    this.time.delayedCall(1200, () => {
-      this.coracoes = 1;
-      this.atualizarCoracoes();
-      estado().coracoes = 1;
-      salvar();
+    this.time.delayedCall(1200, () => this.derrota());
+  }
+
+  /** Fase 13 (docs/plano-de-implementacao.md, CLAUDE.md "Divergencia
+   *  deliberada"): zero coracoes nunca apaga o heroi nem o save - so custa
+   *  dinheiro e parte da mochila, e acorda no Hospital da Vila Semente. O
+   *  Hospital cura os coracoes pro maximo: punir a mesma derrota duas vezes
+   *  (ferido E sem dinheiro) seria demais. O resumo do prejuizo (13.4) viaja
+   *  junto pro Mundo mostrar assim que a tela acender de novo la. */
+  private derrota() {
+    const derrota = aplicarDerrota();
+    this.coracoes = this.coracoesMax;
+    this.atualizarCoracoes();
+    estado().coracoes = this.coracoes;
+    estado().cena = "vila";
+    estado().lugar = VILA.lugar;
+    salvar();
+    this.cameras.main.fadeOut(220, 0, 0, 0);
+    this.cameras.main.once("camerafadeoutcomplete", () => {
+      this.scene.stop();
+      this.mundo.scene.restart({ entrada: HOSPITAL_ENTRADA, derrota });
     });
   }
 

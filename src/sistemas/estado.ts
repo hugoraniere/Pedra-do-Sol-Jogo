@@ -1,6 +1,6 @@
 /** Estado do jogo. Uma unica fonte da verdade sobre o progresso.
  *  Quem grava e le no disco e sistemas/armazenamento.ts. */
-import { gravarEspaco, lerEspaco } from "./armazenamento";
+import { gravarEspaco, lerEspaco } from "./armazenamento.ts";
 
 export type Heroi = {
   nome: string;
@@ -160,4 +160,32 @@ export function usosGastos(acaoId: string): number {
 export function registrarUso(acaoId: string) {
   atual.usosDeAventura[acaoId] = usosGastos(acaoId) + 1;
   salvar();
+}
+
+/** Perder uma luta: zera o dinheiro e sorteia parte da mochila pra levar
+ *  junto (Fase 13, `docs/plano-de-implementacao.md`). Chave de missao (id
+ *  comecando com "chave-") nunca e sorteada - perder uma travaria o jogo sem
+ *  volta, a mesma razao que faz o dado nunca dar "nada aconteceu". No maximo
+ *  metade da mochila elegivel, arredondado pra cima, nunca mais que 3: perder
+ *  uma luta nao pode zerar a mochila inteira de uma vez.
+ *
+ *  `sorteio` entra de fora, igual `rolar()` em turnos.ts, pra dar pra testar
+ *  sem depender de Math.random. */
+export function aplicarDerrota(
+  sorteio: () => number = Math.random
+): { moedasPerdidas: number; itensPerdidos: string[] } {
+  const moedasPerdidas = atual.moedas;
+  atual.moedas = 0;
+
+  const elegiveis = atual.mochila.filter((id) => !id.startsWith("chave-"));
+  const quantidade = Math.min(3, Math.ceil(elegiveis.length / 2));
+  const itensPerdidos: string[] = [];
+  for (let i = 0; i < quantidade; i++) {
+    const indice = Math.floor(sorteio() * elegiveis.length);
+    itensPerdidos.push(...elegiveis.splice(indice, 1));
+  }
+  atual.mochila = atual.mochila.filter((id) => !itensPerdidos.includes(id));
+
+  salvar();
+  return { moedasPerdidas, itensPerdidos };
 }
