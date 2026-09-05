@@ -217,6 +217,34 @@ def i_lupa():
     return im
 
 
+def i_lixeira():
+    """A zona de jogar fora da mochila (docs/plano-de-itens-e-equipamento.md,
+    secao 17.4). Tampa mais larga que o corpo, corpo afunilando pra baixo,
+    tres ranhuras verticais. Contorno automatico (igual i_seta): mais seguro
+    que contorno manual numa silhueta que muda de largura linha a linha."""
+    im = nova(U, U)
+    ret(im, 6, 3, 4, 1, PEDRA_C)
+    ret(im, 3, 4, 10, 2, PEDRA_C)
+    for j in range(6, 13):
+        estreita = (j - 6) // 3
+        ret(im, 4 + estreita, j, 8 - 2 * estreita, 1, PEDRA)
+    for x in (6, 8, 10):
+        for y in range(7, 12):
+            px(im, x, y, PEDRA_E)
+    base = im.copy()
+    for j in range(U):
+        for i in range(U):
+            if base.getpixel((i, j))[3]:
+                continue
+            vizinho = any(
+                0 <= i + dx < U and 0 <= j + dy < U and base.getpixel((i + dx, j + dy))[3]
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
+            )
+            if vizinho:
+                px(im, i, j, TINTA)
+    return im
+
+
 def i_dado():
     im = nova(U, U)
     ret(im, 3, 3, 10, 10, PAPEL)
@@ -318,6 +346,7 @@ ICONES = [
     ("periodo_tarde", i_periodo_tarde()),
     ("periodo_por_do_sol", i_periodo_por_do_sol()),
     ("periodo_noite", i_periodo_noite()),
+    ("lixeira", i_lixeira()),
 ]
 
 

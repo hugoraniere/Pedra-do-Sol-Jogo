@@ -25,6 +25,7 @@ export const ICONE = {
   periodoTarde: 16,
   periodoPorDoSol: 17,
   periodoNoite: 18,
+  lixeira: 19,
 } as const;
 
 /** Lado de um icone da folha, em pixels do jogo. Igual a U em arte/ui.py. */

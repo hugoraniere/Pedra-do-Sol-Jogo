@@ -7,9 +7,11 @@ import { acharCriatura, nomeDoItem, spriteDoGoblin } from "../dados/conteudo";
 import { DIALOGOS, type Escolha } from "../dados/dialogos";
 import { concluirEtapa } from "../sistemas/missoes";
 import {
-  estado, salvar, marcarVisitado, foiDerrotado,
+  estado, salvar, marcarVisitado, foiDerrotado, guardar,
   foiAcesa, acenderFogueira, ultimaFogueiraAcesa,
 } from "../sistemas/estado";
+import { ICONE } from "../sistemas/icones";
+import { ICONE_ITEM } from "../sistemas/icones-itens";
 import type { Encontro } from "./Combate";
 import { Controles } from "../sistemas/controles";
 import { camadasDoHeroi, criarAnimacoes, Heroi } from "../sistemas/heroi";
@@ -119,6 +121,13 @@ export class Mundo extends Phaser.Scene {
   private heroi!: Heroi;
   private controles!: Controles;
   private interagiveis: Interagivel[] = [];
+  /** item jogado fora da mochila, visivel no chao ate ser apanhado — chave
+   *  e a mesma que o `Interagivel` correspondente usa (`item-largado:N`).
+   *  NAO persiste no save de proposito (docs/plano-de-itens-e-
+   *  equipamento.md, secao 17.5): so existe enquanto este mapa continuar
+   *  carregado, igual todo `Interagivel` dinamico deste array. */
+  private itensNoChao = new Map<string, { item: string; quantidade: number; sprite: Phaser.GameObjects.Image }>();
+  private proximoIdItemLargado = 0;
   private conversando = false;
   private solidos!: Phaser.Physics.Arcade.StaticGroup;
   private chao!: Phaser.Tilemaps.TilemapLayer;
@@ -513,6 +522,19 @@ export class Mundo extends Phaser.Scene {
       );
     }
     if (!alvo) return;
+    // item largado no chao (docs/plano-de-itens-e-equipamento.md, secao
+    // 17.5): apanhar nao e conversa, entao resolve e sai ANTES do lookup em
+    // DIALOGOS — mesmo padrao que fogueira/bau ja usam, so que sem abrir
+    // caixa de fala nenhuma no final.
+    if (alvo.chave.startsWith("item-largado:")) {
+      const dados = this.itensNoChao.get(alvo.chave);
+      if (dados) {
+        guardar(dados.item, dados.quantidade);
+        tocar("moeda");
+        this.removerItemDoChao(alvo.chave);
+      }
+      return;
+    }
     // a fogueira e caso especial, antes do lookup generico: a fala dela
     // depende de QUAL instancia e se ja foi acesa, e o sistema de
     // variantes/condicao de dialogos.ts nao da conta disso (condicao e uma
@@ -871,6 +893,40 @@ export class Mundo extends Phaser.Scene {
     // "chegada:0" (unica criatura daquele mapa) identifica ele sozinha —
     // conclui aqui, na derrota, nunca no sorteio de item (so 70% de chance).
     if (chave === "chegada:0") concluirEtapa("primeiros-passos", "derrotar-o-goblin");
+  }
+
+  /** Larga um item no chao, na posicao atual do heroi — chamado pela Ficha
+   *  quando o jogador joga fora da mochila (docs/plano-de-itens-e-
+   *  equipamento.md, secao 17.5). Reusa o MESMO icone que a mochila ja usa
+   *  (`ICONE_ITEM`/`itens.png`) — nenhum sprite novo de "item no chao"
+   *  precisa existir. Item sem ficha em catalogo nenhum (um item de
+   *  historia solto, tipo "pano-goblin") cai com o icone generico de
+   *  mochila, honesto em vez de fingir um icone que nao existe. */
+  largarItemNoChao(item: string, quantidade: number) {
+    const temIconeProprio = ICONE_ITEM[item] !== undefined;
+    const x = this.heroi.x;
+    const y = this.heroi.y;
+    const sprite = this.add
+      .image(x, y - 6, temIconeProprio ? "itens" : "ui", temIconeProprio ? ICONE_ITEM[item] : ICONE.mochila)
+      .setDepth(500);
+    // cai no chao, um pulo pequeno — o mesmo "isto aconteceu agora" que o
+    // bau ja da com o som "bau-abre" + delay da moeda, so que em movimento
+    this.tweens.add({ targets: sprite, y, duration: 220, ease: "Bounce.easeOut" });
+    const chave = `item-largado:${this.proximoIdItemLargado++}`;
+    this.itensNoChao.set(chave, { item, quantidade, sprite });
+    this.interagiveis.push({ x, y, chave, tipo: "objeto", largura: 12, altura: 12, obj: sprite });
+  }
+
+  /** Tira o item apanhado do chao e da lista de interagiveis — chamado so
+   *  por `tentarInteragir()`, depois de `guardar()` ja ter posto na
+   *  mochila de verdade. */
+  private removerItemDoChao(chave: string) {
+    const dados = this.itensNoChao.get(chave);
+    if (!dados) return;
+    dados.sprite.destroy();
+    this.itensNoChao.delete(chave);
+    const idx = this.interagiveis.findIndex((i) => i.chave === chave);
+    if (idx !== -1) this.interagiveis.splice(idx, 1);
   }
 
   /** O tamanho do mundo em pixel, pra Combate.ts limitar a propria camera
