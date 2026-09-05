@@ -105,7 +105,7 @@ export class Combate extends Phaser.Scene {
   private dicaChapa!: Phaser.GameObjects.NineSlice;
   private coracoes = 3;
   private coracoesMax = 3;
-  private atributos: Record<Atributo, number> = { forca: 0, esperteza: 0, coracao: 0 };
+  private atributos: Record<Atributo, number> = { forca: 0, destreza: 0, agilidade: 0, inteligencia: 0, vitalidade: 0 };
   private topoDaBarra = 0;
   private alcancadas = new Map<string, { tx: number; ty: number; custo: number; de?: string }>();
   /** A cena de onde o heroi e o chao de verdade vem emprestados. Nunca cria
@@ -382,7 +382,7 @@ export class Combate extends Phaser.Scene {
     if (lutadores.length === 0) return this.acabarCombate();
     this.fase = "vezDaCriatura";
     this.ordem.comecar([
-      { id: "heroi", iniciativa: this.d20() + this.atributos.esperteza, movimentoMax: MOVIMENTO.heroi },
+      { id: "heroi", iniciativa: this.d20() + this.atributos.agilidade, movimentoMax: MOVIMENTO.heroi },
       ...lutadores.map((g) => ({ id: g.id, iniciativa: this.d20(), movimentoMax: MOVIMENTO.goblin })),
     ]);
     const minha = this.casaDoHeroi();
@@ -472,9 +472,9 @@ export class Combate extends Phaser.Scene {
           // o heroi rola DEFESA contra o ND do golpe da criatura - nunca mais
           // a criatura rolando o proprio ataque.
           const nd = 10 + b.bonus;
-          const resultado = testar(this.atributos.esperteza, nd, this.d20);
+          const resultado = testar(this.atributos.agilidade, nd, this.d20);
           tocarFicha(DADO.rola);
-          this.mostrarDado(resultado, this.atributos.esperteza, b.sprite.x, b.sprite.y - 40);
+          this.mostrarDado(resultado, this.atributos.agilidade, b.sprite.x, b.sprite.y - 40);
           this.time.delayedCall(520, () => {
             tocarFicha(DESFECHO[somDoDesfecho(resultado.desfecho)]);
             if (foiSucesso(resultado.desfecho)) {

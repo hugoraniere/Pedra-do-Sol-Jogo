@@ -9,7 +9,12 @@
  */
 import type { Marca } from "../sistemas/marcas";
 
-export type Atributo = "forca" | "esperteza" | "coracao";
+/** Revisao de 2026-09-04 (CLAUDE.md): os tres da mesa (FORCA, ESPERTEZA,
+ *  CORACAO) viraram cinco. "Esperteza" fazia tres trabalhos escondidos - agora
+ *  cada um tem nome proprio: magia vira Inteligencia, golpe a distancia vira
+ *  Destreza, iniciativa e defesa viram Agilidade. "Coracao" vira Vitalidade
+ *  porque a mesma palavra fazia dois trabalhos (o atributo E os coracoes/vida). */
+export type Atributo = "forca" | "destreza" | "agilidade" | "inteligencia" | "vitalidade";
 
 /** Que pedaco do mundo uma acao de combate atinge. */
 export type FormaDeAcao = "casa" | "linha" | "aoRedor";
@@ -36,14 +41,20 @@ export type AcaoDeCombate = {
   marca?: Marca;
 };
 
+/** Icones emprestados ate arte propria existir (arte/icones.py so tem "forca"
+ *  e "esperteza" desenhados hoje) - Inteligencia, Destreza e Agilidade
+ *  reusam o icone de esperteza, Vitalidade reusa o coracao cheio. Comecar
+ *  feio de proposito, ver docs/06-fluxo-de-sprites.md. */
 export const ATRIBUTOS: Record<Atributo, { nome: string; icone: string; oQueFaz: string }> = {
-  forca: { nome: "FORCA", icone: "forca", oQueFaz: "empurrar, subir, lutar, carregar" },
-  esperteza: { nome: "ESPERTEZA", icone: "esperteza", oQueFaz: "procurar, lembrar, consertar, magia" },
-  coracao: { nome: "CORACAO", icone: "coracao_cheio", oQueFaz: "coragem, fazer amigo, sorte, animais" },
+  forca: { nome: "FORCA", icone: "forca", oQueFaz: "empurrar, subir, golpe de perto, carregar" },
+  destreza: { nome: "DESTREZA", icone: "esperteza", oQueFaz: "golpe a distancia, mira, mao firme" },
+  agilidade: { nome: "AGILIDADE", icone: "esperteza", oQueFaz: "iniciativa, esquiva, reflexo" },
+  inteligencia: { nome: "INTELIGENCIA", icone: "esperteza", oQueFaz: "magia, lembrar, consertar" },
+  vitalidade: { nome: "VITALIDADE", icone: "coracao_cheio", oQueFaz: "coragem, fazer amigo, resistir" },
 };
 
-/** A ordem em que os tres poderes aparecem na ficha de papel, de cima para baixo. */
-export const ORDEM_PODERES: Atributo[] = ["forca", "esperteza", "coracao"];
+/** A ordem em que os cinco atributos aparecem na ficha, de cima para baixo. */
+export const ORDEM_PODERES: Atributo[] = ["forca", "destreza", "agilidade", "inteligencia", "vitalidade"];
 
 // ------------------------------------------------------------------ racas
 export type Raca = {
@@ -70,7 +81,7 @@ export const RACAS: Raca[] = [
     id: "vale",
     nome: "Gente do Vale",
     curto: "Vale",
-    bonus: "coracao",
+    bonus: "vitalidade",
     dom: "Nunca Desisto",
     domTexto: "Uma vez por aventura voce pode rolar o dado de novo.",
     icone: "dado-5",
@@ -92,7 +103,7 @@ export const RACAS: Raca[] = [
     id: "elfo",
     nome: "Elfo da Folha",
     curto: "Elfo",
-    bonus: "esperteza",
+    bonus: "inteligencia",
     dom: "Olhos de Coruja",
     domTexto: "Voce enxerga no escuro e de bem longe.",
     icone: "dom-olhos-de-coruja",
@@ -103,9 +114,9 @@ export const RACAS: Raca[] = [
     id: "pequenino",
     nome: "Pequenino do Trigo",
     curto: "Pequenino",
-    bonus: "coracao",
+    bonus: "vitalidade",
     dom: "Pe de Coelho",
-    domTexto: "Uma vez por aventura voce troca um OPS por um QUASE.",
+    domTexto: "Uma vez por aventura voce troca uma Falha por uma Falha Perto.",
     icone: "dom-pata-de-coelho",
     coracoes: 3,
     cor: 0xf5b62b,
@@ -123,7 +134,7 @@ export const RACAS: Raca[] = [
     acaoDeCombate: {
       id: "sopro-quentinho", tipo: "habilidade", nome: "SOPRO QUENTINHO",
       dica: "Solta fogo pela boca. So uma vez por aventura.",
-      icone: 10, cor: 0xf5b62b, forma: "casa", alcance: 2, atributo: "coracao", som: "fogo",
+      icone: 10, cor: 0xf5b62b, forma: "casa", alcance: 2, atributo: "vitalidade", som: "fogo",
     },
   },
 ];
@@ -165,7 +176,7 @@ export const CLASSES: Classe[] = [
     id: "mago",
     nome: "Mago da Torre",
     curto: "Mago",
-    bonus: "esperteza",
+    bonus: "inteligencia",
     arma: "cajado",
     habilidade: "Tres Magias",
     habilidadeTexto: "Voce escolhe tres magias, cada uma com um uso por aventura.",
@@ -175,7 +186,7 @@ export const CLASSES: Classe[] = [
     id: "cacador",
     nome: "Cacador de Dragao",
     curto: "Cacador",
-    bonus: "esperteza",
+    bonus: "destreza",
     arma: "arco",
     habilidade: "Olho de Alvo",
     habilidadeTexto: "Voce ganha +1 no dado quando mira em alguma coisa longe.",
@@ -185,7 +196,7 @@ export const CLASSES: Classe[] = [
     id: "amigo",
     nome: "Amigo dos Bichos",
     curto: "Amigo",
-    bonus: "coracao",
+    bonus: "vitalidade",
     arma: "funda",
     habilidade: "Fala com Bichos",
     habilidadeTexto: "Voce conversa com qualquer bicho, e eles ajudam se gostarem de voce.",

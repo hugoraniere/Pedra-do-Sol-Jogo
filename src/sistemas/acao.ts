@@ -36,8 +36,8 @@ const TABELA_DE_GOLPE: Record<string, Omit<AcaoDeCombate, "id" | "nome" | "cor" 
   "espada-curta": { tipo: "golpe", icone: 6, forma: "casa", alcance: 1, atributo: "forca", som: "soco" },
   cajado: { tipo: "golpe", icone: 5, forma: "casa", alcance: 1, atributo: "forca", som: "cajado" },
   martelo: { tipo: "golpe", icone: 6, forma: "casa", alcance: 1, atributo: "forca", som: "soco" },
-  arco: { tipo: "golpe", icone: 6, forma: "casa", alcance: 5, atributo: "esperteza", som: "soco" },
-  funda: { tipo: "golpe", icone: 6, forma: "casa", alcance: 4, atributo: "esperteza", som: "soco" },
+  arco: { tipo: "golpe", icone: 6, forma: "casa", alcance: 5, atributo: "destreza", som: "soco" },
+  funda: { tipo: "golpe", icone: 6, forma: "casa", alcance: 4, atributo: "destreza", som: "soco" },
 };
 
 /** O golpe de arma do heroi. `armaSprite` e o que esta EQUIPADO agora (pode
@@ -76,8 +76,8 @@ const TABELA_DE_MAGIA: Record<string, { forma: FormaDeAcao; alcance: number; ico
   "bola-de-fogo": { forma: "casa", alcance: 6, icone: 7, marca: "fogo" },
 };
 
-/** As magias tocam ESPERTEZA na mesa, igual golpe toca FORCA - regra geral,
- *  sem excecao entre as treze. */
+/** As magias tocam INTELIGENCIA (revisao de 2026-09-04 - era ESPERTEZA na
+ *  mesa), igual golpe toca FORCA - regra geral, sem excecao entre as treze. */
 export function acaoDaMagia(id: string): AcaoDeHeroi | undefined {
   const dados = TABELA_DE_MAGIA[id];
   const magia = acharMagia(id);
@@ -85,7 +85,7 @@ export function acaoDaMagia(id: string): AcaoDeHeroi | undefined {
   const somPorMarca: Partial<Record<string, string>> = { fogo: "fogo", gelo: "gelo", "som-alto": "voz" };
   return {
     id: magia.id, tipo: "magia", nome: magia.nome.toUpperCase(), dica: magia.texto,
-    cor: magia.cor, atributo: "esperteza",
+    cor: magia.cor, atributo: "inteligencia",
     som: (dados.marca && somPorMarca[dados.marca]) ?? "",
     ...dados,
     escopo: "porAventura",

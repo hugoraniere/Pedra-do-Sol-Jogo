@@ -114,8 +114,13 @@ sem tela de game over - so o resumo do prejuizo e um botao pra seguir.
   parte: Resistencia (de Forca), Percepcao e Conhecimento (de Inteligencia), Vontade
   (de Vitalidade). "Coracao" vira "Vitalidade" tambem porque a mesma palavra fazia
   dois trabalhos (o atributo E os coracoes/vida) - agora sao coisas com nomes
-  diferentes. A criacao de personagem (quantos pontos, de onde vem cada +1) ainda
-  esta em desenho, nao fechada.
+  diferentes. **Implementado**: `+1` de raca/classe/jogador continua igual (3
+  pontos, agora espalhados por 5 opcoes em vez de 3), golpe a distancia e
+  Destreza, magia e Inteligencia, iniciativa e defesa sao Agilidade. Os
+  sub-atributos (Resistencia, Percepcao, Conhecimento, Vontade) continuam so
+  conceito - nenhuma acao os testa ainda, isso espera as 11 magias
+  reformuladas. A criacao de personagem (mais pontos? uma Origem nova?) ainda
+  esta em desenho, nao fechada - so os 5 atributos em si foram implementados.
 - **Teste, revisao de 2026-09-04: 1d6 virou 1d20 contra dificuldade.** O sistema da
   mesa (tres faixas fixas) saiu; entrou 1d20 + modificador contra um numero de
   dificuldade (ND) que cada acao/bicho/obstaculo declara o proprio. Cinco desfechos

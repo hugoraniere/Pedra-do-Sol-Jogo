@@ -1,4 +1,5 @@
-/** Os tres poderes do heroi: FORCA, ESPERTEZA, CORACAO.
+/** Os cinco poderes do heroi: FORCA, DESTREZA, AGILIDADE, INTELIGENCIA,
+ * VITALIDADE (revisao de 2026-09-04 - eram tres na mesa, ver CLAUDE.md).
  *
  * A regra e a do manual impresso, pagina 2, passo 4: todo poder comeca em zero,
  * a raca da +1, a classe da +1, e o jogador coloca mais +1 onde quiser.
@@ -15,7 +16,7 @@ import type { Heroi } from "./estado";
 
 export type Poderes = Record<Atributo, number>;
 
-export const zerados = (): Poderes => ({ forca: 0, esperteza: 0, coracao: 0 });
+export const zerados = (): Poderes => ({ forca: 0, destreza: 0, agilidade: 0, inteligencia: 0, vitalidade: 0 });
 
 /** O que a origem do heroi da sozinha: +1 da raca e +1 da classe. */
 export function poderesDaOrigem(raca: string, classe: string): Poderes {
@@ -32,7 +33,10 @@ export function poderesDaOrigem(raca: string, classe: string): Poderes {
  *  nunca anda por ai com um ponto a menos do que o papel lhe daria. */
 export function poderEscolhidoDoHeroi(heroi: Heroi): Atributo {
   const escolhido = heroi.poderEscolhido as Atributo;
-  if (escolhido === "forca" || escolhido === "esperteza" || escolhido === "coracao") {
+  if (
+    escolhido === "forca" || escolhido === "destreza" || escolhido === "agilidade" ||
+    escolhido === "inteligencia" || escolhido === "vitalidade"
+  ) {
     return escolhido;
   }
   return acharRaca(heroi.raca).bonus;

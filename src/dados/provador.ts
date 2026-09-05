@@ -41,8 +41,9 @@ export type AcaoDeProva = {
   espera: number;
   /** skill: 1 uso por combate inteiro */
   usosPorCombate?: number;
-  /** que atributo entra no 1d6. Golpe usa FORCA, magia usa ESPERTEZA, igual a mesa */
-  atributo: "forca" | "esperteza" | "coracao";
+  /** que atributo entra no dado. Golpe usa FORCA, magia usa INTELIGENCIA
+   *  (revisao de 2026-09-04 - era ESPERTEZA na mesa, ver CLAUDE.md) */
+  atributo: "forca" | "destreza" | "agilidade" | "inteligencia" | "vitalidade";
   /** uma frase curta, mostrada quando o dedo ou o mouse para em cima do slot */
   dica: string;
   som: "cajado" | "soco" | "fogo" | "gelo" | "voz";
@@ -63,10 +64,10 @@ export type AcaoDeProva = {
 export const ACOES_DE_PROVA: AcaoDeProva[] = [
   { id: "golpe-cajado", tipo: "golpe", nome: "CAJADO", dica: "Bate de perto. O cajado nao foi feito pra isso.", icone: ICONE.cajado, cor: 0xb08658, forma: "casa", alcance: 1, espera: 0, atributo: "forca", som: "cajado" },
   { id: "soco", tipo: "golpe", nome: "SEM ARMA", dica: "Sempre da pra usar. Nunca quebra nada.", icone: ICONE.punho, cor: 0x4a3e64, forma: "casa", alcance: 1, espera: 0, atributo: "forca", som: "soco" },
-  { id: "bola-de-fogo", tipo: "magia", nome: "BOLA DE FOGO", dica: "Uma bola de fogo que voa longe.", icone: ICONE.fogo, cor: 0xf2802b, forma: "casa", alcance: 6, espera: 2, atributo: "esperteza", som: "fogo" },
-  { id: "bafo-gelado", tipo: "magia", nome: "BAFO GELADO", dica: "Um sopro que pega todo mundo na linha.", icone: ICONE.gelo, cor: 0x7ec4f2, forma: "linha", alcance: 3, espera: 2, atributo: "esperteza", som: "gelo", marca: "gelo" },
-  { id: "voz-de-trovao", tipo: "magia", nome: "VOZ DE TROVAO", dica: "Um grito que pega todo mundo em volta.", icone: ICONE.trovao, cor: 0x7b5ac4, forma: "aoRedor", alcance: 3, espera: 3, atributo: "esperteza", som: "voz" },
-  { id: "sopro-quentinho", tipo: "skill", nome: "SOPRO QUENTINHO", dica: "So uma vez por luta. Vale a pena guardar.", icone: ICONE.sopro, cor: 0xf5b62b, forma: "casa", alcance: 2, espera: 0, usosPorCombate: 1, atributo: "coracao", som: "fogo" },
+  { id: "bola-de-fogo", tipo: "magia", nome: "BOLA DE FOGO", dica: "Uma bola de fogo que voa longe.", icone: ICONE.fogo, cor: 0xf2802b, forma: "casa", alcance: 6, espera: 2, atributo: "inteligencia", som: "fogo" },
+  { id: "bafo-gelado", tipo: "magia", nome: "BAFO GELADO", dica: "Um sopro que pega todo mundo na linha.", icone: ICONE.gelo, cor: 0x7ec4f2, forma: "linha", alcance: 3, espera: 2, atributo: "inteligencia", som: "gelo", marca: "gelo" },
+  { id: "voz-de-trovao", tipo: "magia", nome: "VOZ DE TROVAO", dica: "Um grito que pega todo mundo em volta.", icone: ICONE.trovao, cor: 0x7b5ac4, forma: "aoRedor", alcance: 3, espera: 3, atributo: "inteligencia", som: "voz" },
+  { id: "sopro-quentinho", tipo: "skill", nome: "SOPRO QUENTINHO", dica: "So uma vez por luta. Vale a pena guardar.", icone: ICONE.sopro, cor: 0xf5b62b, forma: "casa", alcance: 2, espera: 0, usosPorCombate: 1, atributo: "vitalidade", som: "fogo" },
 ];
 
 /** Quanto cada um anda por turno, em casas. */
