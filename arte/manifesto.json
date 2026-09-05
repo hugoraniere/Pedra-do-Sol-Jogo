@@ -1,6 +1,6 @@
 {
   "gerado_por": "npm run arte",
-  "total": 135,
+  "total": 138,
   "arquivos": {
     "aranha-filhote.png": {
       "hash": "73b3d6cc5fac3ef6",
@@ -393,8 +393,8 @@
       "altura": 256
     },
     "icones.png": {
-      "hash": "ed49f6943ffa2174",
-      "bytes": 2201,
+      "hash": "e542661f41b69200",
+      "bytes": 2221,
       "largura": 432,
       "altura": 16
     },
@@ -476,11 +476,29 @@
       "largura": 20,
       "altura": 18
     },
+    "objetos/arvore-2.png": {
+      "hash": "cdca2a59a42e8e05",
+      "bytes": 1061,
+      "largura": 56,
+      "altura": 72
+    },
+    "objetos/arvore-3.png": {
+      "hash": "b51ca1b78124386e",
+      "bytes": 1062,
+      "largura": 56,
+      "altura": 72
+    },
+    "objetos/arvore-escura-2.png": {
+      "hash": "72feaa4b975e76ec",
+      "bytes": 1042,
+      "largura": 56,
+      "altura": 72
+    },
     "objetos/arvore-escura.png": {
-      "hash": "fb29f42535ac01ac",
-      "bytes": 587,
-      "largura": 40,
-      "altura": 52
+      "hash": "ee201ead7276249c",
+      "bytes": 1050,
+      "largura": 56,
+      "altura": 72
     },
     "objetos/arvore-raio.png": {
       "hash": "09abcbc4e98cc171",
@@ -489,10 +507,10 @@
       "altura": 58
     },
     "objetos/arvore.png": {
-      "hash": "d033a5fd5e527a95",
-      "bytes": 591,
-      "largura": 40,
-      "altura": 52
+      "hash": "358c22b078cf6417",
+      "bytes": 1044,
+      "largura": 56,
+      "altura": 72
     },
     "objetos/barraca.png": {
       "hash": "f4263b8039985e30",
