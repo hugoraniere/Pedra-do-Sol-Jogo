@@ -27,7 +27,7 @@ Problemas encontrados: 0
 | 15-carregar | Carregar:30 Som:0 Ponteiro:1 | 0 |
 | perto-02-criacao-raca | Criacao:34 Som:0 Ponteiro:1 | 0 |
 | perto-03-criacao-raca-pequenino | Criacao:34 Som:0 Ponteiro:1 | 0 |
-| perto-04-criacao-classe | Criacao:37 Som:0 Ponteiro:1 | 0 |
+| perto-04-criacao-classe | Criacao:38 Som:0 Ponteiro:1 | 0 |
 | perto-05-criacao-classe-cavaleiro | Criacao:36 Som:0 Ponteiro:1 | 0 |
 | perto-06-criacao-poder | Criacao:44 Som:0 Ponteiro:1 | 0 |
 | perto-07-criacao-heroi | Criacao:102 Som:0 Ponteiro:1 | 0 |

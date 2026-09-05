@@ -2,10 +2,15 @@
  *  pura, sem Phaser. Ver docs/11-combate-e-magias.md secao 7 (a gramatica
  *  MARCA + FORMA) e docs/mundo-que-reage.md secao 3 (a tabela inteira).
  *
- * Versao MINIMA desta fase: so a linha que envolve `gelo`/`molhado` existe de
- * verdade. As outras dezesseis combinacoes da tabela completa entram na
- * Fase 4, junto com as superficies de chao — a maioria delas muda o CHAO, nao
- * so a criatura, e superficie ainda nao existe no jogo.
+ * Revisao de 2026-09-04, junto da reformulacao das 11 magias restantes: sete
+ * marcas tratadas agora (gelo, luz, planta, cola, doce, bolha, som-alto), as
+ * seis novas sao as que as magias de debuff/buff realmente carregam. Nao
+ * entraram ainda: fogo/agua (a interacao completa com gelo, que pede
+ * superficie de chao pra fazer sentido - Fase 4/10 do plano) e vento/pulo/
+ * conserto/fala/invisivel/corta/quebra/empurra (efeito DIRETO, nunca uma
+ * condicao - tabela de "vem de" que pede sistema proprio: mover o heroi,
+ * consertar objeto, abrir dialogo. Ver docs/mundo-que-reage.md secao 3, a
+ * linha final da tabela).
  *
  * A funcao nunca "erra": se a marca nao acha reacao, devolve um resultado
  * vazio e o efeito visual acontece do mesmo jeito (isso e responsabilidade de
@@ -46,7 +51,33 @@ export function aplicarMarca(marca: Marca, condicoesDoAlvo: Condicao[]): Resulta
     return { condicoesNovas: condicoesDoAlvo };
   }
 
-  // as outras dezesseis marcas ainda nao tem reacao propria nesta fase.
+  if (marca === "luz") {
+    // luz revela quem estava escondido (docs/mundo-que-reage.md secao 3) -
+    // "invisivel" e nome de MARCA, nao de condicao (Sumir-Sumindo e efeito
+    // direto no heroi, nunca uma condicao de bicho); a condicao equivalente
+    // no union de IdCondicao e "escondido".
+    const semEsconderijo = condicoesDoAlvo.filter((c) => c.id !== "escondido");
+    return { condicoesNovas: aplicar(semEsconderijo, { id: "iluminado", turnosRestantes: 20 }) };
+  }
+
+  if (marca === "planta" || marca === "cola") {
+    return { condicoesNovas: aplicar(condicoesDoAlvo, { id: "preso", turnosRestantes: 2 }) };
+  }
+
+  if (marca === "doce") {
+    return { condicoesNovas: aplicar(condicoesDoAlvo, { id: "atraido", turnosRestantes: 3 }) };
+  }
+
+  if (marca === "bolha") {
+    return { condicoesNovas: aplicar(condicoesDoAlvo, { id: "protegido", turnosRestantes: 3 }) };
+  }
+
+  if (marca === "som-alto") {
+    return { condicoesNovas: aplicar(condicoesDoAlvo, { id: "assustado", turnosRestantes: 2 }) };
+  }
+
+  // fogo, agua, vento, pulo, conserto, fala, invisivel, corta, quebra,
+  // empurra: ainda sem reacao propria aqui (ver o comentario do arquivo).
   return { condicoesNovas: condicoesDoAlvo };
 }
 

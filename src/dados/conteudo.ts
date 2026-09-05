@@ -217,19 +217,26 @@ export const CLASSES: Classe[] = [
 // ---------------------------------------------------------------- magias
 export type Magia = { id: string; nome: string; texto: string; cor: number };
 
+/** Revisao de 2026-09-04: oito das treze ganharam nome e clima novos, "caso a
+ *  caso" como o Hugo pediu - nao um reskin em bloco. O `id` de cada uma NAO
+ *  mudou (evita quebrar heroi.magias salvo, CLASSES.magias, TABELA_DE_MAGIA
+ *  em sistemas/acao.ts e MAGIAS_SOM em dados/sons.ts, que continuam
+ *  referenciando o id antigo) - so o que o jogador LE mudou. As que ja
+ *  soavam adultas (Voz de Trovao, Bafo Gelado, Bola de Fogo) ou ja eram so
+ *  funcionais (Cresce-Grama, Remendo) ficaram como estavam. */
 export const MAGIAS: Magia[] = [
-  { id: "luzinha", nome: "Luzinha", texto: "Uma bolinha de luz flutua e ilumina o caminho.", cor: 0xf5b62b },
+  { id: "luzinha", nome: "Fogo-Fatuo", texto: "Uma luz fraca que ilumina o escuro e revela quem estava escondido.", cor: 0xf5b62b },
   { id: "bafo-gelado", nome: "Bafo Gelado", texto: "Um sopro que congela agua, fogo e ate goblin.", cor: 0x7ec4f2 },
-  { id: "cresce-grama", nome: "Cresce-Grama", texto: "A grama cresce alta e vira escada, corda ou esconderijo.", cor: 0x3e9b62 },
-  { id: "voz-de-trovao", nome: "Voz de Trovao", texto: "Sua voz fica tao alta que todo mundo para pra ouvir.", cor: 0x4a3e64 },
-  { id: "pulo-de-sapo", nome: "Pulo de Sapo", texto: "Um pulo enorme, por cima de rio, muro ou monstro.", cor: 0x3e9b62 },
-  { id: "dedo-colante", nome: "Dedo Colante", texto: "Suas maos grudam em qualquer parede.", cor: 0xee7ba6 },
-  { id: "remendo", nome: "Remendo", texto: "Junta de volta uma coisa quebrada.", cor: 0xb08658 },
-  { id: "escudo-de-bolha", nome: "Escudo de Bolha", texto: "Uma bolha te protege de um golpe.", cor: 0x7ec4f2 },
-  { id: "cheiro-de-bolo", nome: "Cheiro de Bolo", texto: "Um cheirinho irresistivel atrai todo mundo pro mesmo lugar.", cor: 0xf5b62b },
-  { id: "fala-bicho", nome: "Fala Bicho", texto: "Voce entende e fala com qualquer bicho.", cor: 0x3e9b62 },
-  { id: "sumir-sumindo", nome: "Sumir-Sumindo", texto: "Voce fica invisivel enquanto ficar quietinho.", cor: 0x4a3e64 },
-  { id: "chama-vento", nome: "Chama-Vento", texto: "Um vento forte empurra tudo que estiver na frente.", cor: 0xcde9f8 },
+  { id: "cresce-grama", nome: "Cresce-Grama", texto: "A vegetacao cresce na hora: vira escada, corda ou esconderijo.", cor: 0x3e9b62 },
+  { id: "voz-de-trovao", nome: "Voz de Trovao", texto: "Um grito que ecoa longe o bastante pra fazer qualquer um parar.", cor: 0x4a3e64 },
+  { id: "pulo-de-sapo", nome: "Salto Longo", texto: "Um impulso que atravessa rio, muro ou inimigo de um salto so.", cor: 0x3e9b62 },
+  { id: "dedo-colante", nome: "Aderencia", texto: "As maos grudam em qualquer superficie por um instante - sobe parede, atravessa teto.", cor: 0xee7ba6 },
+  { id: "remendo", nome: "Remendo", texto: "Conserta na hora o que quebrou.", cor: 0xb08658 },
+  { id: "escudo-de-bolha", nome: "Barreira", texto: "Uma camada invisivel absorve o proximo golpe.", cor: 0x7ec4f2 },
+  { id: "cheiro-de-bolo", nome: "Cheiro de Fogueira", texto: "Um cheiro de fumaca que atrai qualquer bicho de longe.", cor: 0xf5b62b },
+  { id: "fala-bicho", nome: "Lingua Selvagem", texto: "Por um tempo, voce entende e e entendido por qualquer bicho.", cor: 0x3e9b62 },
+  { id: "sumir-sumindo", nome: "Veu de Sombra", texto: "As sombras escondem voce, enquanto ficar parado.", cor: 0x4a3e64 },
+  { id: "chama-vento", nome: "Rajada", texto: "Um vento forte empurra tudo pela frente - e alimenta o fogo que ja estava queimando.", cor: 0xcde9f8 },
   { id: "bola-de-fogo", nome: "Bola de Fogo", texto: "Uma bola de fogo que voa numa direcao. Goblin aguenta, gelo nao.", cor: 0xf2802b },
 ];
 

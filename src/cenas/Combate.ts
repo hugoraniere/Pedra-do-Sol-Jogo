@@ -27,6 +27,8 @@ import type { Atributo } from "../dados/conteudo";
 import { tocar, tocarFicha } from "../sistemas/som";
 import { texto } from "../sistemas/texto";
 import { Ordem } from "../sistemas/turnos";
+import { aplicarMarca, type Condicao, type Marca } from "../sistemas/marcas";
+import { condicoesDados } from "../dados/condicoes-dados";
 import type { Mundo } from "./Mundo";
 
 const SLOT = 22;
@@ -53,6 +55,10 @@ type Bicho = {
   pips?: Phaser.GameObjects.Container;
   mostrarAte: number;
   rota: Casa[];
+  /** revisao de 2026-09-04: antes disto, `acao.marca` nunca era lido - toda
+   *  magia so causava dano generico, por baixo do efeito visual bonito. */
+  condicoes: Condicao[];
+  condicoesUI?: Phaser.GameObjects.Container;
 };
 
 type Slot = {
@@ -242,7 +248,7 @@ export class Combate extends Phaser.Scene {
       id, bicharioId, chave, nome, bonus,
       retrato: ICONE.retrato[spriteChave.replace("goblin-", "")] ?? 1,
       sprite: s, corpo: s.body as Phaser.Physics.Arcade.Body, tipo: "goblin",
-      coracoes, coracoesMax: coracoes, mostrarAte: 0, rota: [],
+      coracoes, coracoesMax: coracoes, mostrarAte: 0, rota: [], condicoes: [],
     });
   }
 
@@ -708,7 +714,10 @@ export class Combate extends Phaser.Scene {
             projetilOrientado(this, this.heroi.x, this.heroi.y - 8, px, py, 0x7ec4f2, 5, 6, 160, () => {
               pegos
                 .filter((b) => this.mesmaCasa(this.casaDoBicho(b), c.tx, c.ty))
-                .forEach((b) => this.atingir(b, px, py, resultado.desfecho === "critico-sucesso", "gelo"));
+                .forEach((b) => {
+                  this.atingir(b, px, py, resultado.desfecho === "critico-sucesso", "gelo");
+                  if (acao.marca) this.aplicarMarcaNoBicho(b, acao.marca);
+                });
             });
           });
         });
@@ -723,7 +732,10 @@ export class Combate extends Phaser.Scene {
         // Bola de Fogo trava.
         ondaDeConjuracao(this, this.heroi.x, this.heroi.y, 0xf2802b, 16);
         projetil(this, this.heroi.x, this.heroi.y - 8, cx, cy, 0xf2802b, 3, 220, () => {
-          pegos.forEach((b) => this.atingir(b, cx, cy, resultado.desfecho === "critico-sucesso"));
+          pegos.forEach((b) => {
+            this.atingir(b, cx, cy, resultado.desfecho === "critico-sucesso");
+            if (acao.marca) this.aplicarMarcaNoBicho(b, acao.marca);
+          });
           estourinho(this, cx, cy, 0xf2802b, 8, 12);
           hitstop(this, 60);
           this.cameras.main.shake(100, 0.003);
@@ -731,7 +743,14 @@ export class Combate extends Phaser.Scene {
         });
         return;
       } else {
-        pegos.forEach((b) => this.atingir(b, cx, cy, resultado.desfecho === "critico-sucesso"));
+        pegos.forEach((b) => {
+          this.atingir(b, cx, cy, resultado.desfecho === "critico-sucesso");
+          // e aqui que as 11 magias sem animacao propria (Cresce-Grama, Voz
+          // de Trovao, Cheiro de Fogueira, Rajada...) ganham reacao de
+          // verdade, mesmo sem projetil dedicado - o dano generico continua,
+          // a marca por cima e o que muda de verdade.
+          if (acao.marca) this.aplicarMarcaNoBicho(b, acao.marca);
+        });
         // o martelo pesa mais que espada, cajado ou soco: o mesmo golpe corpo
         // a corpo (passo 3 do plano), so essa arma ganha o micro-engasgo.
         if (acao.id === "golpe-martelo") hitstop(this, 50);
@@ -854,6 +873,7 @@ export class Combate extends Phaser.Scene {
     this.bichos = this.bichos.filter((o) => o !== b);
     b.corpo?.setVelocity(0, 0);
     b.pips?.destroy();
+    b.condicoesUI?.destroy();
     if (b.tipo === "goblin") {
       tocarFicha(CRIATURAS_SOM.pequeno.desiste);
       if (b.chave) {
@@ -910,6 +930,39 @@ export class Combate extends Phaser.Scene {
     b.pips = this.add.container(b.sprite.x, b.sprite.y - 36, [g]).setDepth(2000);
     b.pips.setScale(0.6);
     this.tweens.add({ targets: b.pips, scale: 1, duration: 140, ease: "Back.easeOut" });
+  }
+
+  /** As condicoes de verdade acima da cabeca (acima dos coracoes) - MOLHADO,
+   *  PRESO, ASSUSTADO etc, no mesmo molde que Provador.ts ja usava. Max 3
+   *  visiveis: as 11 magias novas raramente empilham mais que isso numa
+   *  criatura so, e "+N" pode esperar o dia que empilhar. */
+  private mostrarCondicoes(b: Bicho) {
+    b.condicoesUI?.destroy();
+    if (b.condicoes.length === 0) return;
+    const visiveis = b.condicoes.slice(0, 3);
+    const largura = visiveis.length * 10 - 2;
+    const g = this.add.graphics();
+    visiveis.forEach((cond, i) => {
+      const ficha = condicoesDados(cond.id);
+      const x = -largura / 2 + i * 10;
+      g.fillStyle(ficha.cor, 1).fillRect(x, 0, 8, 8);
+      g.lineStyle(1, 0x2c2440, 0.8).strokeRect(x + 0.5, 0.5, 7, 7);
+    });
+    b.condicoesUI = this.add.container(b.sprite.x, b.sprite.y - 46, [g]).setDepth(2000);
+    popIn(this, b.condicoesUI, 140, 0.6);
+  }
+
+  /** O elo que faltava entre `acao.marca` (que so alimentava a cor do efeito
+   *  visual) e o motor de condicoes de verdade - antes desta revisao (2026-
+   *  09-04) NENHUMA magia do jogo real chamava `aplicarMarca()`, nem Bafo
+   *  Gelado ou Bola de Fogo. As condicoes aplicadas aqui ainda nao contam os
+   *  proprios turnos (isso pede passarTurno() rodando em entrarNoTurno(),
+   *  fica pro proximo passo) - mas a marca agora MUDA o bicho de verdade, em
+   *  vez de so colorir um flash. */
+  private aplicarMarcaNoBicho(b: Bicho, marca: Marca) {
+    const resultado = aplicarMarca(marca, b.condicoes);
+    b.condicoes = resultado.condicoesNovas;
+    this.mostrarCondicoes(b);
   }
 
   // =================================================================== update
@@ -1030,11 +1083,15 @@ export class Combate extends Phaser.Scene {
   private cuidarDosPips() {
     const agora = this.time.now;
     this.bichos.forEach((b) => {
-      if (!b.pips) return;
-      b.pips.setPosition(b.sprite.x, b.sprite.y - 36);
-      if (agora > b.mostrarAte && b.pips.alpha > 0) {
-        b.pips.setAlpha(Math.max(0, b.pips.alpha - 0.04));
+      if (b.pips) {
+        b.pips.setPosition(b.sprite.x, b.sprite.y - 36);
+        if (agora > b.mostrarAte && b.pips.alpha > 0) {
+          b.pips.setAlpha(Math.max(0, b.pips.alpha - 0.04));
+        }
       }
+      // condicoes nunca desbotam sozinhas (diferente dos pips de dano) -
+      // elas representam um estado que continua valendo, so seguem o bicho.
+      b.condicoesUI?.setPosition(b.sprite.x, b.sprite.y - 46);
     });
   }
 
