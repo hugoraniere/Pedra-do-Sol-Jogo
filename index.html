@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#2C2440">
 <link rel="icon" type="image/png" href="/favicon.png">
+<!-- o resto do PWA (manifest.webmanifest, o link para ele, o registro do
+     service worker) e injetado sozinho no build por vite-plugin-pwa, ver
+     vite.config.ts. So o que o Safari do iOS nao le do manifesto mora aqui:
+     ele nao tira o icone nem o "abrir sem barra do navegador" so do
+     manifesto, precisa destas tags dele mesmo. -->
+<link rel="apple-touch-icon" href="/icone-apple-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Aurora">
 <title>Reino de Aurora</title>
 <style>
   html,body{margin:0;padding:0;height:100%;background:#2C2440;overflow:hidden;

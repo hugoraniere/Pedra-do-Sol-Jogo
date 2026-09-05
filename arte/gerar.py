@@ -91,6 +91,8 @@ def main():
     titulo_arte.gerar(SAIDA, a_mao)
     ficha_fonte = fonte_arte.gerar(SAIDA, a_mao)
     ui_arte.favicon(os.path.join(RAIZ, "..", "public", "favicon.png"))
+    # os icones de instalar o jogo no celular. Ver manifest.webmanifest.
+    ui_arte.icones_do_app(os.path.join(RAIZ, "..", "public"))
 
     # o jogo le este arquivo para saber o tamanho e a colisao de cada objeto,
     # entao adicionar um objeto novo nao exige mexer em nenhum .ts
