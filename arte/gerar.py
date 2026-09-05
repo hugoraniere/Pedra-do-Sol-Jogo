@@ -36,6 +36,7 @@ import cursor as cursor_arte
 import fonte as fonte_arte
 import gente
 import icones as icones_arte
+import itens as itens_arte
 import manifesto as manifesto_arte
 import mundo
 import tiles
@@ -88,6 +89,9 @@ def main():
     indice_cursor = cursor_arte.gerar(SAIDA)
     # folha propria do combate, para nao disputar ui.py com o ambiente `sprites`
     indice_icones = icones_arte.gerar(SAIDA)
+    # folha propria dos itens de mochila (consumivel, material, armadura,
+    # acessorio) — mesma razao: assunto proprio, lista que so cresce
+    indice_itens = itens_arte.gerar(SAIDA)
     titulo_arte.gerar(SAIDA, a_mao)
     ficha_fonte = fonte_arte.gerar(SAIDA, a_mao)
     ui_arte.favicon(os.path.join(RAIZ, "..", "public", "favicon.png"))
@@ -110,6 +114,7 @@ def main():
     print("ui:    ", indice_ui)
     print("cursor:", indice_cursor)
     print("icones:", indice_icones)
+    print("itens: ", indice_itens)
     print("objetos:", ", ".join(ficha_objetos))
     print("fonte: ", ficha_fonte)
     orfaos = limpar_orfaos(comeco)

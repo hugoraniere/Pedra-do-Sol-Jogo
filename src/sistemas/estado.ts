@@ -1,7 +1,13 @@
 /** Estado do jogo. Uma unica fonte da verdade sobre o progresso.
  *  Quem grava e le no disco e sistemas/armazenamento.ts. */
 import { gravarEspaco, lerEspaco } from "./armazenamento";
-import { acharMaterial, type Atributo } from "../dados/conteudo";
+import { acharMaterial, acharMochila, type Atributo } from "../dados/conteudo";
+
+/** Um slot da mochila: um item (com quantidade) ou vazio. Slot tem POSICAO
+ *  fixa — e o que deixa arrastar um item de lugar (`moverItem`) fazer
+ *  sentido, diferente da contagem solta que a mochila usava antes (ver
+ *  docs/plano-de-itens-e-equipamento.md). */
+export type SlotDaMochila = { item: string; quantidade: number } | null;
 
 export type Heroi = {
   nome: string;
@@ -43,11 +49,15 @@ export type Estado = {
   coracoesMax: number;
   moedas: number;
   selos: number;
-  /** posse de item, com contagem — chave e o id (de `LOJA`, `MATERIAIS`, ou
-   *  um item de historia como "pano-goblin"), valor e quantos tem. Save
-   *  antigo guardava so uma lista de posse (sem contar); `abrirEspaco()`
-   *  migra pra `{ id: 1 }` cada, uma vez, na leitura. */
-  mochila: Record<string, number>;
+  /** slot por posicao — o comprimento e sempre `acharMochila(mochilaAtual)
+   *  .slots`. Save antigo guardava um dicionario de contagem (antes disso,
+   *  uma lista de posse crua); `abrirEspaco()` migra os dois formatos pra
+   *  slot, uma vez, na leitura. Nunca mexa no comprimento na mao — use
+   *  `comprarMochila()`. */
+  mochila: SlotDaMochila[];
+  /** id de `MOCHILAS` (conteudo.ts) — decide `mochila.length`. Comeca na
+   *  pequena; so cresce, via `comprarMochila()`. */
+  mochilaAtual: string;
   visitados: string[];
   /** chave estavel de cada criatura ja vencida (`${cena}:${indice}` no mapa),
    *  para ela nao voltar a existir quando o jogador reentra no lugar */
@@ -102,7 +112,8 @@ export const VAZIO: Estado = {
   coracoesMax: 3,
   moedas: 5,
   selos: 0,
-  mochila: {},
+  mochila: new Array(8).fill(null),
+  mochilaAtual: "mochila-pequena",
   visitados: [],
   derrotados: [],
   cena: "vila",
@@ -149,16 +160,43 @@ export function abrirEspaco(espaco: number): boolean {
   // VAZIO, entao um save gravado antes de um campo novo existir voltaria sem
   // ele. Aqui o heroi antigo ganha os campos que nasceram depois dele.
   atual.heroi = { ...copia(VAZIO.heroi), ...(lido.heroi ?? {}) };
-  // save antigo guardava mochila como lista (so posse, sem contagem) — um
-  // array sobrescreveria o {} novo do VAZIO no espalhamento acima. Migra pra
-  // contagem 1 cada, uma vez, na leitura.
-  if (Array.isArray(lido.mochila)) {
-    const antiga = lido.mochila as unknown as string[];
-    atual.mochila = {};
-    for (const item of antiga) atual.mochila[item] = (atual.mochila[item] ?? 0) + 1;
-  }
+  atual.mochila = migrarMochila(lido.mochila, atual.mochilaAtual);
   inicioDaSessao = Date.now();
   return true;
+}
+
+/** A mochila ja teve tres formatos: lista de posse crua (`string[]`),
+ *  dicionario de contagem (`Record<string, number>`), e agora slot por
+ *  posicao. Detecta o formato do save e converte pro atual, uma vez, na
+ *  leitura — nenhum dos dois formatos antigos e escrito de novo.
+ *
+ *  O tamanho normal vem da mochila equipada, mas se o save tinha MAIS
+ *  pilhas de item do que a mochila atual comporta (dicionario antigo nao
+ *  tinha limite nenhum), a mochila migrada cresce pra caber tudo — perder
+ *  item na migracao seria pior que uma mochila temporariamente "cheia
+ *  demais pro tamanho dela". */
+function migrarMochila(bruta: unknown, mochilaAtualId: string): SlotDaMochila[] {
+  const capacidade = acharMochila(mochilaAtualId).slots;
+  let pilhas: { item: string; quantidade: number }[];
+  if (Array.isArray(bruta) && bruta.every((v) => typeof v === "string")) {
+    // formato mais antigo: lista de posse, uma entrada por unidade
+    const contagem: Record<string, number> = {};
+    for (const item of bruta as string[]) contagem[item] = (contagem[item] ?? 0) + 1;
+    pilhas = Object.entries(contagem).map(([item, quantidade]) => ({ item, quantidade }));
+  } else if (bruta && typeof bruta === "object" && !Array.isArray(bruta)) {
+    // formato do meio: dicionario de contagem
+    pilhas = Object.entries(bruta as Record<string, number>).map(([item, quantidade]) => ({ item, quantidade }));
+  } else if (Array.isArray(bruta)) {
+    // ja e slot (ou save novo, sem mochila ainda) — so garante o tamanho certo
+    const slots = (bruta as SlotDaMochila[]).slice();
+    while (slots.length < capacidade) slots.push(null);
+    return slots;
+  } else {
+    return new Array(capacidade).fill(null);
+  }
+  const slots: SlotDaMochila[] = new Array(Math.max(capacidade, pilhas.length)).fill(null);
+  pilhas.forEach((p, i) => (slots[i] = p));
+  return slots;
 }
 
 export function salvar() {
@@ -171,19 +209,99 @@ export function salvar() {
   gravarEspaco(atual.espaco, atual);
 }
 
-export function guardar(item: string, quantidade = 1) {
-  atual.mochila[item] = (atual.mochila[item] ?? 0) + quantidade;
+/** Guarda `quantidade` de um item: empilha num slot que ja tem esse item, ou
+ *  ocupa o primeiro slot vazio. Devolve false sem gastar nada se a mochila
+ *  estiver cheia (nenhum slot igual, nenhum vazio) — quem chama decide o que
+ *  fazer (por agora, os dois lugares que chamam isto ignoram o retorno,
+ *  igual sempre ignoraram; a mochila comeca grande o bastante pra isso ser
+ *  raro no jogo de hoje). */
+export function guardar(item: string, quantidade = 1): boolean {
+  const iExistente = atual.mochila.findIndex((s) => s?.item === item);
+  if (iExistente >= 0) {
+    atual.mochila[iExistente]!.quantidade += quantidade;
+    salvar();
+    return true;
+  }
+  const iVazio = atual.mochila.findIndex((s) => s === null);
+  if (iVazio < 0) return false;
+  atual.mochila[iVazio] = { item, quantidade };
   salvar();
+  return true;
 }
 
-/** Tira `quantidade` de um item da mochila, sem salvar sozinha — quem chama
- *  decide o resto da transacao (usar, vender) antes de salvar uma vez so. */
+/** Tira `quantidade` de um item da mochila (de qualquer slot que o tenha),
+ *  sem salvar sozinha — quem chama decide o resto da transacao (usar,
+ *  vender) antes de salvar uma vez so. */
 function retirarDaMochila(item: string, quantidade: number): boolean {
-  const posse = atual.mochila[item] ?? 0;
-  if (posse < quantidade) return false;
-  const restante = posse - quantidade;
-  if (restante <= 0) delete atual.mochila[item];
-  else atual.mochila[item] = restante;
+  const i = atual.mochila.findIndex((s) => s?.item === item);
+  if (i < 0) return false;
+  const slot = atual.mochila[i]!;
+  if (slot.quantidade < quantidade) return false;
+  if (slot.quantidade === quantidade) atual.mochila[i] = null;
+  else slot.quantidade -= quantidade;
+  return true;
+}
+
+/** Tira `quantidade` de um slot pela POSICAO (nao pelo item) — usado por
+ *  quem ja sabe o indice na grade (a Ficha, jogando fora ou vendendo pelo
+ *  slot que o jogador tocou), diferente de `retirarDaMochila` (usado por
+ *  quem so sabe o id, como `usar`/`venderMaterial`). */
+function retirarDoSlot(indice: number, quantidade: number): boolean {
+  const slot = atual.mochila[indice];
+  if (!slot || slot.quantidade < quantidade) return false;
+  if (slot.quantidade === quantidade) atual.mochila[indice] = null;
+  else slot.quantidade -= quantidade;
+  return true;
+}
+
+/** Joga fora (descarta, sem moeda nenhuma — diferente de `venderMaterial`)
+ *  `quantidade` do slot `indice`. Devolve false sem mudar nada se o slot
+ *  estiver vazio ou nao tiver quantidade suficiente. */
+export function jogarFora(indice: number, quantidade = 1): boolean {
+  if (!retirarDoSlot(indice, quantidade)) return false;
+  salvar();
+  return true;
+}
+
+/** Move o conteudo de um slot pra outro (o "arrastar pra reorganizar" da
+ *  mochila). Slot destino vazio: so muda de lugar. Slot destino com o MESMO
+ *  item: empilha os dois no destino (a origem esvazia). Slot destino com
+ *  item DIFERENTE: troca os dois de lugar. Nao faz nada (devolve false) se a
+ *  origem estiver vazia ou os indices forem iguais. */
+export function moverItem(deIndice: number, paraIndice: number): boolean {
+  if (deIndice === paraIndice) return false;
+  const origem = atual.mochila[deIndice];
+  if (!origem) return false;
+  const destino = atual.mochila[paraIndice];
+  if (destino && destino.item === origem.item) {
+    destino.quantidade += origem.quantidade;
+    atual.mochila[deIndice] = null;
+  } else {
+    atual.mochila[paraIndice] = origem;
+    atual.mochila[deIndice] = destino;
+  }
+  salvar();
+  return true;
+}
+
+/** Quantos slots a mochila equipada agora tem. */
+export const capacidadeDaMochila = (): number => acharMochila(atual.mochilaAtual).slots;
+
+/** Troca pra uma mochila maior (nunca menor — comprar so faz sentido pra
+ *  cima). Preserva o conteudo dos slots que ja existiam, so acrescenta slot
+ *  vazio no fim. Devolve false sem gastar nada se a mochila pedida nao for
+ *  maior que a atual, ou faltar moeda.
+ *
+ *  Sem cena de loja pra chamar isto ainda — ver docs/plano-de-itens-e-
+ *  equipamento.md, secao 7. Pronta pra quando existir. */
+export function comprarMochila(id: string): boolean {
+  const nova = acharMochila(id);
+  if (nova.slots <= capacidadeDaMochila()) return false;
+  if (atual.moedas < nova.preco) return false;
+  atual.moedas -= nova.preco;
+  while (atual.mochila.length < nova.slots) atual.mochila.push(null);
+  atual.mochilaAtual = id;
+  salvar();
   return true;
 }
 

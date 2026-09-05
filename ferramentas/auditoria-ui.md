@@ -18,7 +18,7 @@ Problemas encontrados: 0
 | 11-janela-eu | Interface:37 Ficha:52 Som:0 Ponteiro:1 | 0 |
 | 11-janela-poderes | Interface:37 Ficha:43 Som:0 Ponteiro:1 | 0 |
 | 11-janela-magias | Interface:37 Ficha:36 Som:0 Ponteiro:1 | 0 |
-| 11-janela-mochila | Interface:37 Ficha:33 Som:0 Ponteiro:1 | 0 |
+| 11-janela-mochila | Interface:37 Ficha:52 Som:0 Ponteiro:1 | 0 |
 | 11-janela-diario | Interface:37 Ficha:33 Som:0 Ponteiro:1 | 0 |
 | 11-janela-menu | Interface:37 Ficha:37 Som:0 Ponteiro:1 | 0 |
 | 12-pausa | Interface:37 Pausa:22 Som:0 Ponteiro:1 | 0 |

@@ -451,6 +451,111 @@ projetado em `docs/11-combate-e-magias.md`, nada implementado aqui.
   "prometido" na Ficha sem efeito numerico. Sprite de armadura como camada
   de corpo tambem fica aqui (depende da resolucao de sprite, ainda em
   aberto). Uso de item em combate continua Fase 6 (secao 13).
+- **Fase E — a mochila virou slot (2026-09-05), FEITA.** A pedido do Hugo
+  ("slot com icone, hover, tamanho de mochila tipo Stardew/Zomboid, jogar
+  fora, mudar de lugar, botao direito pra usar"): reformulacao real, nao
+  incremento — a lista de texto da Fase B virou grade de slot com icone.
+  Detalhe completo na secao 16.
+
+## 16. A mochila vira slot (Fase E)
+
+**Por que reformular em vez de so acrescentar:** a Fase B/C jah entregava
+mochila funcional (usar/vender/equipar), mas como LISTA de texto — cada item
+uma linha com nome, descricao sempre visivel, botao de acao. O Hugo pediu
+o modelo Stardew Valley/Project Zomboid: grade de slot com posicao fixa,
+icone em vez de nome, descricao so no hover, arrastar pra trocar de posicao,
+botao direito pra usar direto. Isso muda o MODELO DE DADO (contagem por id
+vira slot por posicao) e a interacao inteira, entao vira secao propria em
+vez de mais uma linha na Fase C.
+
+### Icones novos: `arte/itens.py`
+
+Pipeline separado de `ui.py` (interface generica) e `icones.py` (retrato/
+acao/dado de combate) — item de mochila e um terceiro assunto, mesma logica
+que ja separava os outros dois. Mesma tecnica de `icones.py` (bloco de 16x16
+letras + LEGENDA), consultada a skill `desenhar-sprite` antes de desenhar
+qualquer coisa.
+
+43 icones ao todo: os 26 itens da Fase A (consumivel/material/armadura/
+acessorio) mais 17 de arma. As armas usam **8 formas-base** (uma por TIPO —
+espada, escudo, arco, cajado, martelo, machado, adaga, funda), e as 3
+lendarias + 6 encontradas sao a MESMA forma com cor trocada
+(`com_cores()`), nao redesenhadas do zero — o mesmo principio que o jogo ja
+usa pra roupa/cabelo (silhueta fixa, cor por cima). Gerados, ampliados e
+OLHADOS contra o painel-creme de verdade (nao contra grama, que e onde o
+personagem se julga, nao onde item se julga) antes de aceitar — 3 primeiras
+tentativas (corda, lanterna, biscoito) liam mal e foram redesenhadas depois
+de ver o contact sheet ampliado. Indice em `src/sistemas/icones-itens.ts`
+(`ICONE_ITEM`), textura carregada em `Boot.ts` como `"itens"`.
+
+### Mochila com tamanho (Stardew/Zomboid)
+
+`Mochila`/`MOCHILAS` novo em `conteudo.ts`: pequena (8 slots, gratis, o
+heroi comeca com ela), media (16, 15 moedas), grande (24, 30 moedas) — os
+nomes/precos sao provisorios, o Hugo pode trocar. `estado().mochilaAtual`
+guarda qual esta equipada; `comprarMochila()` em `estado.ts` troca pra uma
+maior (nunca menor) preservando o conteudo dos slots que ja existiam. **Sem
+cena de loja pra chamar isto ainda** — mesma pendencia da secao 7, a funcao
+esta pronta e esperando.
+
+### O slot substitui a contagem
+
+`estado().mochila` mudou de `Record<string, number>` pra
+`SlotDaMochila[]` (`{item, quantidade} | null`, um por posicao,
+comprimento = `capacidadeDaMochila()`). `abrirEspaco()` agora migra TRES
+formatos possiveis (lista de posse crua -> dicionario de contagem -> slot),
+cada save abrindo no formato que tiver e saindo no formato novo. Se um save
+tinha mais pilha de item do que a mochila atual comporta, a mochila migrada
+cresce pra caber tudo — perder item na migracao seria pior que uma mochila
+"cheia demais pro tamanho dela" por um tempo.
+
+Novo em `estado.ts`: `moverItem(de, para)` (troca dois slots, ou empilha se
+for o mesmo item), `jogarFora(indice, quantidade)` (descarta sem moeda —
+diferente de `venderMaterial`).
+
+### A grade em `Ficha.ts`
+
+MOCHILA e a UNICA pagina que nao usa o sistema de `Bloco`/pilha generico
+(que continua servindo EU/PODERES/MAGIAS/DIARIO/MENU sem mudar nada) — grade
+de icone e outra forma de conteudo, nao lista de texto. `desenharMochila()`
+desenha um slot por posicao (fundo encaixado + icone + numero se
+empilhado), mais uma zona "ARRASTE ATE AQUI PRA JOGAR FORA".
+
+Interacao por gesto, pensada pra funcionar igual no mouse e no dedo:
+
+- **Hover (mouse) ou toque simples (dedo):** mostra a dica — nome,
+  descricao/bonus, de onde vem. A mesma informacao que os botoes EQUIPAR/
+  USAR/VENDER mostravam por extenso na Fase B, agora sob demanda.
+- **Arrastar** (mouse ou dedo, com um limiar de 6px pra distinguir de toque
+  parado): pega o item, solta em outro slot troca/empilha os dois, solta na
+  zona de jogar fora descarta.
+- **Botao direito (mouse) ou toque longo ~450ms (dedo):** usa a acao rapida
+  da categoria — a MESMA logica que os botoes da Fase B faziam (usar
+  consumivel com efeito, vender material, equipar/desequipar armadura ou
+  acessorio, empunhar/desempunhar arma com sprite). So arma sem sprite
+  proprio continua sem acao (mesmo gap de sempre, ver Fase C).
+
+**Correcao de um bug encontrado ao testar:** a primeira versao ancorava a
+dica SEMPRE acima do slot (igual o combate faz com a barra de acao no
+rodape) — como a grade da mochila fica logo abaixo das abas, a dica vazava
+por cima e cobria os botoes EU/PODERES/etc. Trocado pra ancorar abaixo do
+slot (a mochila tem folga embaixo — zona de jogar fora, FECHAR — que o
+combate nao tem).
+
+**Testado ao vivo** (`vite preview`): hover mostra a dica certa; arrastar um
+item pra um slot vazio troca de posicao (conferido no save, indice a
+indice); arrastar pra zona de jogar fora remove o item sem dar moeda;
+botao direito usa a pocao (coracao encheu, quantidade descontou) sem abrir
+o menu do navegador (`disableContextMenu()`); os dois slots de equipamento
+(armadura/acessorio) continuam independentes. `npm run build/auditar/
+conferir/contraste` verdes — `auditar` inclui `11-janela-mochila` (grade
+com 8 slots vazios) com 0 problema de sobreposicao/transbordo.
+
+**O que fica pra depois, de proposito:** arrastar item pra FORA da janela
+(largar no mapa) — a mochila so sabe jogar fora dentro da propria zona
+marcada, nao existe ainda "item largado no chao" como objeto do mundo.
+Animacao de picape/uso (o item some/aparece na hora, sem transicao) —
+puro polimento, nao muda nenhum dado.
 
 ## 15. Coordenacao necessaria
 

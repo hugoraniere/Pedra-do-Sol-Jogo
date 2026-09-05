@@ -1,6 +1,6 @@
 {
   "gerado_por": "npm run arte",
-  "total": 151,
+  "total": 152,
   "arquivos": {
     "aranha-filhote.png": {
       "hash": "ececeb0a0cfcd628",
@@ -390,6 +390,12 @@
       "hash": "082578e9dd0cbfea",
       "bytes": 2414,
       "largura": 464,
+      "altura": 16
+    },
+    "itens.png": {
+      "hash": "fd8962d10ba2e2b3",
+      "bytes": 2461,
+      "largura": 688,
       "altura": 16
     },
     "lobo-nevoa.png": {
