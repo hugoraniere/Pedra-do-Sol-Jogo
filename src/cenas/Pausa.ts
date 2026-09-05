@@ -173,17 +173,29 @@ export class Pausa extends Phaser.Scene {
     // botao nao existe, em vez de existir e nao funcionar: botao que nao faz
     // nada e o pior caso para quem tem 7 anos.
     const temTelaCheia = this.scale.fullscreen.available;
-    const alturaConteudo =
+
+    // OS CONTROLES SAO OBRIGATORIOS; O PARAGRAFO EXPLICATIVO NAO E. Numa janela
+    // baixa e deitada (celular antigo, tela dividida) sobra pouca altura, e
+    // "LONGE mostra mais do mapa..." e a unica coisa aqui que e descricao, nao
+    // controle. Perder-la e melhor que o < VOLTAR vazar pra fora da tela — o
+    // que de fato acontecia antes desta conta existir. Ver docs/07, "pergunte
+    // quanto cabe, mostre o que couber, na ordem de importancia".
+    const alturaControles =
       TAMANHO.linhaTexto +
       ESPACO.md +
       TAMANHO.botao +
-      ESPACO.lg +
-      alturaDoTexto(linhas.length) +
       ESPACO.lg +
       TAMANHO.botao +
       (temTelaCheia ? ESPACO.lg + TAMANHO.botao : 0) +
       ESPACO.lg +
       TAMANHO.botao;
+    const alturaComExplicacao = alturaControles + ESPACO.lg + alturaDoTexto(linhas.length);
+    // o mesmo teto que caixa() respeita por dentro: alem disto ela pinca no
+    // topo e vaza por baixo, porque nunca encolhe o proprio conteudo.
+    const tetoDisponivel =
+      ALTURA - TAMANHO.paddingTela * 2 - TAMANHO.paddingPainel * 2 - TAMANHO.chapa - ESPACO.sm;
+    const cabeExplicacao = alturaComExplicacao <= tetoDisponivel;
+    const alturaConteudo = cabeExplicacao ? alturaComExplicacao : alturaControles;
 
     const area = caixa(this, { largura: larguraCaixa(), alturaConteudo, titulo: "CONFIGURACOES" });
     const p = pilha(area, ESPACO.md);
@@ -219,19 +231,21 @@ export class Pausa extends Phaser.Scene {
       this.painel.add(b);
     });
 
-    const areaTexto = p.reservar(alturaDoTexto(linhas.length), ESPACO.lg);
-    linhas.forEach((linha, i) => {
-      this.painel.add(
-        marcar(
-          texto(this, LARGURA / 2, areaTexto.y + i * TAMANHO.linhaTexto, linha, {
-            cor: 0x4a3e64,
-            ancora: 0.5,
-          }),
-          "texto",
-          linha
-        )
-      );
-    });
+    if (cabeExplicacao) {
+      const areaTexto = p.reservar(alturaDoTexto(linhas.length), ESPACO.lg);
+      linhas.forEach((linha, i) => {
+        this.painel.add(
+          marcar(
+            texto(this, LARGURA / 2, areaTexto.y + i * TAMANHO.linhaTexto, linha, {
+              cor: 0x4a3e64,
+              ancora: 0.5,
+            }),
+            "texto",
+            linha
+          )
+        );
+      });
+    }
 
     // ------------------------------------------------------------ som
     // Dois botoes, nao uma chavinha: chavinha exige saber que o lado aceso e o

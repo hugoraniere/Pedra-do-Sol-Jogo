@@ -16,6 +16,7 @@
     "app:win": "npm run build && electron-builder --win",
     "app:linux": "npm run build && electron-builder --linux",
     "auditar": "npm run build && node ferramentas/auditar-ui.mjs",
+    "auditar-celular": "npm run build && node ferramentas/auditar-celular.mjs",
     "conferir": "node ferramentas/conferir-personagens.mjs",
     "folha": "python3 ferramentas/folha-de-personagens.py",
     "bestiario": "python3 ferramentas/folha-do-bestiario.py",

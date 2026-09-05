@@ -18,9 +18,13 @@ import { medidaDaJanela, vigiarJanela } from "./sistemas/visao";
 import { instalarBancada } from "./sistemas/bancada";
 import { ligarDoutor } from "./sistemas/doutor";
 import { instalarPonteiro } from "./sistemas/cursor";
+import { vigiarOrientacao } from "./sistemas/orientacao";
 
 // escuta antes do Phaser subir, senao um erro na propria subida passa batido
 ligarDoutor();
+// nao depende do Phaser: se o celular ja esta de pe, o aviso aparece antes
+// mesmo da fonte terminar de carregar, em vez de esperar o jogo montar
+vigiarOrientacao();
 
 function comecar() {
   // a resolucao logica sai da janela e da visao escolhida, e tem que estar
