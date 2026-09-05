@@ -18,7 +18,7 @@ import { alcancaveis, caminho, chaveDaCasa, distanciaEmCasas, type Casa } from "
 import { acoesDoHeroi, type AcaoDeHeroi } from "../sistemas/acao";
 import { fileira } from "../sistemas/fileira";
 import { criarAnimacoes, camadasDoHeroi, Heroi } from "../sistemas/heroi";
-import { agachar, hitstop, ondaDeConjuracao, piscar, projetilOrientado } from "../sistemas/fx";
+import { agachar, estourinho, hitstop, ondaDeConjuracao, piscar, projetil, projetilOrientado } from "../sistemas/fx";
 import { aplicarDerrota, estado, guardar, marcarDerrotado, registrarUso, salvar, usosGastos } from "../sistemas/estado";
 import { HOSPITAL_ENTRADA, VILA } from "../dados/mapas";
 import { poderesDoHeroi } from "../sistemas/poderes";
@@ -693,6 +693,21 @@ export class Combate extends Phaser.Scene {
         });
         this.cameras.main.shake(70, 0.0015);
         this.time.delayedCall(600, () => this.fimDaAcao());
+        return;
+      } else if (acao.id === "bola-de-fogo") {
+        // a magia mais forte do Mago merece pesar mais que as outras treze -
+        // passo 7 do plano (o ultimo). Onda maior (16 em vez do padrao),
+        // bola mais gorda (raio 3 em vez de 2) e o unico impacto com
+        // hitstop de magia de proposito: Bafo Gelado nao trava a tela,
+        // Bola de Fogo trava.
+        ondaDeConjuracao(this, this.heroi.x, this.heroi.y, 0xf2802b, 16);
+        projetil(this, this.heroi.x, this.heroi.y - 8, cx, cy, 0xf2802b, 3, 220, () => {
+          pegos.forEach((b) => this.atingir(b, cx, cy, faixa === "oba"));
+          estourinho(this, cx, cy, 0xf2802b, 8, 12);
+          hitstop(this, 60);
+          this.cameras.main.shake(100, 0.003);
+          this.time.delayedCall(500, () => this.fimDaAcao());
+        });
         return;
       } else {
         pegos.forEach((b) => this.atingir(b, cx, cy, faixa === "oba"));

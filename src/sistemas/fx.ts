@@ -213,16 +213,17 @@ export function projetil(
   x1: number, y1: number,
   x2: number, y2: number,
   cor: number,
+  raio = 2,
   ms = 220,
   onChegar?: () => void
 ) {
-  const bola = cena.add.circle(x1, y1, 2, cor).setDepth(9999);
+  const bola = cena.add.circle(x1, y1, raio, cor).setDepth(9999);
   const rastro: Phaser.GameObjects.Arc[] = [];
   const evento = cena.time.addEvent({
     delay: 30,
     loop: true,
     callback: () => {
-      const p = cena.add.circle(bola.x, bola.y, 1.3, cor, 0.35).setDepth(9998);
+      const p = cena.add.circle(bola.x, bola.y, raio * 0.65, cor, 0.35).setDepth(9998);
       rastro.push(p);
       cena.tweens.add({ targets: p, alpha: 0, duration: 180, onComplete: () => p.destroy() });
     },

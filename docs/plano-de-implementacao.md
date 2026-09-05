@@ -1217,6 +1217,21 @@ escalonados, todos azuis, distinguivel de Bola de Fogo so pela cor e pelo
 Tamanho: P
 
 ### 7. Bola de Fogo, a mais vista das treze
+
+> **Feita, checada por leitura de codigo e pelas conferencias automaticas,
+> nao ao vivo** (esta sessao — mesma ressalva dos passos 5 e 6, a aba de
+> teste continuou presa em `document.hidden` a sessao inteira). `projetil()`
+> ganhou `raio = 2` como novo parametro opcional, entre `cor` e `ms` -
+> conferido que o unico outro lugar que chama `projetil()` hoje
+> (`Provador.ts:850`) so passa os 5 argumentos posicionais originais, entao
+> nao quebra. `npm run build`, `npm run auditar` (36 telas, 0 problema) e
+> `npm run conferir` (25 combinacoes) passam limpos — nao provam a animacao
+> em si (nenhum dos tres abre um combate de verdade), mas provam que nada
+> ficou incoerente: tipos batendo, jogo abrindo, nenhuma tela quebrada. Com
+> isto, a Atualizacao 3 (todos os 7 passos) esta implementada; falta so o
+> Hugo ver rodando de verdade e dizer se o peso/velocidade de cada efeito
+> "sente" certo — isso e coisa de jogar, nao de ler codigo.
+
 Arquivo: `src/cenas/Combate.ts`
 Faz: `ondaDeConjuracao(pesDoHeroi, cor fogo, raioFinal=16)` (onda maior que o
 padrao — e a magia mais forte do Mago) + `projetil()` (o circulo generico
