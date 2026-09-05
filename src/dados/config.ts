@@ -293,6 +293,8 @@ export const OBJETOS = [
   "pinheiro", "pinheiro-baixo", "grande-ouvinte", "arvore-raio", "tronco-caido",
   "toco", "samambaia", "cogumelo", "cogumelo-azul", "pedra-musgo", "teia", "raizes",
   "cama", "prateleira-pocoes", "caldeirao",
+  "mesa", "tapete", "armario", "banco", "forja", "bigorna", "suporte-armas",
+  "estante-livros", "forno-padaria", "prateleira-pao",
 ] as const;
 
 export const CABELOS = [
