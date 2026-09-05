@@ -13,19 +13,20 @@ import Phaser from "phaser";
 import { ALTURA, LARGURA, SOLIDOS, TILE } from "../dados/config";
 import { acharCriatura, spriteDoGoblin } from "../dados/conteudo";
 import { ICONE, MOVIMENTO } from "../dados/provador";
-import { ARMAS, CRIATURAS_SOM, DADO, DESFECHO, IMPACTOS, MAGIAS_SOM, faixaDoDado } from "../dados/sons";
+import { ARMAS, CRIATURAS_SOM, DADO, DESFECHO, IMPACTOS, MAGIAS_SOM } from "../dados/sons";
+import { testar, foiSucesso, type Desfecho, type ResultadoDeTeste } from "../sistemas/teste";
 import { alcancaveis, caminho, chaveDaCasa, distanciaEmCasas, type Casa } from "../sistemas/alcance";
 import { acoesDoHeroi, type AcaoDeHeroi } from "../sistemas/acao";
 import { fileira } from "../sistemas/fileira";
 import { criarAnimacoes, camadasDoHeroi, Heroi } from "../sistemas/heroi";
-import { agachar, estourinho, hitstop, ondaDeConjuracao, piscar, projetil, projetilOrientado } from "../sistemas/fx";
+import { agachar, estourinho, hitstop, ondaDeConjuracao, piscar, popIn, projetil, projetilOrientado } from "../sistemas/fx";
 import { aplicarDerrota, estado, guardar, marcarDerrotado, registrarUso, salvar, usosGastos } from "../sistemas/estado";
 import { HOSPITAL_ENTRADA, VILA } from "../dados/mapas";
 import { poderesDoHeroi } from "../sistemas/poderes";
 import type { Atributo } from "../dados/conteudo";
 import { tocar, tocarFicha } from "../sistemas/som";
 import { texto } from "../sistemas/texto";
-import { Ordem, rolar } from "../sistemas/turnos";
+import { Ordem } from "../sistemas/turnos";
 import type { Mundo } from "./Mundo";
 
 const SLOT = 22;
@@ -68,6 +69,16 @@ type Slot = {
 };
 
 export type Encontro = { id: string; chave: string }[];
+
+/** So tres arquivos de som existem (oba/quase/ops) pros cinco desfechos novos -
+ *  gravar dois desfechos novos (critico de sucesso, critico de fracasso) fica
+ *  pra quando fizer sentido investir em som/gerar.py. Ate la, os dois criticos
+ *  emprestam o tom do desfecho mais proximo. */
+function somDoDesfecho(desfecho: Desfecho): keyof typeof DESFECHO {
+  if (desfecho === "critico-sucesso" || desfecho === "sucesso") return "oba";
+  if (desfecho === "falha-perto") return "quase";
+  return "ops";
+}
 
 export class Combate extends Phaser.Scene {
   private encontro: Encontro = [];
@@ -363,15 +374,16 @@ export class Combate extends Phaser.Scene {
     return this.bichos.filter((b) => b.tipo === "goblin");
   }
 
-  private d6 = () => Phaser.Math.Between(1, 6);
+  /** Revisao de 2026-09-04 (docs/modelo-de-combate.md secao 3): 1d20, nao 1d6. */
+  private d20 = () => Phaser.Math.Between(1, 20);
 
   private comecarCombate() {
     const lutadores = this.goblins();
     if (lutadores.length === 0) return this.acabarCombate();
     this.fase = "vezDaCriatura";
     this.ordem.comecar([
-      { id: "heroi", iniciativa: this.d6() + this.atributos.esperteza, movimentoMax: MOVIMENTO.heroi },
-      ...lutadores.map((g) => ({ id: g.id, iniciativa: this.d6(), movimentoMax: MOVIMENTO.goblin })),
+      { id: "heroi", iniciativa: this.d20() + this.atributos.esperteza, movimentoMax: MOVIMENTO.heroi },
+      ...lutadores.map((g) => ({ id: g.id, iniciativa: this.d20(), movimentoMax: MOVIMENTO.goblin })),
     ]);
     const minha = this.casaDoHeroi();
     const [ax, ay] = this.centroDaCasa(minha.tx, minha.ty);
@@ -429,7 +441,11 @@ export class Combate extends Phaser.Scene {
     });
   }
 
-  /** A vez da criatura: anda ate perto e bate. Ela NUNCA rola dado, igual a mesa. */
+  /** A vez da criatura: anda ate perto e bate. Ela NUNCA rola dado - isso nao
+   *  mudou, so ficou mais estrito (docs/modelo-de-combate.md secao 3, revisao
+   *  de 2026-09-04): antes ela rolava o proprio ataque contra uma faixa fixa;
+   *  agora e sempre o HEROI que rola, tambem pra se defender. A criatura so
+   *  tem um ND fixo (10 + bonus) que representa a forca do golpe dela. */
   private jogarCriatura(id: string) {
     const b = this.bichos.find((x) => x.id === id);
     if (!b) { this.ordem.remover(id); return this.entrarNoTurno(); }
@@ -453,17 +469,19 @@ export class Combate extends Phaser.Scene {
         tocarFicha(CRIATURAS_SOM.pequeno.reage);
         this.time.delayedCall(500, () => {
           grito.destroy();
-          const { dado, total } = rolar(b.bonus, this.d6);
-          const faixa = faixaDoDado(total);
+          // o heroi rola DEFESA contra o ND do golpe da criatura - nunca mais
+          // a criatura rolando o proprio ataque.
+          const nd = 10 + b.bonus;
+          const resultado = testar(this.atributos.esperteza, nd, this.d20);
           tocarFicha(DADO.rola);
-          this.mostrarDado(dado, b.bonus, faixa, b.sprite.x, b.sprite.y - 40);
+          this.mostrarDado(resultado, this.atributos.esperteza, b.sprite.x, b.sprite.y - 40);
           this.time.delayedCall(520, () => {
-            tocarFicha(DESFECHO[faixa]);
-            if (faixa === "ops") {
+            tocarFicha(DESFECHO[somDoDesfecho(resultado.desfecho)]);
+            if (foiSucesso(resultado.desfecho)) {
               this.poeira(this.heroi.x, this.heroi.y - 8);
               tocarFicha(IMPACTOS.errou);
             } else {
-              this.heroiApanha(faixa === "oba");
+              this.heroiApanha(resultado.desfecho === "critico-fracasso");
             }
             this.time.delayedCall(420, () => { this.ordem.passar(); this.entrarNoTurno(); });
           });
@@ -646,16 +664,19 @@ export class Combate extends Phaser.Scene {
     else if (acao.som === "voz") tocarFicha(MAGIAS_SOM.voz);
 
     const bonus = this.atributos[acao.atributo];
-    const { dado, total } = rolar(bonus, this.d6);
-    const faixa = faixaDoDado(total);
+    // o ND vem de quem esta na casa mirada - hoje todo bicho tem bonus 0, entao
+    // isto da ND 10 sempre, mas ja fica pronto pro dia que o bestiario
+    // diferenciar bicho fraco de chefe (docs/modelo-de-combate.md secao 3).
+    const pegos = this.pegos(acao, casa);
+    const nd = 10 + (pegos[0]?.bonus ?? 0);
+    const resultado = testar(bonus, nd, this.d20);
     tocarFicha(DADO.rola);
     const [cx, cy] = this.centroDaCasa(casa.tx, casa.ty);
-    this.mostrarDado(dado, bonus, faixa, cx, cy - 40);
+    this.mostrarDado(resultado, bonus, cx, cy - 40);
 
     this.time.delayedCall(420, () => {
-      tocarFicha(DESFECHO[faixa]);
-      const pegos = this.pegos(acao, casa);
-      if (faixa === "ops" || pegos.length === 0) {
+      tocarFicha(DESFECHO[somDoDesfecho(resultado.desfecho)]);
+      if (!foiSucesso(resultado.desfecho) || pegos.length === 0) {
         this.poeira(cx, cy - 8);
         tocarFicha(IMPACTOS.errou);
       } else if (acao.id === "golpe-arco" || acao.id === "golpe-funda") {
@@ -670,7 +691,7 @@ export class Combate extends Phaser.Scene {
           ? [0x96a2b8, 4, 4]
           : [0xa87a4e, 2, 8];
         projetilOrientado(this, this.heroi.x, this.heroi.y - 8, cx, cy, corProjetil, largura, comprimento, ms, () => {
-          pegos.forEach((b) => this.atingir(b, cx, cy, faixa === "oba"));
+          pegos.forEach((b) => this.atingir(b, cx, cy, resultado.desfecho === "critico-sucesso"));
           this.cameras.main.shake(90, 0.0022);
           this.time.delayedCall(500, () => this.fimDaAcao());
         });
@@ -687,7 +708,7 @@ export class Combate extends Phaser.Scene {
             projetilOrientado(this, this.heroi.x, this.heroi.y - 8, px, py, 0x7ec4f2, 5, 6, 160, () => {
               pegos
                 .filter((b) => this.mesmaCasa(this.casaDoBicho(b), c.tx, c.ty))
-                .forEach((b) => this.atingir(b, px, py, faixa === "oba", "gelo"));
+                .forEach((b) => this.atingir(b, px, py, resultado.desfecho === "critico-sucesso", "gelo"));
             });
           });
         });
@@ -702,7 +723,7 @@ export class Combate extends Phaser.Scene {
         // Bola de Fogo trava.
         ondaDeConjuracao(this, this.heroi.x, this.heroi.y, 0xf2802b, 16);
         projetil(this, this.heroi.x, this.heroi.y - 8, cx, cy, 0xf2802b, 3, 220, () => {
-          pegos.forEach((b) => this.atingir(b, cx, cy, faixa === "oba"));
+          pegos.forEach((b) => this.atingir(b, cx, cy, resultado.desfecho === "critico-sucesso"));
           estourinho(this, cx, cy, 0xf2802b, 8, 12);
           hitstop(this, 60);
           this.cameras.main.shake(100, 0.003);
@@ -710,7 +731,7 @@ export class Combate extends Phaser.Scene {
         });
         return;
       } else {
-        pegos.forEach((b) => this.atingir(b, cx, cy, faixa === "oba"));
+        pegos.forEach((b) => this.atingir(b, cx, cy, resultado.desfecho === "critico-sucesso"));
         // o martelo pesa mais que espada, cajado ou soco: o mesmo golpe corpo
         // a corpo (passo 3 do plano), so essa arma ganha o micro-engasgo.
         if (acao.id === "golpe-martelo") hitstop(this, 50);
@@ -731,24 +752,44 @@ export class Combate extends Phaser.Scene {
     this.calcularAlcance();
   }
 
-  private mostrarDado(dado: number, bonus: number, faixa: "ops" | "quase" | "oba", x: number, y: number) {
-    const cores = { ops: 0xe2483d, quase: 0xf5b62b, oba: 0x3e9b62 };
-    const palavras = { ops: "OPS", quase: "QUASE", oba: "OBA" };
-    const palavra = palavras[faixa];
-    const largura = 26 + (bonus > 0 ? 18 : 0) + palavra.length * 8 + 8;
+  /** O cartao do dado, revisado pra 1d20/5 desfechos (docs/modelo-de-combate.md
+   *  secao 3). Nao ha mais icone de face - 20 faces de dado nao cabem em pixel
+   *  art razoavel, entao o numero sai como texto, igual o modificador ja saia. */
+  private mostrarDado(resultado: ResultadoDeTeste, bonus: number, x: number, y: number) {
+    const cores: Record<Desfecho, number> = {
+      "critico-sucesso": 0xf5b62b,
+      sucesso: 0x3e9b62,
+      "falha-perto": 0xf2802b,
+      falha: 0xe2483d,
+      "critico-fracasso": 0x7b5ac4,
+    };
+    const palavras: Record<Desfecho, string> = {
+      "critico-sucesso": "CRITICO!",
+      sucesso: "SUCESSO",
+      "falha-perto": "PERTO",
+      falha: "FALHOU",
+      "critico-fracasso": "DESASTRE",
+    };
+    const palavra = palavras[resultado.desfecho];
+    const largura = 30 + (bonus > 0 ? 18 : 0) + palavra.length * 8 + 8;
     const cx = Phaser.Math.Clamp(x, largura / 2 + 4, this.largura * TILE - largura / 2 - 4);
     const caixa = this.add.container(cx, y).setDepth(2000);
     const chapa = this.add.nineslice(0, 0, "painel-creme", undefined, largura, 20, 8, 8, 8, 8).setOrigin(0.5);
     const esquerda = -largura / 2 + 4;
-    const face = this.add.image(esquerda + 8, 0, "icones", ICONE.dadoBase + dado - 1);
-    const pecas: Phaser.GameObjects.GameObject[] = [chapa, face];
-    let cursor = esquerda + 18;
+    const numero = texto(this, esquerda + 4, -4, String(resultado.dado), { cor: 0x2c2440 });
+    const pecas: Phaser.GameObjects.GameObject[] = [chapa, numero];
+    let cursor = esquerda + 22;
     if (bonus > 0) {
       pecas.push(texto(this, cursor, -4, `+${bonus}`, { cor: 0x4a3e64 }));
       cursor += 18;
     }
-    pecas.push(texto(this, cursor + 2, -4, palavra, { cor: cores[faixa] }));
+    pecas.push(texto(this, cursor + 2, -4, palavra, { cor: cores[resultado.desfecho] }));
     caixa.add(pecas);
+    // os dois criticos ganham um pulo de entrada - a mesma familia de efeito que
+    // ja marca "isto e diferente do normal" em pips e selos, so emprestada aqui.
+    if (resultado.desfecho === "critico-sucesso" || resultado.desfecho === "critico-fracasso") {
+      popIn(this, caixa, 160);
+    }
     this.tweens.add({
       targets: caixa, y: y - 10, alpha: 0, delay: 640, duration: 320,
       onComplete: () => caixa.destroy(),
