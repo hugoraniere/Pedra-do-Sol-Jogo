@@ -10,6 +10,7 @@
  */
 import { ARMAS, acharClasse, acharMagia, acharRaca, type AcaoDeCombate, type FormaDeAcao } from "../dados/conteudo.ts";
 import type { Marca } from "./marcas.ts";
+import type { AlvoDeAcao } from "./alvo.ts";
 import type { Heroi } from "./estado.ts";
 
 /** Quando a acao volta a ficar disponivel. "porLuta" so existe pro Golpe
@@ -60,18 +61,26 @@ export function golpeDaArma(armaId: string): AcaoDeHeroi {
  *  equivalente la (bafo-gelado, voz-de-trovao, bola-de-fogo); os outros vem
  *  da tabela de `docs/11-combate-e-magias.md` secao 9, convertidos de px
  *  (real-time, obsoleto) pra casas (~16px cada). */
-const TABELA_DE_MAGIA: Record<string, { forma: FormaDeAcao; alcance: number; icone: number; marca?: Marca }> = {
+const TABELA_DE_MAGIA: Record<
+  string,
+  { forma: FormaDeAcao; alcance: number; icone: number; marca?: Marca; alvo?: AlvoDeAcao }
+> = {
   luzinha: { forma: "aoRedor", alcance: 0, icone: 6, marca: "luz" },
   "bafo-gelado": { forma: "linha", alcance: 3, icone: 8, marca: "gelo" },
   "cresce-grama": { forma: "aoRedor", alcance: 3, icone: 6, marca: "planta" },
   "voz-de-trovao": { forma: "aoRedor", alcance: 3, icone: 9, marca: "som-alto" },
-  "pulo-de-sapo": { forma: "casa", alcance: 4, icone: 6, marca: "pulo" },
-  "dedo-colante": { forma: "aoRedor", alcance: 0, icone: 6, marca: "cola" },
-  remendo: { forma: "casa", alcance: 2, icone: 6, marca: "conserto" },
-  "escudo-de-bolha": { forma: "aoRedor", alcance: 0, icone: 6, marca: "bolha" },
+  // salta pra qualquer casa livre dentro do alcance, sem se importar com o que
+  // tem no meio do caminho - "atravessa rio, muro ou inimigo de um salto so".
+  // alvo "livre": nao precisa pegar ninguem, o efeito e mover o proprio heroi.
+  "pulo-de-sapo": { forma: "casa", alcance: 4, icone: 6, marca: "pulo", alvo: "livre" },
+  "dedo-colante": { forma: "aoRedor", alcance: 0, icone: 6, marca: "cola", alvo: "livre" },
+  // "casa"/alcance 2 nunca fazia sentido pra um conserto no proprio corpo -
+  // virou aoRedor/0, igual todo outro autocuidado (escudo, esconderijo).
+  remendo: { forma: "aoRedor", alcance: 0, icone: 6, marca: "conserto", alvo: "livre" },
+  "escudo-de-bolha": { forma: "aoRedor", alcance: 0, icone: 6, marca: "bolha", alvo: "livre" },
   "cheiro-de-bolo": { forma: "aoRedor", alcance: 4, icone: 6, marca: "doce" },
   "fala-bicho": { forma: "casa", alcance: 2, icone: 6, marca: "fala" },
-  "sumir-sumindo": { forma: "aoRedor", alcance: 0, icone: 6, marca: "invisivel" },
+  "sumir-sumindo": { forma: "aoRedor", alcance: 0, icone: 6, marca: "invisivel", alvo: "livre" },
   "chama-vento": { forma: "linha", alcance: 5, icone: 6, marca: "vento" },
   "bola-de-fogo": { forma: "casa", alcance: 6, icone: 7, marca: "fogo" },
 };

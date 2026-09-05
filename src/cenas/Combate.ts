@@ -19,7 +19,7 @@ import { alcancaveis, caminho, chaveDaCasa, distanciaEmCasas, type Casa } from "
 import { acoesDoHeroi, type AcaoDeHeroi } from "../sistemas/acao";
 import { fileira } from "../sistemas/fileira";
 import { criarAnimacoes, camadasDoHeroi, Heroi } from "../sistemas/heroi";
-import { agachar, estourinho, hitstop, ondaDeConjuracao, piscar, popIn, projetil, projetilOrientado } from "../sistemas/fx";
+import { agachar, estourinho, hitstop, ondaDeConjuracao, piscar, popIn, projetil, projetilOrientado, textoFlutuante } from "../sistemas/fx";
 import { aplicarDerrota, estado, guardar, marcarDerrotado, registrarUso, salvar, usosGastos } from "../sistemas/estado";
 import { HOSPITAL_ENTRADA, VILA } from "../dados/mapas";
 import { poderesDoHeroi } from "../sistemas/poderes";
@@ -28,6 +28,7 @@ import { tocar, tocarFicha } from "../sistemas/som";
 import { texto } from "../sistemas/texto";
 import { Ordem } from "../sistemas/turnos";
 import { aplicarMarca, type Condicao, type Marca } from "../sistemas/marcas";
+import { tem } from "../sistemas/condicoes";
 import { condicoesDados } from "../dados/condicoes-dados";
 import type { Mundo } from "./Mundo";
 
@@ -112,6 +113,10 @@ export class Combate extends Phaser.Scene {
   private coracoes = 3;
   private coracoesMax = 3;
   private atributos: Record<Atributo, number> = { forca: 0, destreza: 0, agilidade: 0, inteligencia: 0, vitalidade: 0 };
+  /** condicoes no proprio heroi - Escudo de Bolha, Veu de Sombra e Aderencia
+   *  sao autolancadas, ninguem mais tem essa lista (ver sistemas/alvo.ts). */
+  private heroiCondicoes: Condicao[] = [];
+  private heroiCondicoesUI?: Phaser.GameObjects.Container;
   private topoDaBarra = 0;
   private alcancadas = new Map<string, { tx: number; ty: number; custo: number; de?: string }>();
   /** A cena de onde o heroi e o chao de verdade vem emprestados. Nunca cria
@@ -138,6 +143,11 @@ export class Combate extends Phaser.Scene {
     this.fase = "montando";
     this.escolhida = undefined;
     this.rotaDoHeroi = [];
+    // sem isto, Escudo de Bolha ou Veu de Sombra lancado numa luta continuava
+    // valendo na luta seguinte - a cena e reaproveitada, os campos nao se
+    // limpam sozinhos.
+    this.heroiCondicoes = [];
+    this.heroiCondicoesUI = undefined;
 
     const st0 = estado();
     const ficha = st0.heroi;
@@ -476,8 +486,12 @@ export class Combate extends Phaser.Scene {
         this.time.delayedCall(500, () => {
           grito.destroy();
           // o heroi rola DEFESA contra o ND do golpe da criatura - nunca mais
-          // a criatura rolando o proprio ataque.
-          const nd = 10 + b.bonus;
+          // a criatura rolando o proprio ataque. Escondido (Veu de Sombra)
+          // torna o golpe mais dificil de acertar: -4 no ND que o heroi
+          // precisa bater, nunca abaixo de 4 (sempre sobra alguma chance de
+          // apanhar, nunca um "impossivel errar").
+          const escondido = tem(this.heroiCondicoes, "escondido");
+          const nd = Math.max(4, 10 + b.bonus - (escondido ? 4 : 0));
           const resultado = testar(this.atributos.agilidade, nd, this.d20);
           tocarFicha(DADO.rola);
           this.mostrarDado(resultado, this.atributos.agilidade, b.sprite.x, b.sprite.y - 40);
@@ -502,6 +516,16 @@ export class Combate extends Phaser.Scene {
   }
 
   private heroiApanha(cheio = true) {
+    // Escudo de Bolha "absorve o proximo golpe" (conteudo.ts) - literal: o
+    // golpe que ia acontecer some inteiro, mesmo um critico-fracasso de
+    // defesa, e a protecao se gasta na hora (nunca mais que um golpe).
+    if (tem(this.heroiCondicoes, "protegido")) {
+      this.heroiCondicoes = this.heroiCondicoes.filter((c) => c.id !== "protegido");
+      this.mostrarCondicoesHeroi();
+      piscar(this, this.heroi, 90, 2, 0.5);
+      tocarFicha(IMPACTOS.errou);
+      return;
+    }
     tocarFicha(IMPACTOS.bicho);
     this.cameras.main.shake(cheio ? 140 : 90, cheio ? 0.005 : 0.003);
     this.coracoes = Math.max(0, this.coracoes - 1);
@@ -548,10 +572,17 @@ export class Combate extends Phaser.Scene {
   }
 
   // ==================================================================== a vez
-  private passavel(tx: number, ty: number, quem?: Bicho): boolean {
+  /** `ignorarSolido` e a Aderencia: maos grudentas escalam o que normalmente
+   *  bloqueia passagem (parede, pedra) - so o heroi usa isto, e so enquanto a
+   *  condicao "rapido" durar (ver aplicarMarcaNoHeroi, marca "cola"). Um bicho
+   *  ocupando a casa continua bloqueando: escalar parede nao e atravessar
+   *  gente. */
+  private passavel(tx: number, ty: number, quem?: Bicho, ignorarSolido = false): boolean {
     if (tx < 0 || ty < 0 || tx >= this.largura || ty >= this.altura) return false;
-    const tile = this.chaoLayer.getTileAt(tx, ty);
-    if (!tile || (SOLIDOS as readonly number[]).includes(tile.index)) return false;
+    if (!ignorarSolido) {
+      const tile = this.chaoLayer.getTileAt(tx, ty);
+      if (!tile || (SOLIDOS as readonly number[]).includes(tile.index)) return false;
+    }
     const ocupada = this.bichos.some(
       (b) => b !== quem && b.tipo !== "arbusto" && this.mesmaCasa(this.casaDoBicho(b), tx, ty)
     );
@@ -569,7 +600,8 @@ export class Combate extends Phaser.Scene {
   private calcularAlcance() {
     const vez = this.ordem.agora();
     if (!vez) return;
-    this.alcancadas = alcancaveis(this.casaDoHeroi(), vez.movimento, (tx, ty) => this.passavel(tx, ty));
+    const grudento = tem(this.heroiCondicoes, "rapido");
+    this.alcancadas = alcancaveis(this.casaDoHeroi(), vez.movimento, (tx, ty) => this.passavel(tx, ty, undefined, grudento));
     this.desenharCasas();
   }
 
@@ -629,6 +661,7 @@ export class Combate extends Phaser.Scene {
       this.ordem.gastarMovimento(achada.custo);
       this.fase = "andando";
       this.pincelCasas.clear();
+      this.quebrarEsconderijo();
     }
   }
 
@@ -638,6 +671,9 @@ export class Combate extends Phaser.Scene {
     this.escolhida = undefined;
     this.pincel.clear();
     this.heroi.parar();
+    // agir quebra o esconderijo igual andar quebra - a unica excecao e o
+    // proprio lance de Veu de Sombra, que acabou de criar a condicao.
+    if (acao.id !== "sumir-sumindo") this.quebrarEsconderijo();
     // Vira para o alvo antes de agir. Em combate o heroi ataca parado, e a
     // direcao dele so mudava andando: sem isto, o braco estica para o lado em
     // que ele andou pela ultima vez, que quase nunca e o lado do goblin.
@@ -682,7 +718,18 @@ export class Combate extends Phaser.Scene {
 
     this.time.delayedCall(420, () => {
       tocarFicha(DESFECHO[somDoDesfecho(resultado.desfecho)]);
-      if (!foiSucesso(resultado.desfecho) || pegos.length === 0) {
+      if (acao.id === "fala-bicho") {
+        // tabela de desfecho propria (docs/11-combate-e-magias.md secao 9):
+        // convencer nunca foi um golpe, entao nao cabe no galho generico de
+        // acerto/erro logo abaixo - ver convencerBicho().
+        this.convencerBicho(pegos, resultado.desfecho, cx, cy);
+        this.time.delayedCall(500, () => this.fimDaAcao());
+        return;
+      }
+      // "livre" (sistemas/alvo.ts): a acao age no proprio heroi ou numa casa
+      // vazia, entao pegos() vazio e o resultado ESPERADO, nunca um erro.
+      const semAlvoNecessario = acao.alvo === "livre";
+      if (!foiSucesso(resultado.desfecho) || (pegos.length === 0 && !semAlvoNecessario)) {
         this.poeira(cx, cy - 8);
         tocarFicha(IMPACTOS.errou);
       } else if (acao.id === "golpe-arco" || acao.id === "golpe-funda") {
@@ -742,6 +789,16 @@ export class Combate extends Phaser.Scene {
           this.time.delayedCall(500, () => this.fimDaAcao());
         });
         return;
+      } else if (acao.id === "pulo-de-sapo") {
+        this.saltar(casa);
+      } else if (acao.id === "remendo") {
+        this.curarComRemendo(resultado.desfecho === "critico-sucesso");
+      } else if (semAlvoNecessario) {
+        // Escudo de Bolha, Veu de Sombra, Aderencia: a marca vira condicao no
+        // proprio heroi, nunca em quem calhou de estar perto - "aoRedor
+        // alcance 0" nunca pega um bicho de verdade (ver sistemas/alvo.ts).
+        if (acao.marca) this.aplicarMarcaNoHeroi(acao.marca);
+        ondaDeConjuracao(this, this.heroi.x, this.heroi.y, acao.cor, 10);
       } else {
         pegos.forEach((b) => {
           this.atingir(b, cx, cy, resultado.desfecho === "critico-sucesso");
@@ -904,6 +961,39 @@ export class Combate extends Phaser.Scene {
     });
   }
 
+  /** A mesma saida de `desistir()` (some do combate E do mapa, larga o de
+   *  sempre) - so que sem a queda giratoria de quem perde a luta. Foi
+   *  CONVENCIDO, nao vencido (Lingua Selvagem, ver convencerBicho()). Some
+   *  trotando pro lado de fora do heroi, e `comLoot` so vem true no critico:
+   *  a magia funcionou tao bem que o bicho deixa cair o de sempre mesmo assim. */
+  private convencido(b: Bicho, comLoot: boolean) {
+    this.bichos = this.bichos.filter((o) => o !== b);
+    b.corpo?.setVelocity(0, 0);
+    b.pips?.destroy();
+    b.condicoesUI?.destroy();
+    if (b.tipo === "goblin") {
+      tocarFicha(CRIATURAS_SOM.pequeno.desiste);
+      if (b.chave) {
+        marcarDerrotado(b.chave);
+        this.mundo.removerCriatura(b.chave);
+        if (comLoot) {
+          const ficha = acharCriatura(b.bicharioId);
+          ficha?.larga.forEach((item) => {
+            if (item === "moeda") estado().moedas += 1;
+            else guardar(item);
+          });
+        }
+        salvar();
+      }
+    }
+    this.ordem.remover(b.id);
+    const ladoDoHeroi = b.sprite.x < this.heroi.x ? -1 : 1;
+    this.tweens.add({
+      targets: b.sprite, alpha: 0, x: b.sprite.x + ladoDoHeroi * 24,
+      duration: 420, ease: "Sine.easeIn", onComplete: () => b.sprite.destroy(),
+    });
+  }
+
   private poeira(x: number, y: number) {
     for (let i = 0; i < 5; i++) {
       const p = this.add.circle(x, y, 1.5, 0xfdefd6, 0.9).setDepth(y + 1);
@@ -912,6 +1002,65 @@ export class Combate extends Phaser.Scene {
         alpha: 0, duration: 300, onComplete: () => p.destroy(),
       });
     }
+  }
+
+  /** Salto Longo: acerta o dado e o heroi pula direto pra casa mirada, sem se
+   *  importar com parede, rio ou bicho no meio do caminho - "atravessa rio,
+   *  muro ou inimigo de um salto so" (conteudo.ts). Sem pegos(): o efeito e
+   *  mover o proprio heroi, nunca causar dano (marca "pulo" e efeito DIRETO,
+   *  ver o cabecalho de sistemas/marcas.ts). */
+  private saltar(casa: Casa) {
+    const [dx, dy] = this.centroDaCasa(casa.tx, casa.ty);
+    agachar(this, this.heroi, 90);
+    this.time.delayedCall(90, () => {
+      this.tweens.add({
+        targets: this.heroi, x: dx, y: dy, duration: 200, ease: "Sine.easeOut",
+        onComplete: () => {
+          this.tweens.add({ targets: this.heroi, scaleY: 0.82, duration: 70, yoyo: true });
+          this.poeira(dx, dy);
+        },
+      });
+    });
+  }
+
+  /** Remendo: conserta o proprio heroi, nao um objeto - a mochila ainda nao
+   *  tem nada quebravel pra consertar de verdade (marca "conserto", mesmo
+   *  cabecalho de sistemas/marcas.ts). Cura 1 coracao, 2 no critico - a unica
+   *  cura de combate que o heroi tem hoje. */
+  private curarComRemendo(critico: boolean) {
+    const antes = this.coracoes;
+    this.coracoes = Math.min(this.coracoesMax, this.coracoes + (critico ? 2 : 1));
+    this.atualizarCoracoes();
+    estado().coracoes = this.coracoes;
+    salvar();
+    ondaDeConjuracao(this, this.heroi.x, this.heroi.y, 0xb08658, 10);
+    if (this.coracoes > antes) {
+      const t = texto(this, this.heroi.x, this.heroi.y - 30, `+${this.coracoes - antes}`, { cor: 0x3e9b62, ancora: 0.5 });
+      textoFlutuante(this, t, 20, 500);
+    }
+  }
+
+  /** Lingua Selvagem nunca causa dano, so tenta convencer - tabela propria
+   *  pros 5 desfechos (docs/11-combate-e-magias.md secao 9), porque nao cabe
+   *  no galho generico de acerto/erro de golpe e magia:
+   *    critico-sucesso: vai embora E larga o de sempre (efeito extra do critico)
+   *    sucesso:         vai embora, sem loot (foi convencido, nao vencido)
+   *    falha / falha-perto: nao convenceu, a luta continua igual
+   *    critico-fracasso: assustou o bicho errado - ele fica bravo (+2 no ND) */
+  private convencerBicho(pegos: Bicho[], desfecho: Desfecho, cx: number, cy: number) {
+    const b = pegos[0];
+    if (!b) { this.poeira(cx, cy - 8); tocarFicha(IMPACTOS.errou); return; }
+    if (desfecho === "critico-sucesso") return this.convencido(b, true);
+    if (desfecho === "sucesso") return this.convencido(b, false);
+    if (desfecho === "critico-fracasso") {
+      b.bonus += 2;
+      const grito = texto(this, b.sprite.x, b.sprite.y - 40, "!", { cor: 0xe2483d, ancora: 0.5 });
+      textoFlutuante(this, grito, 16, 500);
+      tocarFicha(CRIATURAS_SOM.pequeno.reage);
+      return;
+    }
+    this.poeira(cx, cy - 8);
+    tocarFicha(IMPACTOS.errou);
   }
 
   // ===================================================== vida sobre a cabeca
@@ -963,6 +1112,40 @@ export class Combate extends Phaser.Scene {
     const resultado = aplicarMarca(marca, b.condicoes);
     b.condicoes = resultado.condicoesNovas;
     this.mostrarCondicoes(b);
+  }
+
+  /** O mesmo desenho de `mostrarCondicoes`, so que acima do proprio heroi -
+   *  Escudo de Bolha, Veu de Sombra e Aderencia sao autolancadas (alvo
+   *  "livre" em sistemas/alvo.ts), entao o efeito e nele, nunca num bicho. */
+  private mostrarCondicoesHeroi() {
+    this.heroiCondicoesUI?.destroy();
+    if (this.heroiCondicoes.length === 0) return;
+    const visiveis = this.heroiCondicoes.slice(0, 3);
+    const largura = visiveis.length * 10 - 2;
+    const g = this.add.graphics();
+    visiveis.forEach((cond, i) => {
+      const ficha = condicoesDados(cond.id);
+      const x = -largura / 2 + i * 10;
+      g.fillStyle(ficha.cor, 1).fillRect(x, 0, 8, 8);
+      g.lineStyle(1, 0x2c2440, 0.8).strokeRect(x + 0.5, 0.5, 7, 7);
+    });
+    this.heroiCondicoesUI = this.add.container(this.heroi.x, this.heroi.y - 46, [g]).setDepth(2000);
+    popIn(this, this.heroiCondicoesUI, 140, 0.6);
+  }
+
+  private aplicarMarcaNoHeroi(marca: Marca) {
+    const resultado = aplicarMarca(marca, this.heroiCondicoes);
+    this.heroiCondicoes = resultado.condicoesNovas;
+    this.mostrarCondicoesHeroi();
+  }
+
+  /** Veu de Sombra some "enquanto o heroi ficar parado" (conteudo.ts) - andar
+   *  ou agir quebra o esconderijo na hora. Passar a vez, nao: e exatamente o
+   *  "ficar parado" que mantem a magia valendo. */
+  private quebrarEsconderijo() {
+    if (!tem(this.heroiCondicoes, "escondido")) return;
+    this.heroiCondicoes = this.heroiCondicoes.filter((c) => c.id !== "escondido");
+    this.mostrarCondicoesHeroi();
   }
 
   // =================================================================== update
@@ -1093,6 +1276,7 @@ export class Combate extends Phaser.Scene {
       // elas representam um estado que continua valendo, so seguem o bicho.
       b.condicoesUI?.setPosition(b.sprite.x, b.sprite.y - 46);
     });
+    this.heroiCondicoesUI?.setPosition(this.heroi.x, this.heroi.y - 46);
   }
 
   private desenharIniciativa() {

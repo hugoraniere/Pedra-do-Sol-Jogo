@@ -115,8 +115,15 @@ caso("tem() nao acha uma condicao ausente", !tem([{ id: "molhado", turnosRestant
   caso("planta aplica preso", igual(r.condicoesNovas, [{ id: "preso", turnosRestantes: 2 }]));
 }
 {
+  // cola e autolancada (Aderencia gruda as MAOS DO PROPRIO heroi) - nao faz
+  // sentido prender quem for acertado, entao a reacao mudou: deixa GRUDENTO
+  // (id "rapido", ver condicoes-dados.ts pro nome exibido), nunca preso.
   const r = aplicarMarca("cola", []);
-  caso("cola tambem aplica preso (mesma reacao de planta)", igual(r.condicoesNovas, [{ id: "preso", turnosRestantes: 2 }]));
+  caso("cola aplica rapido (\"grudento\"), nao mais preso", igual(r.condicoesNovas, [{ id: "rapido", turnosRestantes: 99 }]));
+}
+{
+  const r = aplicarMarca("invisivel", []);
+  caso("invisivel (Veu de Sombra) aplica escondido", igual(r.condicoesNovas, [{ id: "escondido", turnosRestantes: 99 }]));
 }
 {
   const r = aplicarMarca("doce", []);

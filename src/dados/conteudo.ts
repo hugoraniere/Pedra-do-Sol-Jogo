@@ -8,6 +8,7 @@
  * adicionar uma raca ou uma magia sem abrir nenhuma cena.
  */
 import type { Marca } from "../sistemas/marcas";
+import type { AlvoDeAcao } from "../sistemas/alvo";
 
 /** Revisao de 2026-09-04 (CLAUDE.md): os tres da mesa (FORCA, ESPERTEZA,
  *  CORACAO) viraram cinco. "Esperteza" fazia tres trabalhos escondidos - agora
@@ -39,6 +40,10 @@ export type AcaoDeCombate = {
   /** chave de som; nem toda acao tem uma ligada ainda (ver Combate.ts) */
   som: string;
   marca?: Marca;
+  /** "livre" quando a acao age no proprio heroi ou numa casa vazia, e nao
+   *  precisa pegar ninguem pra contar como sucesso - ver sistemas/alvo.ts.
+   *  Ausente (o padrao) significa "inimigo", igual sempre foi. */
+  alvo?: AlvoDeAcao;
 };
 
 /** Icones emprestados ate arte propria existir (arte/icones.py so tem "forca"

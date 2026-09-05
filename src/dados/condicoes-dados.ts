@@ -28,6 +28,12 @@ export const CONDICOES_DADOS: Partial<Record<IdCondicao, FichaCondicao>> = {
   assustado: { nome: "ASSUSTADO", cor: 0x7b5ac4 },
   atraido: { nome: "ATRAIDO", cor: 0xf5b62b },
   iluminado: { nome: "ILUMINADO", cor: 0xfff8ea },
+  escondido: { nome: "ESCONDIDO", cor: 0x4a3e64 },
+  // "rapido" e o id generico de condicoes.ts, mas quem carrega hoje e so a
+  // Aderencia (maos grudentas escalando qualquer superficie) - o nome exibido
+  // conta a historia de verdade, o id por baixo pode servir a outra magia de
+  // velocidade no futuro sem precisar renomear nada (ver sistemas/marcas.ts).
+  rapido: { nome: "GRUDENTO", cor: 0xee7ba6 },
 };
 
 export function condicoesDados(id: IdCondicao): FichaCondicao {
