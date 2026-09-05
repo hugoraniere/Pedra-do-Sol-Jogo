@@ -173,6 +173,69 @@ estavam certos** sobre o dado decidir.
 
 ---
 
+## 3.6 REGRA DURA: o combate nunca troca de lugar
+
+Decidida antes da Fase 3, por pedido explicito. Nao e detalhe de implementacao,
+e restricao de arquitetura — precisa estar escrita antes de mais alguem tocar
+na fronteira da Fase 7 (`docs/plano-de-implementacao.md`), porque e exatamente
+ali, na hora de portar o combate para o jogo de verdade, que o habito antigo de
+JRPG ("a tela escurece e carrega a arena de batalha") seria mais facil de
+reintroduzir sem querer.
+
+> **O combate comeca exatamente onde o jogador esta andando. Mesma cena, mesmo
+> mapa, mesma camera. Nunca existe uma "tela de batalha".**
+
+Isso ja e verdade no provador hoje, mas por decisao de desenho, nao por
+acidente — e o motivo de valer a pena escrever:
+
+- **uma cena so.** `create()` monta o tilemap **uma vez**. `comecarCombate()`
+  nunca chama `scene.start`, `scene.launch` nem recria o `Tilemap`: ele so
+  troca a `fase` (a maquina de estado que ja existia) de `"explorando"` para o
+  primeiro turno. A cena e o objeto do tilemap sao os MESMOS antes e depois.
+- **a camera nunca solta o heroi.** `startFollow(this.heroi, ...)` e chamado
+  uma vez, em `create()`. Nenhum ponto do combate troca o alvo da camera nem
+  da um corte.
+- **o heroi nao teleporta.** Ele so recebe um ajuste para o centro da PROPRIA
+  casa em que ja estava, animado em 160ms, no exato instante em que o combate
+  comeca. Isso NAO e mudanca de lugar: e alinhamento de grade. Fora de combate
+  o heroi anda em pixel continuo; o turno precisa dele exatamente em cima de
+  uma casa para `alcancaveis()`/`passavel()` funcionarem. Sem o ajuste, o
+  primeiro passo do turno o puxava de uma vez para o centro da casa e parecia
+  teleporte — foi corrigido bem no comeco da Fase 0.
+  **O limite nao e simetrico**, e vale escrever por que: o sprite e ancorado
+  pelo CENTRO no eixo X mas pelo PE (base da casa) no eixo Y — a mesma
+  convencao de `centroDaCasa()`/`casaDe()` usada no jogo inteiro. Isso da
+  **meia casa (8px) em X** e **uma casa inteira (16px) em Y**. Um limite unico
+  "meia casa nos dois eixos" foi a primeira versao deste teste, e ela
+  reprovava ajustes legitimos no eixo Y sem motivo — o proprio teste, ao ser
+  escrito com cuidado (posicionando o heroi de proposito num canto de casa em
+  vez de so no centro), pegou o proprio erro antes de virar regra escrita.
+
+**O que isso implica pra Fase 7**, e por isso a regra vem antes dela: o `ARENA`
+de `src/dados/provador.ts` e um mapa de mentira, criado SO porque o provador
+precisava de algum lugar pra existir sem depender de `Mundo.ts`. Ele nao e o
+modelo de "como o combate cria o proprio cenario" — e um substituto de "o mapa
+que o jogador ja estava andando". Quando a Fase 7.3 acontecer de verdade, o
+combate roda **em cima do tilemap que `Mundo.ts` ja desenha pra Vila Semente**,
+lendo o mesmo `objetos.json`, o mesmo `chaoLayer`, a mesma camera. Nunca um
+`Combate.ts` novo com o proprio `create()` e o proprio mapa.
+
+**Como se confere**: `Provador.conferirMesmoLugar()`, um metodo publico da
+propria cena (nao um script `.mjs`, porque isto precisa do Phaser de pe). Ele
+guarda uma "fotografia" antes de `comecarCombate()` — chave da cena, a
+IDENTIDADE do objeto `Tilemap` (nao uma copia, o mesmo objeto), o alvo da
+camera, e a CASA do heroi (nao so o pixel) — dispara o combate, e compara **na
+hora**, sem esperar nenhum tween: a garantia e geometrica (o alvo do ajuste e
+sempre o centro da propria casa onde o heroi ja estava), entao vale em
+qualquer instante da animacao. De proposito nao depende de esperar tempo real,
+porque esperar um tween de verdade e exatamente o tipo de teste que fica
+fragil com a aba em segundo plano. Roda no console do `?provador` com
+`jogo.scene.getScene("Provador").conferirMesmoLugar()`, e devolve OK/FALHA por
+item, igual as outras conferencias deste projeto. Ver
+`docs/plano-de-implementacao.md`, Fase 2.5.
+
+---
+
 ## 4. A pergunta que vale mais que toda esta lista
 
 > **Resolvida.** A resposta foi por turnos, e esta na secao 3.5. O que segue e o

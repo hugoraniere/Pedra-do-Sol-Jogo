@@ -63,9 +63,6 @@ def _ancoras(qtd, semente, distancia=5):
 
 
 # ------------------------------------------------------------------- grama
-
-
-# ------------------------------------------------------------------- grama
 def _tufo_grama(im, x, y, r):
     """Uma touceira: sombra no pe, 2 a 3 laminas inclinadas para o mesmo lado.
     O pe em sombra e o que ancora a touceira no chao; sem ele ela flutua."""
@@ -184,9 +181,6 @@ def areia():
         ret(im, x, y, larg, 1, (246, 232, 194))
         px(im, x, y + 1, (206, 182, 138))
     return im
-
-
-# -------------------------------------------------------------------- pedra
 
 
 # -------------------------------------------------------------------- pedra

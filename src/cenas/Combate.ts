@@ -10,29 +10,24 @@
  * (os goblins daquele encontro). Esta cena so sabe LUTAR contra quem chegou.
  */
 import Phaser from "phaser";
-import { ALTURA, COR, LARGURA, SOLIDOS, TILE } from "../dados/config";
-import { acharCriatura } from "../dados/conteudo";
-import { montarChao } from "../dados/mapas";
-import { ACOES_DE_PROVA, ARENA, ICONE, MOVIMENTO, type AcaoDeProva } from "../dados/provador";
+import { ALTURA, LARGURA, SOLIDOS, TILE } from "../dados/config";
+import { acharCriatura, spriteDoGoblin } from "../dados/conteudo";
+import { ICONE, MOVIMENTO } from "../dados/provador";
 import { ARMAS, CRIATURAS_SOM, DADO, DESFECHO, IMPACTOS, MAGIAS_SOM, faixaDoDado } from "../dados/sons";
 import { alcancaveis, caminho, chaveDaCasa, distanciaEmCasas, type Casa } from "../sistemas/alcance";
+import { acoesDoHeroi, type AcaoDeHeroi } from "../sistemas/acao";
 import { fileira } from "../sistemas/fileira";
 import { criarAnimacoes, camadasDoHeroi, Heroi } from "../sistemas/heroi";
-import { estado, guardar, marcarDerrotado, salvar } from "../sistemas/estado";
+import { estado, guardar, marcarDerrotado, registrarUso, salvar, usosGastos } from "../sistemas/estado";
 import { poderesDoHeroi } from "../sistemas/poderes";
 import type { Atributo } from "../dados/conteudo";
 import { tocar, tocarFicha } from "../sistemas/som";
 import { texto } from "../sistemas/texto";
 import { Ordem, rolar } from "../sistemas/turnos";
+import type { Mundo } from "./Mundo";
 
 const SLOT = 22;
 const GAP = 2;
-
-/** Onde cada participante entra na arena. So quatro: um encontro maior do que
- *  isso ja seria um bando, e bando e proximo passo, nao deste. */
-const POSTOS = [
-  { x: 14, y: 3 }, { x: 18, y: 7 }, { x: 12, y: 12 }, { x: 20, y: 11 },
-];
 
 type Fase = "montando" | "meuTurno" | "mirando" | "andando" | "vezDaCriatura" | "resolvendo";
 
@@ -58,7 +53,7 @@ type Bicho = {
 };
 
 type Slot = {
-  acao: AcaoDeProva;
+  acao: AcaoDeHeroi;
   fundo: Phaser.GameObjects.NineSlice;
   icone: Phaser.GameObjects.Image;
   borda: Phaser.GameObjects.Graphics;
@@ -79,7 +74,7 @@ export class Combate extends Phaser.Scene {
   private slots: Slot[] = [];
   private ordem = new Ordem();
   private fase: Fase = "montando";
-  private escolhida?: AcaoDeProva;
+  private escolhida?: AcaoDeHeroi;
   private rotaDoHeroi: Casa[] = [];
   private chaoLayer!: Phaser.Tilemaps.TilemapLayer;
   private pincel!: Phaser.GameObjects.Graphics;
@@ -100,6 +95,9 @@ export class Combate extends Phaser.Scene {
   private atributos: Record<Atributo, number> = { forca: 0, esperteza: 0, coracao: 0 };
   private topoDaBarra = 0;
   private alcancadas = new Map<string, { tx: number; ty: number; custo: number; de?: string }>();
+  /** A cena de onde o heroi e o chao de verdade vem emprestados. Nunca cria
+   *  os proprios: ver docs/plano-do-combate.md, secao 3.6. */
+  private mundo!: Mundo;
   private largura = 0;
   private altura = 0;
 
@@ -128,47 +126,65 @@ export class Combate extends Phaser.Scene {
     this.coracoes = st0.coracoes;
     this.atributos = poderesDoHeroi(ficha);
 
-    const spritesDosBichos = [...new Set(this.encontro.map((e) => acharCriatura(e.id)?.sprite).filter(Boolean))] as string[];
+    // goblin nao tem textura propria ("goblin" sozinho nunca foi carregado) -
+    // os 3 corpos de verdade entram todos aqui, e cada instancia escolhe o
+    // dela mais abaixo, por posicao (spriteDoGoblin)
+    const spritesDosBichos = [...new Set(
+      this.encontro.map((e) => (e.id === "goblin" ? undefined : acharCriatura(e.id)?.sprite)).filter(Boolean)
+    )] as string[];
+    if (this.encontro.some((e) => e.id === "goblin")) {
+      spritesDosBichos.push("goblin-magricela", "goblin-gorducho", "goblin-moleque");
+    }
     criarAnimacoes(this, [...camadasDoHeroi(ficha).map((c) => c.chave), ...spritesDosBichos]);
 
-    const dados = montarChao(ARENA.chao);
-    const mapa = this.make.tilemap({ data: dados, tileWidth: TILE, tileHeight: TILE });
-    const tiles = mapa.addTilesetImage("tileset")!;
-    this.chaoLayer = mapa.createLayer(0, tiles, 0, 0)!;
-    this.chaoLayer.setCollision(SOLIDOS);
-    this.chaoLayer.setDepth(-1000);
-    this.largura = ARENA.chao[0].length;
-    this.altura = ARENA.chao.length;
+    // A luta acontece NESTE mundo, nunca no proprio: pega emprestado o heroi
+    // de verdade e o chao de verdade de Mundo.ts, em vez de criar um mapa
+    // (`ARENA`, de dados/provador.ts — aquilo era so a bancada de teste) e um
+    // segundo Heroi. Ver docs/plano-do-combate.md, secao 3.6, a regra dura
+    // escrita depois que este arquivo nasceu do jeito antigo.
+    this.mundo = this.scene.get("Mundo") as Mundo;
+    const ctx = this.mundo.contexto();
+    this.heroi = ctx.heroi;
+    this.chaoLayer = ctx.chao;
+    this.largura = this.chaoLayer.tilemap.width;
+    this.altura = this.chaoLayer.tilemap.height;
 
     this.pincelCasas = this.add.graphics().setDepth(-600);
     this.pincel = this.add.graphics().setDepth(-500);
-
-    ARENA.arbustos.forEach((a, i) => this.porArbusto(`arbusto-${i}`, a.x, a.y));
 
     // conta repeticao do mesmo bicho, para o segundo goblin nao se chamar
     // igual ao primeiro na trilha de turno
     const vistos: Record<string, number> = {};
     this.encontro.forEach((e, i) => {
       const b = acharCriatura(e.id);
-      if (!b) return;
-      const posto = POSTOS[i] ?? POSTOS[POSTOS.length - 1];
+      const casa = this.mundo.casaDaCriatura(e.chave);
+      if (!b || !casa) return;
       vistos[e.id] = (vistos[e.id] ?? 0) + 1;
       const nome = this.encontro.filter((o) => o.id === e.id).length > 1
         ? `${b.nome.toUpperCase()} ${ROMANO[vistos[e.id]] ?? vistos[e.id]}`
         : b.nome.toUpperCase();
-      this.porGoblin(`${e.id}-${i}`, e.id, e.chave, b.sprite, nome, 0, posto.x, posto.y, b.coracoes);
+      // ela entra exatamente onde ja estava parada no mapa — nunca num posto
+      // fixo de arena. O Mundo ja escondeu a versao decorativa dela. O corpo
+      // (spriteDoGoblin) sai da MESMA casa que o Mundo usou pra desenhar a
+      // versao decorativa, entao os dois sempre concordam.
+      const spriteChave = e.id === "goblin" ? spriteDoGoblin(casa.tx, casa.ty) : b.sprite;
+      this.porGoblin(`${e.id}-${i}`, e.id, e.chave, spriteChave, nome, 0, casa.tx, casa.ty, b.coracoes);
     });
 
-    this.heroi = new Heroi(this, ...this.centroDaCasa(ARENA.entrada.x, ARENA.entrada.y), ficha);
-    this.physics.add.collider(this.heroi, this.chaoLayer);
-
-    this.cameras.main.setBounds(0, 0, mapa.widthInPixels, mapa.heightInPixels);
+    // a camera de Combate so desenha o que ELE acrescenta (barra, mira, os
+    // bichos de combate) por cima do mundo de verdade, que continua sendo
+    // desenhado por baixo pela camera de Mundo. Por isso ela segue o MESMO
+    // heroi, com o mesmo lerp, e nunca pinta fundo proprio (sem
+    // setBackgroundColor: o padrao e transparente).
+    const limites = this.mundo.limites();
+    this.cameras.main.setBounds(0, 0, limites.largura, limites.altura);
     this.cameras.main.startFollow(this.heroi, true, 0.14, 0.14);
-    this.cameras.main.setBackgroundColor(COR.tinta);
     this.cameras.main.setRoundPixels(true);
-    this.cameras.main.fadeIn(160, 0, 0, 0);
-    this.physics.world.setBounds(0, 0, mapa.widthInPixels, mapa.heightInPixels);
-    this.heroi.body.setCollideWorldBounds(true);
+    // nem colisor nem limite de fisica pro heroi: o corpo dele pertence ao
+    // MUNDO de fisica de Mundo.ts (a mesma cena que o criou), que continua
+    // rodando por baixo. Registrar de novo aqui, no mundo de fisica desta
+    // cena, nao teria efeito nenhum — colisor so funciona dentro do mundo
+    // onde o corpo nasceu.
 
     this.montarInterface();
     this.ligarEntrada();
@@ -192,18 +208,20 @@ export class Combate extends Phaser.Scene {
     return this.casaDe(b.sprite.x, b.sprite.y);
   }
 
-  private porArbusto(id: string, tx: number, ty: number) {
-    const [x, y] = this.centroDaCasa(tx, ty);
-    const s = this.add.sprite(x, y, "obj-arbusto").setOrigin(0.5, 1).setDepth(y);
-    this.bichos.push({ id, bicharioId: "", nome: "ARBUSTO", retrato: -1, bonus: 0, sprite: s, tipo: "arbusto", coracoes: 1, coracoesMax: 1, mostrarAte: 0, rota: [] });
-  }
+  // porArbusto saiu daqui: a arena de mentira tinha arbustos pra quebrar, o
+  // mundo de verdade ainda nao tem objeto destrutivel nenhum plantado. Volta
+  // na Fase 5 (docs/plano-de-implementacao.md), quando objetos com estado
+  // existirem em Mundo.ts de verdade.
 
   private porGoblin(
     id: string, bicharioId: string, chave: string, spriteChave: string, nome: string,
     bonus: number, tx: number, ty: number, coracoes: number
   ) {
     const [x, y] = this.centroDaCasa(tx, ty);
-    const s = this.physics.add.sprite(x, y, spriteChave, 0).setOrigin(0.5, 1);
+    // nasce no mundo do Mundo, nao no da Combate: sao cenas empilhadas, e cada
+    // uma desenha a sua lista inteira por cima da de baixo. Se o goblin fosse
+    // desta cena, ele cobriria o heroi sempre, nao importa o Y de cada um.
+    const s = this.mundo.physics.add.sprite(x, y, spriteChave, 0).setOrigin(0.5, 1);
     s.setDepth(y);
     s.play(`${spriteChave}-parado-baixo`, true);
     s.body.setSize(10, 6).setOffset(3, 26);
@@ -229,16 +247,17 @@ export class Combate extends Phaser.Scene {
     }
     this.trilhaIniciativa = fixo(this.add.container(14 + this.coracoesMax * 11, 2));
 
+    const acoes = acoesDoHeroi(estado().heroi);
     const area = { x: 6, y: ALTURA - SLOT - 2, largura: LARGURA - 56, altura: SLOT };
     const linha = fileira(area, SLOT, GAP);
-    const cabem = Math.min(linha.cabem(), ACOES_DE_PROVA.length);
+    const cabem = Math.min(linha.cabem(), acoes.length);
     this.topoDaBarra = area.y - 14;
 
     fixo(this.add.nineslice(area.x - 2, area.y - 2, "painel-escuro", undefined,
       cabem * (SLOT + GAP) - GAP + 4, SLOT + 4, 8, 8, 8, 8).setOrigin(0).setAlpha(0.85));
 
     for (let i = 0; i < cabem; i++) {
-      const acao = ACOES_DE_PROVA[i];
+      const acao = acoes[i];
       const r = linha.reservar();
       const fundo = fixo(this.add.nineslice(r.x, r.y, "painel-creme", undefined, SLOT, SLOT, 8, 8, 8, 8).setOrigin(0));
       const icone = fixo(this.add.image(r.x + SLOT / 2, r.y + SLOT / 2 + 1, "icones", acao.icone));
@@ -252,7 +271,10 @@ export class Combate extends Phaser.Scene {
       alvo.on("pointerdown", () => this.escolher(acao));
       alvo.on("pointerover", () => this.mostrarDica(acao, r.x + SLOT / 2));
       alvo.on("pointerout", () => this.esconderDica());
-      this.slots.push({ acao, fundo, icone, borda, marca, numero, x: r.x, y: r.y, livreNaRodada: 0, gastou: false });
+      // "porAventura" pode ja ter sido gasta numa luta anterior desta mesma
+      // aventura — o slot nasce riscado se for o caso.
+      const jaGastou = acao.escopo === "porAventura" && usosGastos(acao.id) > 0;
+      this.slots.push({ acao, fundo, icone, borda, marca, numero, x: r.x, y: r.y, livreNaRodada: 0, gastou: jaGastou });
     }
 
     for (let i = 0; i < MOVIMENTO.heroi; i++) {
@@ -283,13 +305,13 @@ export class Combate extends Phaser.Scene {
     this.aviso.setDepth(1201);
   }
 
-  private mostrarDica(a: AcaoDeProva, xSlot: number) {
+  private mostrarDica(a: AcaoDeHeroi, xSlot: number) {
     const linha2 =
       a.forma === "aoRedor" ? `PEGA ${a.alcance} CASAS EM VOLTA`
       : a.forma === "linha" ? `LINHA DE ${a.alcance} CASAS`
       : `ALCANCE ${a.alcance} ${a.alcance === 1 ? "CASA" : "CASAS"}`;
-    const linha3 = a.usosPorCombate ? "UMA VEZ POR LUTA"
-      : a.espera > 0 ? `VOLTA EM ${a.espera} TURNOS`
+    const linha3 = a.escopo === "porLuta" ? "UMA VEZ POR LUTA"
+      : a.escopo === "porAventura" ? "UMA VEZ POR AVENTURA"
       : "TODO TURNO";
     const linhas = [a.nome, linha2, linha3];
     const ENTRE = 2;
@@ -397,14 +419,11 @@ export class Combate extends Phaser.Scene {
     this.slots.forEach((s) => { s.gastou = false; s.livreNaRodada = 0; });
     estado().coracoes = this.coracoes;
     salvar();
-    // a tela some antes de voltar, senao o corte do Mundo reaparecendo por
-    // cima da arena parece travamento em vez de transicao
+    // sem fade: o mundo nunca saiu de cena, entao nao ha nada pra "voltar".
+    // Combate so solta a barra e devolve o controle no mesmo lugar.
     this.time.delayedCall(700, () => {
-      this.cameras.main.fadeOut(220, 0, 0, 0);
-      this.cameras.main.once("camerafadeoutcomplete", () => {
-        this.scene.stop();
-        this.scene.resume("Mundo");
-      });
+      this.scene.stop();
+      this.mundo.sairDeCombate();
     });
   }
 
@@ -518,7 +537,7 @@ export class Combate extends Phaser.Scene {
     });
   }
 
-  private escolher(acao: AcaoDeProva) {
+  private escolher(acao: AcaoDeHeroi) {
     if (this.fase !== "meuTurno" && this.fase !== "mirando") return;
     const vez = this.ordem.agora();
     const slot = this.slots.find((s) => s.acao.id === acao.id)!;
@@ -568,7 +587,7 @@ export class Combate extends Phaser.Scene {
   }
 
   // ================================================================= executar
-  private executar(acao: AcaoDeProva, casa: Casa) {
+  private executar(acao: AcaoDeHeroi, casa: Casa) {
     this.fase = "resolvendo";
     this.escolhida = undefined;
     this.pincel.clear();
@@ -576,8 +595,11 @@ export class Combate extends Phaser.Scene {
     this.heroi.conjurar(300);
 
     const slot = this.slots.find((s) => s.acao.id === acao.id)!;
-    if (acao.usosPorCombate) slot.gastou = true;
-    if (acao.espera > 0) slot.livreNaRodada = this.ordem.rodada() + acao.espera;
+    if (acao.escopo === "porLuta") slot.gastou = true;
+    if (acao.escopo === "porAventura") {
+      slot.gastou = true;
+      registrarUso(acao.id);
+    }
     this.ordem.gastarAcao();
 
     if (acao.som === "cajado") tocarFicha(ARMAS.cajado.golpe);
@@ -590,7 +612,7 @@ export class Combate extends Phaser.Scene {
     const faixa = faixaDoDado(total);
     tocarFicha(DADO.rola);
     const [cx, cy] = this.centroDaCasa(casa.tx, casa.ty);
-    this.mostrarDado(dado, bonus, faixa, cx, cy - 24);
+    this.mostrarDado(dado, bonus, faixa, cx, cy - 40);
 
     this.time.delayedCall(420, () => {
       tocarFicha(DESFECHO[faixa]);
@@ -641,7 +663,7 @@ export class Combate extends Phaser.Scene {
     });
   }
 
-  private pegos(acao: AcaoDeProva, casa: Casa): Bicho[] {
+  private pegos(acao: AcaoDeHeroi, casa: Casa): Bicho[] {
     const eu = this.casaDoHeroi();
     if (acao.forma === "aoRedor") {
       return this.bichos.filter((b) => distanciaEmCasas(this.casaDoBicho(b), eu) <= acao.alcance);
@@ -685,6 +707,9 @@ export class Combate extends Phaser.Scene {
       tocarFicha(CRIATURAS_SOM.pequeno.desiste);
       if (b.chave) {
         marcarDerrotado(b.chave);
+        // tira a versao decorativa do mundo de verdade agora mesmo — nao
+        // precisa esperar Mundo recarregar o mapa pra ela sumir de vez.
+        this.mundo.removerCriatura(b.chave);
         const ficha = acharCriatura(b.bicharioId);
         ficha?.larga.forEach((item) => {
           if (item === "moeda") estado().moedas += 1;

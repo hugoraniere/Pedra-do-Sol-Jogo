@@ -24,6 +24,11 @@ import {
 } from "../dados/provador";
 import { ARMAS, CRIATURAS_SOM, DADO, DESFECHO, IMPACTOS, MAGIAS_SOM, faixaDoDado } from "../dados/sons";
 import { alcancaveis, caminho, chaveDaCasa, distanciaEmCasas, type Casa } from "../sistemas/alcance";
+import { decidirAcaoDaCriatura, type Comportamento } from "../sistemas/criatura";
+import { passarTurno, type Condicao } from "../sistemas/condicoes";
+import { condicoesDados } from "../dados/condicoes-dados";
+import { aplicarMarca } from "../sistemas/marcas";
+import * as fx from "../sistemas/fx";
 import { fileira } from "../sistemas/fileira";
 import { criarAnimacoes, camadasDoHeroi, Heroi } from "../sistemas/heroi";
 import { VAZIO } from "../sistemas/estado";
@@ -43,6 +48,11 @@ type Bicho = {
   retrato: number;
   /** o que ela soma no 1d6 dela. Agora a criatura tambem rola. */
   bonus: number;
+  /** o que ela QUER fazer, decidido por src/sistemas/criatura.ts */
+  comportamento: Comportamento;
+  /** so importa pro `medroso`: ja deu o golpe de surpresa nesta aproximacao?
+   *  Reseta quando ela volta a ficar longe, para poder assustar de novo depois. */
+  jaAtacouDeSurpresa: boolean;
   sprite: Phaser.GameObjects.Sprite;
   corpo?: Phaser.Physics.Arcade.Body;
   tipo: "goblin" | "arbusto";
@@ -53,6 +63,9 @@ type Bicho = {
   pips?: Phaser.GameObjects.Container;
   mostrarAte: number;
   rota: Casa[];
+  /** buff e debuff sao a mesma lista, ver sistemas/condicoes.ts */
+  condicoes: Condicao[];
+  condicoesUI?: Phaser.GameObjects.Container;
 };
 
 type Slot = {
@@ -92,6 +105,20 @@ export class Provador extends Phaser.Scene {
   private dicaTexto!: Phaser.GameObjects.BitmapText;
   private dicaChapa!: Phaser.GameObjects.NineSlice;
   private coracoes = 3;
+  /** this.time.now ate quando um novo golpe nao desconta coracao. Sem isto,
+   *  dois golpes emendados no mesmo instante tiram dois coracoes de uma vez
+   *  por acidente — nao existe essa punicao dupla nem na mesa. */
+  private invencivelAte = 0;
+  /** o que `comecarCombate` REALMENTE decidiu no ultimo ajuste de casa. Existe
+   *  so para `conferirMesmoLugar()` ler o resultado de verdade em vez de
+   *  recalcular a mesma formula por fora — testar a propria conta duas vezes
+   *  nunca pega um erro na conta, so testa que ela concorda com ela mesma. */
+  private ultimoAjuste?: { casa: Casa; alvoPx: { x: number; y: number } };
+  /** o heroi nao guarda condicao dentro dele: `Heroi` e de sistemas/heroi.ts
+   *  e nao deve saber o que e combate. A lista mora aqui, ao lado dos
+   *  coracoes dele, que ja sao tratados do mesmo jeito. */
+  private condicoesHeroi: Condicao[] = [];
+  private condicoesHeroiUI!: Phaser.GameObjects.Container;
   private atributos: Record<Atributo, number> = { forca: 0, esperteza: 0, coracao: 0 };
   private topoDaBarra = 0;
   private alcancadas = new Map<string, { tx: number; ty: number; custo: number; de?: string }>();
@@ -100,6 +127,66 @@ export class Provador extends Phaser.Scene {
 
   constructor() {
     super("Provador");
+  }
+
+  /** REGRA DURA (docs/plano-do-combate.md, secao 3.6): o combate nunca troca
+   *  de cena, de mapa, nem de camera. So ajusta o heroi para o CENTRO da casa
+   *  onde ele ja esta, no maximo meia casa em CADA EIXO (nunca a diagonal
+   *  inteira: um canto de casa pode estar a mais de meia casa em linha reta
+   *  do centro dela, mas nunca mais de meia casa na horizontal OU na vertical
+   *  separadamente, porque o ajuste move x e y de forma independente).
+   *
+   *  Confere na hora, sem esperar nenhum tween: a garantia e GEOMETRICA (o
+   *  alvo do ajuste e sempre o centro da propria casa onde o heroi ja estava,
+   *  entao o limite vale em qualquer instante da animacao, nao so no final).
+   *  De proposito nao depende do relogio do jogo — esperar tempo real por um
+   *  tween e exatamente o tipo de teste que fica fragil quando a aba esta em
+   *  segundo plano e o Phaser desacelera.
+   *
+   *  Roda no console: `jogo.scene.getScene("Provador").conferirMesmoLugar()`.
+   *  So funciona fora de combate (senao nao ha combate novo pra comecar). */
+  conferirMesmoLugar(): string {
+    if (this.ordem.emCombate()) {
+      return "FALHA  precisa comecar FORA de combate para conferir";
+    }
+    const camera = this.cameras.main as unknown as { _follow: unknown };
+    const cenaAntes = this.scene.key;
+    const tilemapAntes = this.chaoLayer.tilemap;
+    const alvoAntes = camera._follow;
+    const casaAntes = this.casaDoHeroi();
+    const pxAntes = { x: this.heroi.x, y: this.heroi.y };
+
+    this.comecarCombate();
+
+    const r: string[] = [];
+    const ok = (n: string, v: boolean) => r.push((v ? "OK   " : "FALHA") + "  " + n);
+    ok("mesma cena", this.scene.key === cenaAntes);
+    ok("mesmo objeto de tilemap (identidade, nao copia)", this.chaoLayer.tilemap === tilemapAntes);
+    ok("camera continua seguindo o heroi", camera._follow === alvoAntes);
+
+    // Le o que `comecarCombate` REALMENTE decidiu (this.ultimoAjuste), nunca
+    // recalcula a mesma formula aqui do lado de fora. Duas contas iguais so
+    // provam que elas concordam entre si, nao que o codigo de verdade fez a
+    // coisa certa. E o mesmo motivo de nao esperar o tween rodar: ler
+    // `this.heroi.x/y` logo depois de criar o tween sempre devolve o valor de
+    // ANTES (Phaser so move a propriedade no proximo quadro), entao um teste
+    // que comparasse isso taria sempre "igual" e nunca pegaria erro nenhum.
+    const feito = this.ultimoAjuste;
+    ok("comecarCombate registrou um ajuste", !!feito);
+    if (feito) {
+      ok("o ajuste mirou a MESMA casa em que o heroi ja estava",
+        feito.casa.tx === casaAntes.tx && feito.casa.ty === casaAntes.ty);
+      // TILE/2 no eixo X (o sprite e ancorado pelo CENTRO horizontal), mas
+      // TILE inteiro no eixo Y (ancorado pelo PE, na base da casa — a mesma
+      // convencao de centroDaCasa()/casaDe() usada no jogo inteiro). Um
+      // limite unico de TILE/2 nos dois eixos pareceria mais limpo, mas
+      // estaria errado: no eixo Y ele reprovaria ajustes legitimos.
+      const dx = Math.abs(feito.alvoPx.x - pxAntes.x);
+      const dy = Math.abs(feito.alvoPx.y - pxAntes.y);
+      ok(`ajuste dentro da propria casa em X (dx=${dx.toFixed(1)}, limite=${TILE / 2})`, dx <= TILE / 2 + 0.5);
+      ok(`ajuste dentro da propria casa em Y (dy=${dy.toFixed(1)}, limite=${TILE})`, dy <= TILE + 0.5);
+    }
+    return r.join("\n");
   }
 
   // ==================================================================== montar
@@ -113,6 +200,7 @@ export class Provador extends Phaser.Scene {
     this.escolhida = undefined;
     this.rotaDoHeroi = [];
     this.coracoes = 3;
+    this.condicoesHeroi = [];
 
     const ficha = { ...VAZIO.heroi, nome: "TROVAO" };
     // Os atributos saem da mesa: raca da +1, classe da +1. O elfo mago fica com
@@ -144,9 +232,9 @@ export class Provador extends Phaser.Scene {
 
     ARENA.arbustos.forEach((a, i) => this.porArbusto(`arbusto-${i}`, a.x, a.y));
     ARENA.goblins.forEach((g, i) =>
-      this.porGoblin(`goblin-${i}`, g.sprite, g.nome, g.bonus, g.x, g.y, g.coracoes, false));
+      this.porGoblin(`goblin-${i}`, g.sprite, g.nome, g.bonus, g.x, g.y, g.coracoes, false, g.comportamento));
     const inv = ARENA.invisivel;
-    this.porGoblin("oculto", inv.sprite, inv.nome, inv.bonus, inv.x, inv.y, inv.coracoes, true);
+    this.porGoblin("oculto", inv.sprite, inv.nome, inv.bonus, inv.x, inv.y, inv.coracoes, true, inv.comportamento);
     this.heroi = new Heroi(this, ...this.centroDaCasa(ARENA.entrada.x, ARENA.entrada.y), ficha);
     this.physics.add.collider(this.heroi, this.chaoLayer);
 
@@ -181,12 +269,17 @@ export class Provador extends Phaser.Scene {
   private porArbusto(id: string, tx: number, ty: number) {
     const [x, y] = this.centroDaCasa(tx, ty);
     const s = this.add.sprite(x, y, "obj-arbusto").setOrigin(0.5, 1).setDepth(y);
-    this.bichos.push({ id, nome: "ARBUSTO", retrato: -1, bonus: 0, sprite: s, tipo: "arbusto", coracoes: 1, coracoesMax: 1, invisivel: false, mostrarAte: 0, rota: [] });
+    this.bichos.push({
+      id, nome: "ARBUSTO", retrato: -1, bonus: 0, comportamento: "passeia", jaAtacouDeSurpresa: false,
+      sprite: s, tipo: "arbusto", coracoes: 1, coracoesMax: 1, invisivel: false, mostrarAte: 0, rota: [],
+      condicoes: [],
+    });
   }
 
   private porGoblin(
     id: string, chave: string, nome: string, bonus: number,
-    tx: number, ty: number, coracoes: number, invisivel: boolean
+    tx: number, ty: number, coracoes: number, invisivel: boolean,
+    comportamento: Comportamento
   ) {
     const [x, y] = this.centroDaCasa(tx, ty);
     const s = this.physics.add.sprite(x, y, chave, 0).setOrigin(0.5, 1);
@@ -196,8 +289,10 @@ export class Provador extends Phaser.Scene {
     if (invisivel) s.setAlpha(0);
     this.bichos.push({
       id, nome, bonus, retrato: ICONE.retrato[chave.replace("goblin-", "")] ?? 1,
+      comportamento, jaAtacouDeSurpresa: false,
       sprite: s, corpo: s.body as Phaser.Physics.Arcade.Body, tipo: "goblin",
       coracoes, coracoesMax: coracoes, invisivel, mostrarAte: 0, rota: [],
+      condicoes: [],
     });
   }
 
@@ -217,6 +312,15 @@ export class Provador extends Phaser.Scene {
       this.coracoesHUD.push(fixo(this.add.image(11 + i * 11, 12, "ui", 0)));
     }
     this.trilhaIniciativa = fixo(this.add.container(48, 2));
+
+    // A fileira de condicoes do heroi vive ABAIXO da barra de topo, nao
+    // dentro dela: os coracoes (16px de imagem) ja quase preenchem os 22px
+    // de altura da barra sozinhos, e a trilha de retratos ocupa o resto.
+    // Nao ha 8px sobrando ali para mais uma fileira de icones sem empilhar
+    // em cima de alguma coisa — e e exatamente isso que o auditor de UI
+    // existe para pegar. Uma faixa propria, so visivel quando ha condicao
+    // ativa, resolve sem disputar espaco com nada que ja existe.
+    this.condicoesHeroiUI = fixo(this.add.container(6, 26)).setVisible(false);
 
     // ------------------------------------------------------- a barra
     // Sem disco: por turnos ninguem anda com direcional, anda tocando a casa.
@@ -369,6 +473,7 @@ export class Provador extends Phaser.Scene {
     // se ajeita na casa, a vista, antes de a ordem comecar.
     const minha = this.casaDoHeroi();
     const [ax, ay] = this.centroDaCasa(minha.tx, minha.ty);
+    this.ultimoAjuste = { casa: minha, alvoPx: { x: ax, y: ay } };
     this.tweens.add({ targets: this.heroi, x: ax, y: ay, duration: 160, ease: "Quad.easeOut" });
     this.anunciar("COMBATE!");
     tocarFicha(CRIATURAS_SOM.pequeno.nota);
@@ -381,6 +486,17 @@ export class Provador extends Phaser.Scene {
     if (!vez) return this.acabarCombate();
     this.desenharIniciativa();
     if (vez.id === "heroi") {
+      // as condicoes do heroi tambem contam para baixo no INICIO do turno
+      // dele, igual a qualquer criatura — a mesma funcao dos dois lados.
+      const { restantes, efeitos } = passarTurno(this.condicoesHeroi);
+      this.condicoesHeroi = restantes;
+      this.sincronizarCondicoesUI(this.condicoesHeroi, this.condicoesHeroiUI, false);
+      if (efeitos.some((e) => e.tipo === "pulaTurno")) {
+        this.anunciar("CONGELADO!", 700);
+        this.fase = "vezDaCriatura"; // reusa o mesmo "ninguem pode agir agora"
+        this.time.delayedCall(500, () => { this.ordem.passar(); this.entrarNoTurno(); });
+        return;
+      }
       this.fase = "meuTurno";
       this.botaoPassar.setVisible(true);
       this.anunciar("SUA VEZ", 600);
@@ -415,55 +531,65 @@ export class Provador extends Phaser.Scene {
     this.slots.forEach((s) => { s.gastou = false; s.livreNaRodada = 0; });
   }
 
-  /** A vez da criatura: anda ate perto e bate. Ela NUNCA rola dado, igual a mesa. */
+  /** A vez da criatura: cada uma decide o que QUER fazer (sistemas/criatura.ts)
+   *  antes de se mexer. So o goblin ATACANDO rola dado — passear ou fugir nao
+   *  precisa de sorte nenhuma. Ela nunca rola contra o heroi na mesa, mas aqui
+   *  a rolagem e sempre DELA MESMA: ver a nota grande abaixo, em atacarAgora. */
   private jogarCriatura(id: string) {
     const b = this.bichos.find((x) => x.id === id);
     if (!b) { this.ordem.remover(id); return this.entrarNoTurno(); }
+
+    // as condicoes dela contam para baixo no INICIO do turno dela, mesma
+    // funcao que o heroi usa. Se ainda estiver CONGELADA, o turno acaba aqui,
+    // sem ela decidir nada.
+    const { restantes, efeitos } = passarTurno(b.condicoes);
+    b.condicoes = restantes;
+    this.atualizarCondicoesDoBicho(b);
+    if (efeitos.some((e) => e.tipo === "pulaTurno")) {
+      this.time.delayedCall(400, () => { this.ordem.passar(); this.entrarNoTurno(); });
+      return;
+    }
+
+    const distanciaAgora = distanciaEmCasas(this.casaDoBicho(b), this.casaDoHeroi());
+    // "passeia vira curioso por reflexo": uma vez que notou o heroi de perto,
+    // NUNCA mais volta a ignorar, mesmo se o heroi se afastar de novo depois.
+    if (b.comportamento === "passeia" && distanciaAgora <= 1) b.comportamento = "curioso";
+    // o susto de "medroso" so vale enquanto colado. Longe, ele esquece e
+    // pode assustar de novo da proxima vez que for pego de surpresa.
+    if (distanciaAgora > 1) b.jaAtacouDeSurpresa = false;
+
+    const intencao = decidirAcaoDaCriatura(
+      b.comportamento, distanciaAgora, b.coracoes, b.coracoesMax, b.jaAtacouDeSurpresa
+    );
+
+    if (intencao === "atacar") return this.atacarAgora(b);
+    if (intencao === "esperar") {
+      // passeia, longe do heroi: nao vale a pena gastar o turno se mexendo
+      // para um combate que nem comecou pra ela.
+      this.time.delayedCall(220, () => { this.ordem.passar(); this.entrarNoTurno(); });
+      return;
+    }
+
+    // avancar ou fugir usam a MESMA busca de casas, so invertendo o criterio
+    // de qual e a "melhor": chegar perto, ou ficar o mais longe possivel.
+    const fugindo = intencao === "fugir";
     const alvo = this.casaDoHeroi();
-    const passos = MOVIMENTO.goblin;
-    const achadas = alcancaveis(this.casaDoBicho(b), passos, (tx, ty) => this.passavel(tx, ty, b));
-    // anda para a casa alcancavel mais perto do heroi
+    const achadas = alcancaveis(this.casaDoBicho(b), MOVIMENTO.goblin, (tx, ty) => this.passavel(tx, ty, b));
     let melhor: Casa | undefined;
-    let melhorDist = Infinity;
+    let melhorDist = fugindo ? -Infinity : Infinity;
     achadas.forEach((c) => {
       const d = distanciaEmCasas(c, alvo);
-      if (d < melhorDist) { melhorDist = d; melhor = { tx: c.tx, ty: c.ty }; }
+      const vence = fugindo ? d > melhorDist : d < melhorDist;
+      if (vence) { melhorDist = d; melhor = { tx: c.tx, ty: c.ty }; }
     });
     b.rota = melhor ? caminho(achadas, melhor) : [];
     this.mostrarPips(b);
 
     const depoisDeAndar = () => {
-      if (distanciaEmCasas(this.casaDoBicho(b), this.casaDoHeroi()) <= 1) {
-        // telegrafo: meio segundo de aviso antes de todo golpe. Sem isso, apanhar
-        // vira "o jogo me sacaneou" em vez de "eu errei".
-        const grito = texto(this, b.sprite.x, b.sprite.y - 40, "!", { cor: 0xf5b62b, ancora: 0.5 });
-        grito.setDepth(2000);
-        this.tweens.add({ targets: b.sprite, scaleY: 0.85, scaleX: 1.15, duration: 160, yoyo: true });
-        tocarFicha(CRIATURAS_SOM.pequeno.reage);
-        this.time.delayedCall(500, () => {
-          grito.destroy();
-          // A CRIATURA TAMBEM ROLA. O material de mesa dizia que so o heroi
-          // rola, porque na mesa quem narra o monstro e uma pessoa. No
-          // videogame o computador rola de qualquer jeito, e escondendo isso o
-          // golpe do goblin vira arbitrario: apanhar sem ver por que e o que
-          // faz o jogador achar que o jogo trapaceia. Mesmo dado, mesma tabela
-          // de tres faixas, mesmo cartao na tela, os dois lados.
-          const { dado, total } = rolar(b.bonus, this.d6);
-          const faixa = faixaDoDado(total);
-          tocarFicha(DADO.rola);
-          this.mostrarDado(dado, b.bonus, faixa, b.sprite.x, b.sprite.y - 40);
-          this.time.delayedCall(520, () => {
-            tocarFicha(DESFECHO[faixa]);
-            if (faixa === "ops") {
-              this.poeira(this.heroi.x, this.heroi.y - 8);
-              tocarFicha(IMPACTOS.errou);
-            } else {
-              this.heroiApanha(faixa === "oba");
-            }
-            this.time.delayedCall(420, () => { this.ordem.passar(); this.entrarNoTurno(); });
-          });
-        });
-        return;
+      // so quem estava avancando pode terminar colado e brigar no mesmo
+      // turno; quem estava fugindo so quer distancia, nunca vira ataque.
+      if (!fugindo && distanciaEmCasas(this.casaDoBicho(b), this.casaDoHeroi()) <= 1) {
+        return this.atacarAgora(b);
       }
       this.time.delayedCall(220, () => { this.ordem.passar(); this.entrarNoTurno(); });
     };
@@ -472,12 +598,83 @@ export class Provador extends Phaser.Scene {
     b.sprite.setData("aoChegar", depoisDeAndar);
   }
 
+  /** O `!` de aviso: nasce pequeno, estica um pouco alem do tamanho (0.2 a
+   *  mais), segura, e sai com fade. 500ms no total, o mesmo numero que
+   *  docs/interface-de-combate.md ja fixou para o telegrafo inteiro.
+   *
+   *  Se outra criatura ja esta telegrafando perto (cabecas a menos de 20px na
+   *  tela), o segundo `!` sobe mais um pouco: dois avisos empilhados na mesma
+   *  altura viram um borrao so, e o jogador precisa saber que sao DOIS
+   *  golpes vindo, nao um. */
+  private telegrafar(b: Bicho) {
+    const perto = this.bichos.some(
+      (o) => o !== b && o.sprite.getData("telegrafando") &&
+        Phaser.Math.Distance.Between(o.sprite.x, o.sprite.y, b.sprite.x, b.sprite.y) < 20
+    );
+    b.sprite.setData("telegrafando", true);
+    const y = b.sprite.y - (perto ? 52 : 40);
+    const grito = texto(this, b.sprite.x, y, "!", { cor: 0xf5b62b, ancora: 0.5 });
+    grito.setDepth(2000).setScale(0);
+    this.tweens.add({
+      targets: grito, scale: 1.2, duration: 140, ease: "Back.easeOut",
+      onComplete: () => this.tweens.add({
+        targets: grito, scale: 1, duration: 60,
+      }),
+    });
+    this.time.delayedCall(400, () =>
+      this.tweens.add({ targets: grito, alpha: 0, duration: 100, onComplete: () => grito.destroy() })
+    );
+    this.tweens.add({ targets: b.sprite, scaleY: 0.85, scaleX: 1.15, duration: 160, yoyo: true });
+    tocarFicha(CRIATURAS_SOM.pequeno.reage);
+    this.time.delayedCall(500, () => b.sprite.setData("telegrafando", false));
+  }
+
+  /** O telegrafo, a rolagem, e o golpe. Meio segundo de aviso antes de todo
+   *  golpe: sem isso, apanhar vira "o jogo me sacaneou" em vez de "eu errei". */
+  private atacarAgora(b: Bicho) {
+    b.jaAtacouDeSurpresa = true;
+    this.telegrafar(b);
+    this.time.delayedCall(500, () => {
+      // A CRIATURA TAMBEM ROLA. O material de mesa dizia que so o heroi
+      // rola, porque na mesa quem narra o monstro e uma pessoa. No
+      // videogame o computador rola de qualquer jeito, e escondendo isso o
+      // golpe do goblin vira arbitrario: apanhar sem ver por que e o que
+      // faz o jogador achar que o jogo trapaceia. Mesmo dado, mesma tabela
+      // de tres faixas, mesmo cartao na tela, os dois lados.
+      const { dado, total } = rolar(b.bonus, this.d6);
+      const faixa = faixaDoDado(total);
+      tocarFicha(DADO.rola);
+      this.mostrarDado(dado, b.bonus, faixa, b.sprite.x, b.sprite.y - 40);
+      this.time.delayedCall(520, () => {
+        tocarFicha(DESFECHO[faixa]);
+        if (faixa === "ops") {
+          this.poeira(this.heroi.x, this.heroi.y - 8);
+          tocarFicha(IMPACTOS.errou);
+        } else {
+          this.heroiApanha(faixa === "oba");
+        }
+        this.time.delayedCall(420, () => { this.ordem.passar(); this.entrarNoTurno(); });
+      });
+    });
+  }
+
   private heroiApanha(cheio = true) {
     tocarFicha(IMPACTOS.bicho);
+    // o pisca-pisca roda sempre, mesmo durante a invencibilidade: e o "quase
+    // levei" que avisa o jogador que o golpe chegou perto, sem custar coracao.
+    // 4 repeticoes de 90ms de ida e volta = 900ms, o numero que
+    // docs/interface-de-combate.md ja fixou para a invencibilidade inteira.
+    fx.piscar(this, this.heroi, 90, 4);
+    if (this.time.now < this.invencivelAte) return;
+    this.invencivelAte = this.time.now + 900;
+
     this.cameras.main.shake(cheio ? 140 : 90, cheio ? 0.005 : 0.003);
+    // o quadro `machucado` nao existe na folha ainda (so `conjura` serve pra
+    // tudo). Ate a Fase 6 desenhar o de verdade, um squash vende 70% do
+    // "levei um soco" so com escala, sem sprite novo.
+    fx.achatar(this, this.heroi, 1.15, 0.8, 90);
     this.coracoes = Math.max(0, this.coracoes - 1);
     this.atualizarCoracoes();
-    this.tweens.add({ targets: this.heroi, alpha: 0.3, duration: 90, yoyo: true, repeat: 3 });
     if (this.coracoes > 0) return;
     // Nunca existe derrota: fica tonto, e volta com um coracao.
     this.heroi.ficarTonto(1200);
@@ -487,6 +684,49 @@ export class Provador extends Phaser.Scene {
 
   private atualizarCoracoes() {
     this.coracoesHUD.forEach((c, i) => c.setFrame(i < this.coracoes ? 0 : 1));
+  }
+
+  /** Redesenha uma fileira de condicoes num container ja existente: ate 3
+   *  quadradinhos de 8x8 na cor de cada uma (docs/mundo-que-reage.md, secao 8:
+   *  "cor tem que querer dizer alguma coisa" — aqui a cor e emprestada da
+   *  acao que mais aplica aquela condicao, o azul do Bafo Gelado por
+   *  exemplo), e um "+N" se sobrar mais do que isso.
+   *
+   *  Simplificacao desta fase: a fileira INTEIRA entra com popIn e sai com
+   *  fade, nao icone por icone. Diferenciar "este e novo, aquele so mudou de
+   *  posicao" exigiria comparar a lista antiga com a nova a cada chamada, e
+   *  nesta fase (no maximo 1 ou 2 condicoes por vez) o ganho nao paga a
+   *  complicacao. Fica registrado para quando isso deixar de ser verdade. */
+  private sincronizarCondicoesUI(
+    lista: Condicao[],
+    container: Phaser.GameObjects.Container,
+    /** heroi (na HUD) alinha a esquerda; criatura (sobre a cabeca) centraliza
+     *  na propria casa, senao a fileira empurra pra um lado toda vez que o
+     *  numero de condicoes muda. */
+    centralizar: boolean
+  ) {
+    container.removeAll(true);
+    if (lista.length === 0) {
+      container.setVisible(false);
+      return;
+    }
+    const MAX = 3;
+    const visiveis = lista.slice(0, MAX);
+    const temMais = lista.length > MAX;
+    const larguraTotal = visiveis.length * 10 - 2 + (temMais ? 14 : 0);
+    const inicioX = centralizar ? -larguraTotal / 2 : 0;
+    visiveis.forEach((cond, i) => {
+      const ficha = condicoesDados(cond.id);
+      const x = inicioX + i * 10;
+      const fundo = this.add.rectangle(x, 0, 8, 8, ficha.cor, 1).setOrigin(0);
+      const borda = this.add.rectangle(x, 0, 8, 8).setOrigin(0).setStrokeStyle(1, 0x2c2440, 0.8);
+      container.add([fundo, borda]);
+    });
+    if (temMais) {
+      container.add(texto(this, inicioX + visiveis.length * 10 + 1, 0, `+${lista.length - MAX}`, { cor: 0xfff8ea }));
+    }
+    container.setVisible(true);
+    fx.popIn(this, container, 140, 0.6);
   }
 
   // ==================================================================== a vez
@@ -538,7 +778,7 @@ export class Provador extends Phaser.Scene {
     const emEspera = this.ordem.rodada() < slot.livreNaRodada;
     if (slot.gastou || emEspera || vez?.acaoUsada) {
       tocar("menu-volta", { volume: 0.4 });
-      this.tweens.add({ targets: [slot.fundo, slot.icone], x: "+=1", duration: 45, yoyo: true, repeat: 2 });
+      fx.tremerLeve(this, [slot.fundo, slot.icone]);
       return;
     }
     if (this.escolhida?.id === acao.id) return this.cancelar();
@@ -596,6 +836,19 @@ export class Provador extends Phaser.Scene {
     this.pincel.clear();
     this.heroi.parar();
     this.heroi.conjurar(300);
+    // o agachar antes de agir: 90ms, quase imperceptivel sozinho, mas sem ele
+    // o efeito sai "do nada". Numeros de docs/interface-de-combate.md 4.2.
+    fx.agachar(this, this.heroi);
+    if (acao.tipo === "magia") {
+      fx.ondaDeConjuracao(this, this.heroi.x, this.heroi.y, acao.cor);
+    }
+    // golpe ou magia de longe (forma "casa", alcance > 1 casa): uma bolinha
+    // viaja ate o alvo antes do impacto, senao o efeito nasce do nada em cima
+    // dele. Alcance 1 e corpo a corpo, nao precisa de projetil nenhum.
+    if (acao.forma === "casa" && acao.alcance > 1) {
+      const [px, py] = this.centroDaCasa(casa.tx, casa.ty);
+      fx.projetil(this, this.heroi.x, this.heroi.y - 8, px, py - 8, acao.cor);
+    }
 
     const slot = this.slots.find((s) => s.acao.id === acao.id)!;
     if (acao.usosPorCombate) slot.gastou = true;
@@ -624,7 +877,21 @@ export class Provador extends Phaser.Scene {
       } else {
         // QUASE acerta mas sem o extra; OBA acerta com recuo e estrelinha
         pegos.forEach((b) => this.atingir(b, cx, cy, faixa === "oba"));
+        // a marca da acao, se ela tiver uma: gelo em quem esta molhado
+        // congela na hora. Ver src/sistemas/marcas.ts para a tabela inteira.
+        if (acao.marca) {
+          pegos.forEach((b) => {
+            const r = aplicarMarca(acao.marca!, b.condicoes);
+            b.condicoes = r.condicoesNovas;
+            this.atualizarCondicoesDoBicho(b);
+            if (r.efeitoEspecial === "congelou") {
+              fx.flashBranco(this, b.sprite, 120);
+              this.anunciar("CONGELOU!", 600);
+            }
+          });
+        }
         this.cameras.main.shake(90, 0.0022);
+        fx.hitstop(this, faixa === "oba" ? 90 : 70);
       }
       this.time.delayedCall(500, () => this.fimDaAcao());
     });
@@ -663,10 +930,7 @@ export class Provador extends Phaser.Scene {
     pecas.push(texto(this, cursor + 2, -4, palavra, { cor: cores[faixa] }));
     caixa.add(pecas);
     // sobe e some: cartao que fica parado vira lixo na tela em duas rodadas
-    this.tweens.add({
-      targets: caixa, y: y - 10, alpha: 0, delay: 640, duration: 320,
-      onComplete: () => caixa.destroy(),
-    });
+    fx.sumirParaCima(this, caixa, 10, 320, 640);
   }
 
   private pegos(acao: AcaoDeProva, casa: Casa): Bicho[] {
@@ -695,18 +959,15 @@ export class Provador extends Phaser.Scene {
       b.invisivel = false;
       b.sprite.setAlpha(1);
       tocarFicha(CRIATURAS_SOM.pequeno.nota);
-      this.tweens.add({ targets: b.sprite, scale: 1.25, duration: 90, yoyo: true });
+      fx.pulso(this, b.sprite, 1.25, 90);
       this.anunciar("TINHA ALGUEM AI!", 800);
       return;
     }
     tocarFicha(b.tipo === "arbusto" ? IMPACTOS.madeira : IMPACTOS.bicho);
-    b.sprite.setTintFill(0xfff8ea);
-    this.time.delayedCall(70, () => b.sprite.clearTint());
-    this.tweens.add({ targets: b.sprite, scaleY: 0.8, duration: 80, yoyo: true });
+    fx.flashBranco(this, b.sprite);
+    fx.achatar(this, b.sprite, 1, 0.8);
     if (cheio && b.corpo) {
-      const fuga = new Phaser.Math.Vector2(b.sprite.x - dex, b.sprite.y - dey).normalize().scale(70);
-      b.corpo.setVelocity(fuga.x, fuga.y);
-      this.time.delayedCall(140, () => b.corpo?.setVelocity(0, 0));
+      fx.empurrar(this, b.corpo, dex, dey, b.sprite.x, b.sprite.y);
     }
     b.coracoes -= 1;
     this.mostrarPips(b);
@@ -717,36 +978,34 @@ export class Provador extends Phaser.Scene {
     this.bichos = this.bichos.filter((o) => o !== b);
     b.corpo?.setVelocity(0, 0);
     b.pips?.destroy();
+    b.condicoesUI?.destroy();
     if (b.tipo === "goblin") tocarFicha(CRIATURAS_SOM.pequeno.desiste);
     this.ordem.remover(b.id);
-    for (let i = 0; i < 3; i++) {
-      const e = this.add.circle(b.sprite.x, b.sprite.y - 16, 1.5, 0xf5b62b).setDepth(2000);
-      this.tweens.add({
-        targets: e, x: b.sprite.x + Phaser.Math.Between(-12, 12), y: b.sprite.y - 30,
-        alpha: 0, duration: 420, ease: "Back.easeOut", onComplete: () => e.destroy(),
-      });
-    }
-    this.tweens.add({
-      targets: b.sprite, alpha: 0, y: b.sprite.y - 10,
-      angle: b.tipo === "goblin" ? 220 : 0, duration: 380,
-      onComplete: () => b.sprite.destroy(),
+    fx.confete(this, b.sprite.x, b.sprite.y - 16, 0xf5b62b);
+    // o goblin gira ao desistir, o arbusto so desmancha reto
+    fx.sumirParaCima(this, b.sprite, 10, 380, 0, {
+      angle: b.tipo === "goblin" ? 220 : 0,
     });
     if (this.ordem.emCombate() && this.goblins().length === 0) this.time.delayedCall(420, () => this.acabarCombate());
   }
 
   private poeira(x: number, y: number) {
-    for (let i = 0; i < 5; i++) {
-      const p = this.add.circle(x, y, 1.5, 0xfdefd6, 0.9).setDepth(y + 1);
-      this.tweens.add({
-        targets: p, x: x + Phaser.Math.Between(-9, 9), y: y + Phaser.Math.Between(-9, 3),
-        alpha: 0, duration: 300, onComplete: () => p.destroy(),
-      });
-    }
+    fx.estourinho(this, x, y, 0xfdefd6);
   }
 
   // ===================================================== vida sobre a cabeca
   /** Coracao, nao barra: a lingua e a mesma do material impresso. E eles somem
    *  sozinhos, porque medidor sempre aceso rouba a atencao da propria luta. */
+  /** Cria o container de condicoes do bicho na primeira vez que ele precisa,
+   *  e redesenha. Chamar sempre que `b.condicoes` mudar (aplicou uma nova,
+   *  ou uma expirou no inicio do turno dela). */
+  private atualizarCondicoesDoBicho(b: Bicho) {
+    if (!b.condicoesUI) {
+      b.condicoesUI = this.add.container(b.sprite.x, b.sprite.y - 28).setDepth(2000);
+    }
+    this.sincronizarCondicoesUI(b.condicoes, b.condicoesUI, true);
+  }
+
   private mostrarPips(b: Bicho) {
     if (b.tipo === "arbusto") return;
     b.mostrarAte = this.time.now + 3000;
@@ -763,8 +1022,7 @@ export class Provador extends Phaser.Scene {
       else g.lineStyle(1, 0xfff8ea, 0.55).strokeRect(x + 0.5, 0.5, 4, 4);
     }
     b.pips = this.add.container(b.sprite.x, b.sprite.y - 36, [g]).setDepth(2000);
-    b.pips.setScale(0.6);
-    this.tweens.add({ targets: b.pips, scale: 1, duration: 140, ease: "Back.easeOut" });
+    fx.popIn(this, b.pips);
   }
 
   // =================================================================== update
@@ -913,11 +1171,16 @@ export class Provador extends Phaser.Scene {
   private cuidarDosPips() {
     const agora = this.time.now;
     this.bichos.forEach((b) => {
-      if (!b.pips) return;
-      b.pips.setPosition(b.sprite.x, b.sprite.y - 36);
-      if (agora > b.mostrarAte && b.pips.alpha > 0) {
-        b.pips.setAlpha(Math.max(0, b.pips.alpha - 0.04));
+      if (b.pips) {
+        b.pips.setPosition(b.sprite.x, b.sprite.y - 36);
+        if (agora > b.mostrarAte && b.pips.alpha > 0) {
+          b.pips.setAlpha(Math.max(0, b.pips.alpha - 0.04));
+        }
       }
+      // a fileira de condicoes fica logo ABAIXO dos coracoes (mais perto da
+      // cabeca), e ao contrario dos coracoes nao desbota sozinha: ela some
+      // quando a condicao expira de verdade, nunca por tempo de tela.
+      if (b.condicoesUI) b.condicoesUI.setPosition(b.sprite.x, b.sprite.y - 28);
     });
   }
 
