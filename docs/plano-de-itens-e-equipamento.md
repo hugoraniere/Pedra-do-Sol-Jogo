@@ -557,7 +557,209 @@ marcada, nao existe ainda "item largado no chao" como objeto do mundo.
 Animacao de picape/uso (o item some/aparece na hora, sem transicao) —
 puro polimento, nao muda nenhum dado.
 
-## 15. Coordenacao necessaria
+## 17. Fase F — layout consistente, menu de acoes, lixeira animada, apanhar do chao
+
+Pedido do Hugo depois de ver a Fase E rodando: a mochila melhorou, mas falta
+polimento de verdade — altura dos elementos inconsistente na ficha inteira,
+tooltip mais completo, botao direito/toque longo abrindo um MENU de acoes em
+vez de disparar uma so, zona de jogar fora com lixeira animada, e o item
+jogado fora precisa cair no chao de verdade (o que a secao 16 ja deixou
+registrado como pendente). Aqui esta o mapeamento contra o que existe hoje,
+sem implementar nada ainda — so plano.
+
+### 17.1. Alturas inconsistentes na ficha (nao so a mochila — as 5 paginas
+### que ainda usam Bloco/pilha)
+
+**O que existe:** `Ficha.ts`, `alturaDoBloco()` — cada tipo de `Bloco` tem
+uma altura diferente e sem relacao entre si: `titulo` sem valor usa
+`TAMANHO.linhaTexto` (10px), `titulo` COM valor (a chapa dourada do numero)
+usa `ALTURA_CHIP` (12px), `texto` usa 10px POR LINHA, `chips` usa
+`alturaDosChips()` (tambem 12px de base), `acao` (botao) usa `TAMANHO.botao`
+(16px, fixo — e o alvo minimo de toque, nao pode encolher). Quatro numeros
+diferentes (10/12/12/16) competindo na mesma pilha e o que da a sensacao de
+"altura parecida mas não igual" que o Hugo notou — sobra em alguns, aperta
+em outros.
+
+**Proposta:** duas mudancas, uma de MEDIDA e uma de DISTRIBUICAO:
+
+1. **Unificar o que pode ser unificado.** `titulo` sem valor sobe de 10 pra
+   12px (mesma do `titulo` com valor e dos `chips`) — sao todos "uma linha
+   de destaque", nao "uma linha de leitura corrida" como `texto` (que
+   continua 10, porque e paragrafo, e paragrafo precisa de mais linha na
+   tela, nao de linha mais alta). `TAMANHO.botao` continua 16 sempre — e
+   contrato de alvo de toque (`docs/07-design-system.md`), mexer nisso
+   quebraria o dedo de crianca em qualquer botao do jogo, nao so na ficha.
+   Isto e mudanca de UM numero em `alturaDoBloco()`, sem tocar layout.
+2. **Distribuir o sobra vertical, em vez de empilhar tudo colado no topo.**
+   `pilha()` (`design.ts`) so tem `reservar()` (anda pra baixo) e
+   `restante()` (quanto sobrou) — nunca reparte o sobrado entre os grupos.
+   Hoje uma pagina curta (MAGIAS, DIARIO com uma missao so) fica com o
+   conteudo grudado no topo e um vazio grande embaixo, o que reforca a
+   sensacao de "elementos maldistribuidos". Proposta: `design.ts` ganha
+   `distribuirFolga(area, grupos, gapMinimo)` — mede a altura de todos os
+   grupos primeiro (a mesma conta que `Ficha.desenhar()` ja faz pra saber o
+   que cabe), divide o espaco QUE SOBROU depois disso pelo numero de
+   `gaps` entre grupos (nao dentro deles — um titulo e o texto embaixo dele
+   continuam colados, isso e o proprio contrato de "grupo" que o comentario
+   de `Ficha.ts` ja protege), e devolve um gap maior que `ESPACO.md` pra
+   cada `pilha().reservar()` entre grupos usar. Pagina cheia (PODERES, 3
+   grupos que ja enchem a tela) fica exatamente igual a hoje — a folga so
+   aparece quando sobra espaco de verdade.
+
+### 17.2. Tooltip mais completo
+
+**O que existe:** `mostrarDicaMochila()` mostra nome + descricao/bonus +
+origem (quando tem). Nao mostra categoria, raridade nem preco.
+
+**Proposta:** acrescentar uma segunda linha de metadado, discreta (cor
+`COR.tintaSuave`, tamanho 8), entre o nome e a descricao:
+`CATEGORIA · RARIDADE` (ex.: "MATERIAL · RARO"), e quando o item tiver
+`preco > 0`, uma terceira linha `Vale N moedas` (material) ou `Custou N
+moedas` (arma/armadura/acessorio comprado — so decorativo, nao é preco de
+recompra). `acharQualquerItem()` (`conteudo.ts`) ja devolve `raridade` pra
+material/armadura/acessorio/arma — so falta ler no tooltip. **Item de
+historia continua sem essas linhas** (nunca teve preco nem raridade, e
+inventar uma pra ele contradiria a propria regra da secao 5: raridade e
+preco sao coisa de item de LOJA/monstro, nao de missao).
+
+### 17.3. Botao direito / toque longo abre MENU, nao dispara acao direto
+
+**O que existe:** `acaoRapida(indice)` decide sozinha UMA acao pela
+categoria do item (usar OU vender OU equipar OU empunhar) e executa na
+hora. Pedido do Hugo: mostrar as OPCOES e deixar escolher — mais seguro
+(sem risco de vender sem querer) e mais descobrivel (o jogador ve o que
+pode fazer, nao decora um gesto por categoria).
+
+**Proposta:** `acaoRapida` vira `abrirMenuDeAcoes(indice)`, que desenha uma
+pilha pequena de botoes creme (reusa `botao()` de `sistemas/botao.ts`, o
+MESMO que a pagina MENU ja usa) ancorada perto do slot, uma linha por acao
+valida daquela categoria:
+
+| categoria | acoes no menu |
+|---|---|
+| consumivel, com efeito e coracao nao cheio | USAR |
+| consumivel, sem efeito OU coracao cheio | (nenhuma — continua so a dica) |
+| material | VENDER 1 (+N moedas) |
+| armadura/acessorio | EQUIPAR ou DESEQUIPAR (o que for oposto do estado atual) |
+| arma, com sprite | EMPUNHAR ou DESEMPUNHAR |
+| arma, sem sprite / historia | (nenhuma) |
+| **qualquer categoria com quantidade > 0** | JOGAR FORA (novo — ver 17.4/17.5) |
+
+Cada categoria ganha UMA acao especifica (ja existente) mais JOGAR FORA
+(nova, universal). Tocar fora do menu, ou num slot vazio, fecha sem fazer
+nada — o mesmo padrao de "clicar fora fecha" que outras janelas do jogo ja
+usam (a propria Ficha fecha em Esc, por exemplo). Left-click/toque simples
+continua mostrando so a DICA (17.2); o menu so abre pelo gesto rapido.
+
+### 17.4. Zona de jogar fora: icone de lixeira + destaque ao arrastar por cima
+
+**O que existe:** um retangulo `painel-creme` com o texto "ARRASTE ATE AQUI
+PRA JOGAR FORA". Funciona, mas e so texto — sem icone, sem reacao ao
+arrasto passar por cima.
+
+**Proposta:**
+- **Icone novo: lixeira**, em `arte/ui.py` (e chrome de interface, nao item
+  de jogo — mora com `mochila`/`livro`/`lupa`, nao em `arte/itens.py`).
+  Silhueta simples: balde trapezoidal com tampa, na mesma tecnica de
+  `i_mochila()` (ret + contorno manual). Gerado, ampliado e OLHADO antes de
+  aceitar, mesma disciplina da Fase E.
+- **Destaque ao arrastar por cima:** `aoMoverPonteiro()` ja roda a cada
+  frame durante o arrasto — passa a checar, alem do slot, se o ponteiro
+  esta dentro de `zonaJogarFora` e trocar o tint do icone da lixeira pra
+  vermelho (`COR.vermelho`, ja existe na paleta) enquanto estiver por cima,
+  voltando ao tom normal quando sair. Mesmo espirito do "so mexe em
+  posicao/cor, nunca reinventa" de `interativo.ts`, so que aqui e o proprio
+  chamador que decide (a lixeira nao e um widget generico, e um alvo de
+  drop especifico).
+- **Tween ao soltar:** um "mastigada" rapida (escala 1 -> 1.15 -> 1, ~120ms)
+  no icone da lixeira quando o item e solto nela de verdade — feedback de
+  "recebi", parecido com o tween que ja existe em outros lugares do jogo
+  (ex.: o efeito de particula ao vencer bicho em `Combate.ts`).
+
+### 17.5. Apanhar item do chao — o sistema novo
+
+Esta e a peca que nao existe: hoje `jogarFora()` so tira da mochila, o item
+simplesmente desaparece. O pedido e ele CAIR NO CHAO, visivel, apanhavel.
+
+**Achado que muda a conta pra melhor:** o Mundo.ts ja tem exatamente a
+peca que isto precisa — `Interagivel` (`x, y, chave, tipo, largura, altura,
+obj`) e a lista `this.interagiveis`, o mesmo mecanismo que ja faz o bau,
+as fogueiras e os NPCs funcionarem. Um item largado no chao e so mais um
+`Interagivel`, com `obj` sendo `this.add.image(x, y, "itens",
+ICONE_ITEM[item])` — **o MESMO icone que a mochila ja usa**, nenhum sprite
+novo de "item no chao" precisa ser desenhado.
+
+**Fluxo proposto:**
+1. `Ficha.jogarFora(indice)` (a acao do menu 17.3) chama
+   `estado().jogarFora(indice, quantidade)` (ja existe, so tira da
+   mochila) E, alem disso, pede pro Mundo.ts largar o item de verdade:
+   `(this.scene.get("Mundo") as Mundo).largarItemNoChao(item, quantidade)`
+   — mesmo padrao de acesso entre cenas que `Ficha.fechar()` ja usa
+   (`this.scene.resume("Mundo")`).
+2. **Onde ele cai:** na posicao atual do heroi no mundo (`mundo.heroi.x/y`)
+   — o jogador jogou fora "aqui", nao importa onde "aqui" seja.
+3. **`Mundo.largarItemNoChao(item, quantidade)`** (metodo novo, publico):
+   cria o sprite (`this.add.image(...)`), monta o `Interagivel`
+   (`chave: \`item-largado:${proximoId++}\``, `tipo: "objeto"`), da um
+   pulo pequeno (tween de y, ~200ms, "cai no chao") e entra em
+   `this.interagiveis`.
+4. **Apanhar:** `tentarInteragir()` ganha um caso especial ANTES do lookup
+   generico em `DIALOGOS` (mesmo padrao que `fogueira` e `bau` ja usam,
+   `Mundo.ts:491` e `:519`): `if (alvo.chave.startsWith("item-largado:"))`
+   chama `guardar(item, quantidade)`, toca um som (reusa `"moeda"` — e o
+   som generico de "ganhou alguma coisa" que o jogo ja tem, nao precisa de
+   som novo), tira o sprite e o `Interagivel` da lista, sem abrir caixa de
+   fala nenhuma (apanhar nao e conversa).
+5. **Duracao: so a sessao do mapa carregado, de proposito, sem persistir
+   no save.** Se o jogador jogar fora e sair do mapa sem apanhar, o item
+   some pra sempre — e a MESMA logica de "fica pra depois, de proposito"
+   ja registrada na secao 16, so que agora e uma escolha deliberada em vez
+   de limitacao: jogar fora e uma decisao com peso de verdade (ninguem
+   "guarda no bolso" um item largado e esperando por 500 anos), e isso
+   poupa a complicacao real de precisar salvar "o que esta largado onde"
+   no save (mudaria `Estado`, precisaria migrar, precisaria limpar
+   quando expira...). Se o Hugo quiser persistencia depois, e decisao
+   nova e separada, nao uma obrigacao escondida deste plano.
+6. **O que NAO faz parte disto:** criatura largando item (bestiario
+   `larga`) continua indo direto pra mochila/moeda, sem passar pelo chao —
+   isso e um sistema DIFERENTE (recompensa de vitoria, sempre concedida) do
+   que "jogar fora e poder mudar de ideia" (a janela curta de recuperar o
+   erro). Misturar os dois faria sentido narrativo nenhum: o goblin nao
+   "joga" a moeda no chao pra voce correr atras, ele solta ela ao morrer.
+
+### 17.6. O que fica de fora deste plano, de proposito
+
+- **Arrastar item da mochila pra FORA da janela direto pro mundo** (sem
+  passar pela zona de jogar fora) — o pedido do Hugo fala em "o lugar onde
+  a pessoa arrasta e solta" no singular (a zona), nao em soltar em
+  qualquer lugar da tela. Fica pra quando/se ele pedir.
+- **Pegar item do chao de volta pra dentro de um slot ESPECIFICO** (drag do
+  mundo pra um slot da mochila) — apanhar empilha/ocupa o primeiro slot
+  livre, igual `guardar()` sempre fez; escolher o slot ao apanhar e
+  seletividade que ninguem pediu ainda.
+- **Item largado sobrevivendo troca de mapa** — decisao explicita contra,
+  17.5 item 5.
+
+### 17.7. Sequenciamento
+
+Quatro pedacos independentes, ordem sugerida por risco (do mais isolado ao
+que toca mais cena):
+
+1. **17.1 (alturas/distribuicao)** — so `design.ts`/`Ficha.ts`, zero
+   dependencia de arte nova, maior efeito visual imediato em TODAS as
+   paginas da ficha, nao so mochila.
+2. **17.2 (tooltip)** — so `Ficha.ts`, dado ja existe (`raridade`/`preco`
+   ja estao em `acharQualquerItem`).
+3. **17.4 (lixeira)** — precisa de 1 icone novo (`arte/ui.py`), senao e so
+   `Ficha.ts`.
+4. **17.3 + 17.5 juntos** — o menu de acoes (17.3) e o unico lugar de onde
+   JOGAR FORA passa a ser chamado, entao faz sentido entregar as duas
+   juntas: o menu sem o chao de destino ficaria incompleto, e o chao sem o
+   menu nao teria como ser acionado (hoje so o arrasto joga fora, e isso
+   continua existindo em paralelo — arrastar pra lixeira tambem larga no
+   chao, mesmo destino final, so o gesto de origem muda).
+
+## 18. Coordenacao necessaria
 
 - `ambiente/ficha` e dona de `Ficha.ts`, `janela.ts`, `design.ts`,
   `icones.ts` — falar antes de tocar de verdade nas Fases B/C.
