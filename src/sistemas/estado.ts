@@ -1,7 +1,7 @@
 /** Estado do jogo. Uma unica fonte da verdade sobre o progresso.
  *  Quem grava e le no disco e sistemas/armazenamento.ts. */
 import { gravarEspaco, lerEspaco } from "./armazenamento.ts";
-import { acharMaterial, acharMochila, type Atributo } from "../dados/conteudo.ts";
+import { acharMaterial, acharMochila, acharRaca, type Atributo } from "../dados/conteudo.ts";
 
 /** Um slot da mochila: um item (com quantidade) ou vazio. Slot tem POSICAO
  *  fixa — e o que deixa arrastar um item de lugar (`moverItem`) fazer
@@ -83,6 +83,12 @@ export type Estado = {
    *  foi usada nesta aventura. Chave = id da acao. Zera na troca de aventura
    *  (ainda nao existe onde isso acontece - ver Fase 9 revista). */
   usosDeAventura: Record<string, number>;
+  /** 0 = acabou de comer, 100 = faminto critico. Sobe com o RELOGIO de jogo
+   *  (nao com minutos reais de sessao) — ver sistemas/moodles.ts. Comer
+   *  reseta pra 0. */
+  fome: number;
+  /** 0 = descansado, 100 = exausto critico. Dormir numa cama reseta pra 0. */
+  sono: number;
 };
 
 export const VAZIO: Estado = {
@@ -116,10 +122,10 @@ export const VAZIO: Estado = {
   mochilaAtual: "mochila-pequena",
   visitados: [],
   derrotados: [],
-  // uma partida nova comeca na Trilha de Chegada, o tutorial guiado — a
-  // Vila (e o sino) so aparecem depois de atravessa-la (ver dados/mapas.ts)
-  cena: "chegada",
-  lugar: "Trilha de Chegada",
+  // uma partida nova comeca na Praia de Chegada, desembarcando do navio — a
+  // Trilha (e a Vila, e o sino) so aparecem depois (ver dados/mapas.ts)
+  cena: "praia",
+  lugar: "Praia de Chegada",
   minutos: 0,
   // 480 = 8h, o heroi chega de manha
   relogio: 480,
@@ -130,6 +136,9 @@ export const VAZIO: Estado = {
   criadoEm: 0,
   atualizadoEm: 0,
   usosDeAventura: {},
+  // o heroi chega alimentado e descansado, do navio
+  fome: 0,
+  sono: 0,
 };
 
 function copia<Tipo>(v: Tipo): Tipo {
@@ -149,6 +158,11 @@ export function novoJogo(espaco: number, heroi: Heroi) {
   atual.espaco = espaco;
   atual.heroi = heroi;
   atual.criadoEm = Date.now();
+  // o dom do Anao ("Casco Duro") e nascer com 4 coracoes em vez de 3 — o
+  // numero ja existe em `acharRaca(heroi.raca).coracoes`, so precisava ser
+  // lido aqui em vez do 3 fixo de VAZIO.
+  atual.coracoesMax = acharRaca(heroi.raca).coracoes;
+  atual.coracoes = atual.coracoesMax;
   inicioDaSessao = Date.now();
   salvar();
 }

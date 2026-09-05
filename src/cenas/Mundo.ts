@@ -27,6 +27,7 @@ import {
 } from "../sistemas/caminho";
 import { definirEstado } from "../sistemas/cursor";
 import { avancarRelogio, corDoCeu, periodoAtual } from "../sistemas/tempo";
+import { avancarMoodles } from "../sistemas/moodles";
 import type { Periodo } from "../dados/tempo";
 
 type FichaObjeto = { w: number; h: number; cw: number; ch: number };
@@ -706,6 +707,7 @@ export class Mundo extends Phaser.Scene {
     // dois `return` de cima (conversando, emCombate) ja cobrem essa pausa,
     // entao ninguem troca de lugar no meio de uma fala ou de uma luta.
     avancarRelogio(delta);
+    avancarMoodles(delta);
     this.atualizarRotinasDeNpc(delta);
     this.atualizarCeu();
   }

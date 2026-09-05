@@ -7,7 +7,9 @@
  *  (Fase 1.2) ja previa: "a primeira condicao que bate e a que toca". */
 import { noPeriodo, etapaFeita } from "../sistemas/condicoes-de-fala";
 import { concluirEtapa } from "../sistemas/missoes";
-import { estado, guardar, mudarAfinidade } from "../sistemas/estado";
+import { estado, equipar, guardar, mudarAfinidade, salvar } from "../sistemas/estado";
+import { tocar } from "../sistemas/som";
+import { ARMA_DA_CLASSE } from "./config";
 import { PEIXES } from "./peixes";
 
 /** Os periodos de um peixe do catalogo (dados/peixes.ts), pra condicionar
@@ -35,6 +37,32 @@ export type VarianteDeFala = {
 export type Fala = { quem: string; variantes: VarianteDeFala[] };
 
 export const DIALOGOS: Record<string, Fala> = {
+  marinheiro: {
+    quem: "O marinheiro",
+    variantes: [
+      {
+        id: "ja-entregou",
+        condicao: etapaFeita("primeiros-passos", "falar-com-marinheiro"),
+        linhas: ["A mare nao espera, heroi.", "Boa sorte em terra firme."],
+      },
+      {
+        id: "padrao",
+        linhas: [
+          "Chegamos. Praia de Chegada, como combinado.",
+          "Suas coisas estao no navio — toma, antes que eu esqueca.",
+          "Sua arma, uma bolsa de moedas, e uma pocao pro caminho.",
+          "Agora eu tenho que voltar. A mare nao espera ninguem.",
+        ],
+        efeito: () => {
+          equipar("arma", ARMA_DA_CLASSE[estado().heroi.classe] ?? "nenhuma");
+          estado().moedas += 10;
+          guardar("pocao-morango");
+          salvar();
+          concluirEtapa("primeiros-passos", "falar-com-marinheiro");
+        },
+      },
+    ],
+  },
   vovo: {
     quem: "Vovo Aurora",
     variantes: [
@@ -245,6 +273,26 @@ export const DIALOGOS: Record<string, Fala> = {
       {
         id: "padrao",
         linhas: ["Vazio. So teia de aranha e uma moeda perdida.", "Voce ganhou 1 moeda de ouro!"],
+      },
+    ],
+  },
+  cama: {
+    quem: "A cama",
+    variantes: [
+      {
+        id: "ja-cheio",
+        condicao: () => estado().coracoes >= estado().coracoesMax,
+        linhas: ["Voce nem esta cansado.", "Melhor guardar o sono pra depois."],
+      },
+      {
+        id: "padrao",
+        linhas: ["Voce deita um pouco.", "Acorda com os coracoes cheios de novo."],
+        efeito: () => {
+          const st = estado();
+          st.coracoes = st.coracoesMax;
+          salvar();
+          tocar("coracao-novo");
+        },
       },
     ],
   },
