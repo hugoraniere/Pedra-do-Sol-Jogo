@@ -225,13 +225,6 @@ export const DESFECHO = {
   ops: { arquivo: "desfecho-ops", volume: 0.7 },
 } satisfies Record<string, FichaSom>;
 
-/** Qual faixa cada numero do dado cai. Bate com o RPG de mesa. */
-export function faixaDoDado(valor: number): ChaveDesfecho {
-  if (valor <= 2) return "ops";
-  if (valor <= 4) return "quase";
-  return "oba";
-}
-
 /* ------------------------------------------------------------------- magias */
 /** As treze magias de conteudo.ts ja vem com cor, e a cor agrupa: magia da mesma
  *  familia soa igual com a altura mudada. Treze magias custam seis arquivos. */
