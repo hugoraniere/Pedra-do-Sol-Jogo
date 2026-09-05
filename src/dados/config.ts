@@ -271,7 +271,7 @@ export const ARMAS_SPRITE = ["nenhuma", "cajado", "espada", "arco", "martelo", "
 
 export const NPCS_SPRITE = [
   "vovo", "ferreiro", "menina", "pescador", "mercador",
-  "menino", "guarda", "padeira", "elfa", "bruxo",
+  "menino", "guarda", "padeira", "marinheiro", "elfa", "bruxo",
 ] as const;
 
 /** Os quatro goblins e as quatro aranhas da Teia Doce. Cada um tem anatomia
@@ -294,7 +294,7 @@ export const OBJETOS = [
   "casa-pequena", "casa-grande", "ferraria", "casa-vovo", "hospital",
   "arvore", "arvore-escura", "arbusto",
   "poste-sino", "poste-com-sino", "poco", "pedra-solta", "barraca", "cerca",
-  "fogueira", "bau", "placa", "varal",
+  "fogueira", "bau", "placa", "varal", "navio",
   "pinheiro", "pinheiro-baixo", "grande-ouvinte", "arvore-raio", "tronco-caido",
   "toco", "samambaia", "cogumelo", "cogumelo-azul", "pedra-musgo", "teia", "raizes",
   "cama", "prateleira-pocoes", "caldeirao",

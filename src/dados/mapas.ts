@@ -611,11 +611,39 @@ export const FLORESTA: Mapa = {
   ],
 };
 
-/** Trilha de Chegada, 30 x 13 tiles — onde toda partida nova comeca agora
- *  (ver `VAZIO.cena` em sistemas/estado.ts). Um caminho so, guiado, bordado
- *  de mata como a Floresta: nasce, passa por uma placa (ensina interacao),
- *  passa por um goblin (ensina combate), sai na Vila. Pequeno de proposito
- *  — anda-se de ponta a ponta em poucos segundos, sem contar as paradas. */
+/** Praia de Chegada, 26 x 11 tiles — onde toda partida nova comeca agora
+ *  (ver `VAZIO.cena` em sistemas/estado.ts). O heroi desembarca do navio que
+ *  o trouxe de outras terras, fala com o marinheiro (que concede a arma da
+ *  propria classe, uma bolsa de moedas e uma pocao — nada disso e equipado
+ *  de verdade na criacao de personagem, so mostrado na vitrine), e segue a
+ *  pe pra Trilha de Chegada. Uma faixa de areia so, sem nada em cima dela:
+ *  o navio e o marinheiro ficam ao lado, nunca sobre o caminho. */
+export const PRAIA_DE_CHEGADA: Mapa = {
+  chao: [
+    "TTTTTTTTTTTTTTTTTTTTTTTTTT",
+    "TTTTTTTTTTTTTTTTTTTTTTTTTT",
+    "TTaaaaaaaaaaaaaaaaaaaaaaTT",
+    "TTaaaaaaaaaaaaaaaaaaaaaaTT",
+    "TTaaaaaaaaaaaaaaaaaaaaaaTT",
+    "TTttttttttttttttttttttttTT",
+    "TTaaaaaaaaaaaaaaaaaaaaaaTT",
+    "TTaaaaaaaaaaaaaaaaaaaaaaTT",
+    "~~~~~~~~~~~~~~~~~~~~~~~~~~",
+    "~~~~~~~~~~~~~~~~~~~~~~~~~~",
+    "~~~~~~~~~~~~~~~~~~~~~~~~~~",
+  ],
+  objetos: [{ nome: "navio", x: 6, y: 7 }],
+  pessoas: [{ quem: "marinheiro", sprite: "marinheiro", x: 9, y: 5 }],
+  entrada: { x: 3, y: 5 },
+  lugar: "Praia de Chegada",
+  saidas: [{ x: 23, y: 5, w: 1, h: 1, para: "chegada", entrada: { x: 3, y: 6 } }],
+};
+
+/** Trilha de Chegada, 30 x 13 tiles. Um caminho so, guiado, bordado de mata
+ *  como a Floresta: nasce (vindo da Praia de Chegada), passa por uma placa
+ *  (ensina interacao), passa por um goblin (ensina combate), sai na Vila.
+ *  Pequeno de proposito — anda-se de ponta a ponta em poucos segundos, sem
+ *  contar as paradas. */
 export const TRILHA_DE_CHEGADA: Mapa = {
   chao: [
     "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
@@ -642,6 +670,7 @@ export const TRILHA_DE_CHEGADA: Mapa = {
 
 /** Todo mapa do jogo, pela chave que fica em `estado().cena`. */
 export const MAPAS: Record<string, Mapa> = {
+  praia: PRAIA_DE_CHEGADA,
   chegada: TRILHA_DE_CHEGADA,
   vila: VILA,
   floresta: FLORESTA,

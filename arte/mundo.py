@@ -474,6 +474,42 @@ def varal():
     return im
 
 
+def navio():
+    """O navio que trouxe o heroi ate a Praia de Chegada. Encostado na agua,
+    puro cenario -- ninguem interage com ele direto, so com o marinheiro do
+    lado. Casco em cunha (largo no convés, estreito na quilha), mastro e vela
+    unica, dobrada de lado (o navio esta atracado, nao navegando)."""
+    im = nova(70, 70)
+    sombra(im, 54, 6, 35, 68)
+    # mastro
+    ret(im, 33, 6, 3, 40, MADEIRA_E)
+    # bandeirola no topo do mastro
+    ret(im, 36, 5, 6, 2, VERMELHO)
+    ret(im, 36, 7, 3, 2, VERMELHO)
+    # vela, presa ao mastro, alargando pra baixo -- dobrada (atracado, sem vento)
+    for j in range(30):
+        y = 10 + j
+        largura = 3 + (j * 22) // 30
+        ret(im, 36, y, largura, 1, PAPEL)
+        if j % 5 == 0:
+            ret(im, 36, y, largura, 1, PAPEL_2)
+    # casco: convés largo em cima, afunilando ate a quilha embaixo
+    for j in range(20):
+        y = 44 + j
+        largura = max(14, 56 - j * 2)
+        x = 35 - largura // 2
+        ret(im, x, y, largura, 1, MADEIRA)
+        if j % 3 == 1:
+            ret(im, x, y, largura, 1, MADEIRA_C)
+    ret(im, 7, 43, 56, 2, MADEIRA_C)
+    # vigias ao longo do casco
+    for x in (18, 30, 42, 54):
+        px(im, x, 50, AGUA_E)
+        px(im, x, 51, AGUA_E)
+    contorno_alfa(im)
+    return im
+
+
 # --------------------------------------------------- a Casa de Cura, por dentro
 # O comodo da Vovo Aurora. Ver docs/14-casa-de-cura.md: um comodo so, pequeno de
 # proposito, sem cama pro heroi deitar (a fogueira continua o unico lugar que
@@ -688,6 +724,7 @@ OBJETOS = [
     ("bau", bau, (0.45, 0.45)),
     ("placa", placa, (0.30, 0.25)),
     ("varal", varal, (0.50, 0.30)),
+    ("navio", navio, (0.75, 0.30)),
     # a Floresta dos Sussurros. O desenho mora em arte/floresta.py; os nomes
     # ficam aqui em literal porque e desta lista que o verificar.mjs confere o
     # espelho com OBJETOS de src/dados/config.ts.

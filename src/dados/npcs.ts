@@ -180,6 +180,25 @@ export const NPCS: Record<string, Npc> = {
     },
   },
 
+  marinheiro: {
+    idade: "50 anos",
+    papel: "Quem trouxe o heroi de navio ate a Praia de Chegada",
+    personalidade: "Pressa de quem ja quer estar de volta ao mar",
+    historia: [
+      "Cruzou mais mar do que terra firme na vida inteira, e conhece a rota " +
+        "ate a Praia de Chegada de cor — e de olho fechado, se precisar.",
+      "Nao fica: descarrega quem e o que precisa descarregar e volta pro " +
+        "navio antes da mare virar, sem tempo pra amizade nova.",
+      "Guarda a bagagem de cada passageiro separada por nome, num baú preso " +
+        "no porao — nunca perdeu uma arma nem uma moeda de ninguem.",
+    ],
+    relacoes: [],
+    afinidades: {
+      gosta: ["vento a favor", "mare cheia", "partida pontual"],
+      naoGosta: ["despedida longa", "gente que atrasa o embarque"],
+    },
+  },
+
   padeira: {
     idade: "51 anos",
     papel: "Padeira da vila",

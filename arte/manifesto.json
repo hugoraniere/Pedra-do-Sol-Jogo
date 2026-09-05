@@ -1,6 +1,6 @@
 {
   "gerado_por": "npm run arte",
-  "total": 154,
+  "total": 156,
   "arquivos": {
     "aranha-filhote.png": {
       "hash": "ececeb0a0cfcd628",
@@ -428,6 +428,12 @@
       "largura": 176,
       "altura": 256
     },
+    "npc-marinheiro.png": {
+      "hash": "71476af2eab5b2cf",
+      "bytes": 6513,
+      "largura": 176,
+      "altura": 256
+    },
     "npc-menina.png": {
       "hash": "8d1ec3a524075d1c",
       "bytes": 6238,
@@ -649,6 +655,12 @@
       "bytes": 234,
       "largura": 30,
       "altura": 20
+    },
+    "objetos/navio.png": {
+      "hash": "c2c0db594e4d8ba6",
+      "bytes": 672,
+      "largura": 70,
+      "altura": 70
     },
     "objetos/pedra-musgo.png": {
       "hash": "a47425bf17053a6c",
