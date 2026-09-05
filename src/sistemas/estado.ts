@@ -1,7 +1,7 @@
 /** Estado do jogo. Uma unica fonte da verdade sobre o progresso.
  *  Quem grava e le no disco e sistemas/armazenamento.ts. */
 import { gravarEspaco, lerEspaco } from "./armazenamento";
-import { acharMaterial } from "../dados/conteudo";
+import { acharMaterial, type Atributo } from "../dados/conteudo";
 
 export type Heroi = {
   nome: string;
@@ -22,6 +22,11 @@ export type Heroi = {
    *  `armaSprite` (ja existia); estes dois sao novos, ver
    *  docs/plano-de-itens-e-equipamento.md. */
   equipamento: { armadura: string | null; acessorio: string | null };
+  /** +1 permanente por Selo de Heroi escolhido em cada poder, ALEM do +1 da
+   *  criacao (`poderEscolhido`). Fica no heroi, nao no estado do save-slot em
+   *  geral, porque e progressao do PERSONAGEM — o mesmo motivo de
+   *  `poderEscolhido` morar aqui. Ver sistemas/poderes.ts. */
+  bonusDeSelo: Record<Atributo, number>;
   /** O +1 que o jogador coloca onde quiser, o passo 4 do manual impresso.
    *
    *  Guardamos a ESCOLHA, e nao o total dos tres poderes. O total sai de
@@ -90,6 +95,7 @@ export const VAZIO: Estado = {
     corChapeu: 0x7b5ac4,
     armaSprite: "nenhuma",
     equipamento: { armadura: null, acessorio: null },
+    bonusDeSelo: { forca: 0, esperteza: 0, coracao: 0 },
     poderEscolhido: "",
   },
   coracoes: 3,
@@ -271,5 +277,36 @@ export function usosGastos(acaoId: string): number {
  *  o save no meio nunca pode devolver um uso de graca. */
 export function registrarUso(acaoId: string) {
   atual.usosDeAventura[acaoId] = usosGastos(acaoId) + 1;
+  salvar();
+}
+
+/** Um Selo de Heroi. Devolve true quando este e o TERCEIRO da leva — e a
+ *  hora de abrir a tela de escolha (ver sistemas/poderes.ts,
+ *  `selosParaProximaEscolha`, e `src/cenas/EscolhaDeSelo.ts`). */
+export function ganharSelo(): boolean {
+  atual.selos += 1;
+  salvar();
+  return atual.selos % 3 === 0;
+}
+
+/** Uma das tres escolhas do Selo de Heroi: +1 coracao permanente, ja
+ *  curado — o premio e sentir o alivio na hora, nao so no proximo descanso. */
+export function ganharCoracaoExtra() {
+  atual.coracoesMax += 1;
+  atual.coracoes = atual.coracoesMax;
+  salvar();
+}
+
+/** A segunda escolha: +1 permanente num poder, alem do da criacao. */
+export function ganharBonusDeAtributo(atributo: Atributo) {
+  atual.heroi.bonusDeSelo[atributo] = (atual.heroi.bonusDeSelo[atributo] ?? 0) + 1;
+  salvar();
+}
+
+/** A terceira escolha: aprende uma magia nova, pro resto do jogo — nao so
+ *  desta aventura. Nao faz nada se ja souber (nunca deveria acontecer, quem
+ *  oferece a escolha ja filtra as conhecidas). */
+export function aprenderMagia(magiaId: string) {
+  if (!atual.heroi.magias.includes(magiaId)) atual.heroi.magias.push(magiaId);
   salvar();
 }

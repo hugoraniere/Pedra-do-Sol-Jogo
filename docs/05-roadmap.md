@@ -43,8 +43,9 @@ esbocadas.
 ## Fase 1, o sistema . AGORA
 
 **O maior buraco do projeto ja tem chao.** O combate joga de verdade, os
-atributos vem da raca/classe/escolha, dom e magia gastam uso de aventura. Falta
-o que fecha o risco de verdade: derrota, fogueira e selo ainda nao existem.
+atributos vem da raca/classe/escolha, dom e magia gastam uso de aventura, e
+agora o risco de verdade fecha: derrota, fogueira e Selo de Heroi funcionam de
+ponta a ponta.
 
 Tudo estreia **na Vila Semente**, que ja existe e e pequena. Nao se estreia sistema
 em mapa novo.
@@ -66,11 +67,12 @@ em mapa novo.
       e salva no estado). Falta o resto: comer e dormir nao enchem nada ainda, e o
       Anao continua nascendo com 3 coracoes em vez de 4 (`coracoesMax` e fixo em
       `novoJogo()`, o dom dele nao esta ligado).
-- [ ] **Derrota e fogueira.** Ainda nao existe nenhuma das duas. Comentario no
-      proprio codigo (`Combate.ts`, `heroiApanha()`) admite: com zero coracoes o
-      heroi so fica tonto 1.2s e volta com 1 coracao — nunca cai, nunca acorda em
-      fogueira, nunca perde o que carregava. E o proprio "risco de verdade" do
-      CLAUDE.md que ainda falta.
+- [x] **Derrota e fogueira.** Zero coracoes nocauteia de verdade: o heroi fica
+      tonto, a tela esmaece e `Mundo.acordarNaFogueira()` acorda ele na ULTIMA
+      fogueira acesa (`estado().fogueirasAcesas`, mesmo em mapa diferente de
+      onde caiu), com coracoes cheios e moedas zeradas — conhecimento nunca se
+      perde. Acender e permanente (`acenderFogueira()`), a fogueira da Vila ja
+      comeca acesa, e sentar numa ja acesa tambem cura.
 - [x] **Combate, o laco inteiro** — mas **o modelo mudou**. Ver a decisao logo
       abaixo: nao e mais tempo real com mira, e por turnos.
 - [ ] **O modo de alvo.** A fase de mira existe de verdade (`Combate.ts`): anel de
@@ -80,17 +82,22 @@ em mapa novo.
       passar pela mira.
 - [x] **Barra de habilidades**, com recarga visivel (pontinhos) e atalho 1-6 no
       teclado. `Combate.ts`.
-- [ ] **Selos de Heroi.** Existe so a conta pura (`selosParaProximaEscolha()` em
-      `sistemas/poderes.ts`), **nunca chamada**. `estado().selos` nunca e
-      incrementado em lugar nenhum do jogo — nao ha fluxo que gere selo, nem
-      tela de escolha.
+- [x] **Selos de Heroi.** Cada criatura vencida rende um selo (`ganharSelo()`,
+      `Combate.ts`); a cada 3, `acabarCombate()` abre a tela nova
+      `EscolhaDeSelo.ts` por cima do Mundo (mesmo padrao de `Pausa.ts`), igual
+      o manual manda: +1 coracao, +1 num poder (`heroi.bonusDeSelo`, somado em
+      `poderesDoHeroi()`), ou uma magia nova (sorteada entre as ainda nao
+      aprendidas).
 - [x] **Dom de raca e as tres magias**, 1 uso por aventura cada, de verdade
       (`estado().usosDeAventura`, `registrarUso()` chamado ao executar em
       `Combate.ts`).
 
 Pronto quando: da para tomar um susto na vila, perder, acordar na fogueira, e
-entender exatamente o que custou. **Ainda nao esta pronto** — falta justamente
-a derrota e a fogueira, o coracao do "risco de verdade".
+entender exatamente o que custou. **O risco de verdade ja joga de ponta a
+ponta.** O que ainda falta pra fechar a fase de vez e mais modesto: o dado
+como `sistemas/dado.ts` proprio (hoje espalhado), coracoes cheios por comer/
+dormir e o Anao com 4, e os dois passos que faltam no modo de alvo
+(confirmacao e previa de area).
 
 **Decisao, registrada em `docs/plano-do-combate.md`: o combate deixou de ser
 tempo real com mira e virou por turnos** (estilo mesa, decidido e construido

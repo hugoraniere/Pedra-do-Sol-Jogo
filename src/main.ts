@@ -12,6 +12,7 @@ import { Ficha } from "./cenas/Ficha";
 import { Som } from "./cenas/Som";
 import { Provador } from "./cenas/Provador";
 import { Combate } from "./cenas/Combate";
+import { EscolhaDeSelo } from "./cenas/EscolhaDeSelo";
 import { Ponteiro } from "./cenas/Ponteiro";
 import { instalarAuditor } from "./sistemas/auditoria";
 import { medidaDaJanela, vigiarJanela } from "./sistemas/visao";
@@ -53,7 +54,10 @@ function comecar() {
   physics: { default: "arcade", arcade: { gravity: { x: 0, y: 0 }, debug: false } },
     // o Ponteiro e o ULTIMO de proposito: o Phaser desenha as cenas nesta ordem,
     // e o cursor tem que ficar por cima de tudo, inclusive da caixa de fala.
-    scene: [Boot, Titulo, Carregar, Criacao, Mundo, Interface, Pausa, Ficha, Som, Combate, Provador, Ponteiro],
+    scene: [
+      Boot, Titulo, Carregar, Criacao, Mundo, Interface, Pausa, Ficha, Som,
+      Combate, EscolhaDeSelo, Provador, Ponteiro,
+    ],
   });
   // gancho de depuracao: no console do navegador da para fazer
   //   jogo.scene.getScene("Interface").events.emit("falar", {...})
