@@ -50,11 +50,11 @@ ponta a ponta.
 Tudo estreia **na Vila Semente**, que ja existe e e pequena. Nao se estreia sistema
 em mapa novo.
 
-- [ ] **O dado, como sistema proprio.** A conta (1d6 + atributo, tres faixas) existe
-      espalhada — `rolar()` em `sistemas/turnos.ts`, `faixaDoDado()` em
-      `dados/sons.ts` — mas nunca juntou num `sistemas/dado.ts` puro e testavel.
-      Os modificadores do material impresso (+1 com ajuda, +1 com o item certo,
-      -1 se dificil) **nao existem em lugar nenhum do codigo ainda**.
+- [ ] **O dado, como sistema proprio.** A conta (1d6 + atributo, tres faixas)
+      juntou num `sistemas/dado.ts` puro e testavel (`rolar()` + `faixaDoDado()`,
+      antes espalhados entre `sistemas/turnos.ts` e `dados/sons.ts`).
+      **Ainda falta:** os modificadores do material impresso (+1 com ajuda, +1
+      com o item certo, -1 se dificil) **nao existem em lugar nenhum do codigo**.
 - [x] **Atributos no estado.** `poderesDoHeroi()` (`sistemas/poderes.ts`) soma
       raca (+1) + classe (+1) + a escolha do jogador (`heroi.poderEscolhido`),
       igual o manual pede.
