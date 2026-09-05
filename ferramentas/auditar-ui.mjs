@@ -172,9 +172,54 @@ async function digitarNome() {
 
 const telas = [];
 
+/** Para toda animacao no primeiro quadro dela, para o screenshot ser sempre o
+ *  mesmo, e devolve quantas parou.
+ *
+ *  Sem isto a tela sai diferente de uma rodada para a outra sem nada ter mudado
+ *  no jogo. O culpado e a respiracao: a pose "parado" tem dois quadros, um de
+ *  2200 ms e outro de 700 ms, entao mais ou menos uma captura em cada quatro
+ *  pega o personagem no meio do suspiro. O PNG entra no git, e o diff vira uma
+ *  mudanca que ninguem fez, em qualquer pasta, a qualquer hora. E pior do que
+ *  parece: um screenshot que muda sozinho ensina a ignorar screenshot que muda.
+ *
+ *  ESCOLHE O QUADRO PRIMEIRO E PARA DEPOIS, e a ordem nao e detalhe. O
+ *  setCurrentFrame do Phaser so avisa a troca de quadro (ANIMATION_UPDATE) se a
+ *  animacao ainda estiver tocando. Parando antes, o heroi sai montado errado: o
+ *  corpo pula para o quadro 0 e a roupa e a arma ficam nos pontos de encaixe do
+ *  quadro anterior, porque quem as pendura e justamente esse evento. Nao ha
+ *  risco na ordem certa: entre as duas linhas o jogo nao roda, e o laco de
+ *  animacao nao avanca no meio de um bloco sincrono. */
+async function congelar() {
+  return pagina.evaluate(() => {
+    const achatar = (l) => l.flatMap((o) => (Array.isArray(o.list) ? [o, ...achatar(o.list)] : [o]));
+    const parados = [];
+    for (const cena of window.jogo.scene.getScenes(true)) {
+      for (const o of achatar(cena.children.list)) {
+        if (!o.anims?.isPlaying || !o.anims.currentAnim) continue;
+        o.anims.setCurrentFrame(o.anims.currentAnim.frames[0]);
+        o.anims.pause();
+        parados.push(o);
+      }
+    }
+    window.__congelados = parados;
+    return parados.length;
+  });
+}
+
+/** Solta o que congelar() parou. A auditoria continua clicando depois da foto,
+ *  e cena com animacao parada nao e o jogo que o jogador ve. */
+async function descongelar() {
+  await pagina.evaluate(() => {
+    (window.__congelados ?? []).forEach((o) => o.anims?.resume());
+    window.__congelados = undefined;
+  });
+}
+
 async function olhar(nome) {
   await pagina.waitForTimeout(500);
+  await congelar();
   await pagina.screenshot({ path: join(PASTA_TELAS, `${nome}.png`) });
+  await descongelar();
   const achados = await pagina.evaluate(() => window.auditarUI());
   const contagem = await pagina.evaluate(() => {
     const conta = (lista) =>
