@@ -1160,6 +1160,19 @@ linha reta ate o goblin, girada na direcao certa mesmo em diagonal.
 Tamanho: P
 
 ### 5. Ligar arco/funda em `Combate.ts`
+
+> **Feita, checada por leitura de codigo, nao ao vivo** (esta sessao). O
+> branch novo em `executar()` verifica `acao.id === "golpe-arco" ||
+> "golpe-funda"` (confirmado contra o retorno real de `golpeDaArma("arco")`
+> via console: `id: "golpe-arco"`, bate certo) e usa a distancia REAL ate a
+> casa (nao o alcance maximo da arma) pro tempo de voo. Tentei confirmar
+> jogando uma flecha de verdade numa luta, mas a aba do navegador desta
+> sessao voltou a travar em `document.hidden` (o mesmo problema que ja tinha
+> aparecido antes) - nem a rolagem do dado avancou, entao nem cheguei a ver
+> se foi acerto ou erro. Fica pendente de confirmacao visual pro Hugo, nao
+> de logica: build limpo, tipos batendo, e a peca que faltava
+> (`projetilOrientado`) ja foi provada isolada no passo 4.
+
 Arquivo: `src/cenas/Combate.ts`
 Faz: golpes com `acao.alcance > 1` (arco=5, funda=4 — os unicos golpes, ja
 que magias tem o proprio branch) pulam `golpeCorpoACorpo` e chamam:

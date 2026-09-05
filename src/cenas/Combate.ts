@@ -18,7 +18,7 @@ import { alcancaveis, caminho, chaveDaCasa, distanciaEmCasas, type Casa } from "
 import { acoesDoHeroi, type AcaoDeHeroi } from "../sistemas/acao";
 import { fileira } from "../sistemas/fileira";
 import { criarAnimacoes, camadasDoHeroi, Heroi } from "../sistemas/heroi";
-import { agachar, hitstop } from "../sistemas/fx";
+import { agachar, hitstop, projetilOrientado } from "../sistemas/fx";
 import { aplicarDerrota, estado, guardar, marcarDerrotado, registrarUso, salvar, usosGastos } from "../sistemas/estado";
 import { HOSPITAL_ENTRADA, VILA } from "../dados/mapas";
 import { poderesDoHeroi } from "../sistemas/poderes";
@@ -658,6 +658,23 @@ export class Combate extends Phaser.Scene {
       if (faixa === "ops" || pegos.length === 0) {
         this.poeira(cx, cy - 8);
         tocarFicha(IMPACTOS.errou);
+      } else if (acao.id === "golpe-arco" || acao.id === "golpe-funda") {
+        // arco e funda atiram de verdade: quem acerta e a flecha/pedra
+        // CHEGANDO no alvo, nao o clique - passo 5 do plano (Atualizacao 3).
+        // O tempo de voo escala com a distancia real ate a casa, nao com o
+        // alcance maximo da arma: um tiro de perto chega mais rapido que um
+        // no limite do alcance.
+        const distancia = distanciaEmCasas(minha, casa);
+        const ms = 90 + distancia * 45;
+        const [corProjetil, largura, comprimento] = acao.id === "golpe-funda"
+          ? [0x96a2b8, 4, 4]
+          : [0xa87a4e, 2, 8];
+        projetilOrientado(this, this.heroi.x, this.heroi.y - 8, cx, cy, corProjetil, largura, comprimento, ms, () => {
+          pegos.forEach((b) => this.atingir(b, cx, cy, faixa === "oba"));
+          this.cameras.main.shake(90, 0.0022);
+          this.time.delayedCall(500, () => this.fimDaAcao());
+        });
+        return;
       } else {
         pegos.forEach((b) => this.atingir(b, cx, cy, faixa === "oba"));
         // o martelo pesa mais que espada, cajado ou soco: o mesmo golpe corpo
