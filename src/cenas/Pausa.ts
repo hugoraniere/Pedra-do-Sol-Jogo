@@ -186,6 +186,8 @@ export class Pausa extends Phaser.Scene {
       TAMANHO.botao +
       ESPACO.lg +
       TAMANHO.botao +
+      ESPACO.lg +
+      TAMANHO.botao +
       (temTelaCheia ? ESPACO.lg + TAMANHO.botao : 0) +
       ESPACO.lg +
       TAMANHO.botao;
@@ -272,6 +274,35 @@ export class Pausa extends Phaser.Scene {
         "painel-creme"
       );
       b.marcar(ligado === preferencias().som);
+      this.painel.add(b);
+    });
+
+    // -------------------------------------------------- controles na tela
+    // Mesmo padrao do som: dois botoes, o rotulo diz a escolha inteira. Serve
+    // quem joga so de teclado e quer o direcional/botao A fora da tela —
+    // Controles continua ouvindo teclado normalmente dos dois lados.
+    const linhaControles = p.reservar(TAMANHO.botao, ESPACO.lg);
+    const larguraControles = Math.floor((linhaControles.largura - ESPACO.sm) / 2);
+    ([true, false] as const).forEach((ligado, i) => {
+      const b = botao(
+        this,
+        linhaControles.x + i * (larguraControles + ESPACO.sm) + larguraControles / 2,
+        meio(linhaControles),
+        larguraControles,
+        linhaControles.altura,
+        ligado ? "COM CONTROLES" : "SEM CONTROLES",
+        () => {
+          if (ligado === preferencias().controlesNaTela) return;
+          definirPreferencia("controlesNaTela", ligado);
+          // Interface nao le a preferencia a cada quadro, so em montarDirecional
+          // (chamado por create()) — sem o restart o toque continuaria do
+          // jeito que estava ate a proxima troca de mapa/resolucao.
+          this.scene.get("Interface")?.scene.restart();
+          this.desenhar();
+        },
+        "painel-creme"
+      );
+      b.marcar(ligado === preferencias().controlesNaTela);
       this.painel.add(b);
     });
 

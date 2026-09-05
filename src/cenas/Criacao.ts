@@ -126,9 +126,6 @@ export class Criacao extends Phaser.Scene {
     // todas as combinacoes possiveis de camada precisam de animacao pronta
     criarAnimacoes(this, this.todasAsChaves());
     this.add.rectangle(0, 0, LARGURA, ALTURA, 0xfff8ea).setOrigin(0);
-    // o cenario da tela inicial fica so como textura de fundo, bem apagado.
-    // a 25 por cento ele competia com os botoes e lavava o texto
-    marcar(this.add.image(0, 0, "titulo").setOrigin(0).setAlpha(0.14), "fundo");
 
     // tres camadas de profundidade, nesta ordem: os palcos atras, os bonecos em
     // cima deles, e o que se toca por cima de tudo. Sem separar, o palco
@@ -679,7 +676,7 @@ export class Criacao extends Phaser.Scene {
       })),
       atual,
       [
-        `${raca.nome} · +1 ${ATRIBUTOS[raca.bonus].nome} · ${raca.coracoes} coracoes`,
+        `${raca.nome} · +1 ${ATRIBUTOS[raca.bonus[0]].nome} e +1 ${ATRIBUTOS[raca.bonus[1]].nome} · ${raca.coracoes} coracoes`,
         `${raca.dom}: ${raca.domTexto}`,
       ],
       (k) => {
@@ -754,10 +751,10 @@ export class Criacao extends Phaser.Scene {
     const corpo = this.corpo("Escolha seu ponto forte");
     const linhas = this.linhasDaFicha(
       [
-        `${raca.curto} deu +1 ${ATRIBUTOS[raca.bonus].nome}, ${classe.curto} deu +1 ${
-          ATRIBUTOS[classe.bonus].nome
-        }.`,
-        "O terceiro ponto e seu.",
+        `${raca.curto} deu +1 ${ATRIBUTOS[raca.bonus[0]].nome} e +1 ${ATRIBUTOS[raca.bonus[1]].nome}, ${
+          classe.curto
+        } deu +1 ${ATRIBUTOS[classe.bonus].nome}.`,
+        "O ultimo ponto e seu.",
       ],
       corpo.largura
     );

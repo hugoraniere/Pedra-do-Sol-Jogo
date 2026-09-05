@@ -21,17 +21,22 @@ import { acoesDoHeroi, type AcaoDeHeroi } from "../sistemas/acao";
 import { fileira } from "../sistemas/fileira";
 import { criarAnimacoes, camadasDoHeroi, Heroi } from "../sistemas/heroi";
 import { agachar, estourinho, hitstop, ondaDeConjuracao, piscar, popIn, projetil, projetilOrientado, textoFlutuante } from "../sistemas/fx";
-import { aplicarDerrota, estado, guardar, marcarDerrotado, registrarUso, salvar, usosGastos } from "../sistemas/estado";
+import {
+  aplicarDerrota, estado, guardar, marcarDerrotado, registrarUso, salvar, usosGastos, ganharSelo,
+} from "../sistemas/estado";
 import { HOSPITAL_ENTRADA, VILA } from "../dados/mapas";
 import { poderesDoHeroi } from "../sistemas/poderes";
 import type { Atributo } from "../dados/conteudo";
 import { tocar, tocarFicha } from "../sistemas/som";
 import { texto } from "../sistemas/texto";
+import { periodoAtual } from "../sistemas/tempo";
+import type { Periodo } from "../dados/tempo";
 import { Ordem } from "../sistemas/turnos";
 import { aplicarMarca, type Condicao, type Marca } from "../sistemas/marcas";
 import { rolarDado, dobrar } from "../sistemas/dado";
 import { tem } from "../sistemas/condicoes";
 import { condicoesDados } from "../dados/condicoes-dados";
+import { definirPreferencia, preferencias } from "../sistemas/preferencias";
 import type { Mundo } from "./Mundo";
 
 const SLOT = 22;
@@ -139,6 +144,9 @@ export class Combate extends Phaser.Scene {
   private textoVida!: Phaser.GameObjects.BitmapText;
   private trilhaIniciativa!: Phaser.GameObjects.Container;
   private botaoPassar!: Phaser.GameObjects.Container;
+  private fundoAutoPassar!: Phaser.GameObjects.NineSlice;
+  private marcaAutoPassar!: Phaser.GameObjects.Graphics;
+  private alvoAutoPassar!: Phaser.GameObjects.Rectangle;
   private aviso!: Phaser.GameObjects.BitmapText;
   private chapaAviso!: Phaser.GameObjects.NineSlice;
   private dicaCaixa!: Phaser.GameObjects.Container;
@@ -158,6 +166,13 @@ export class Combate extends Phaser.Scene {
   private mundo!: Mundo;
   private largura = 0;
   private altura = 0;
+  /** selos no INICIO desta luta, pra saber ao final se algum selo ganho aqui
+   *  completou uma leva de 3 (e por isso deve abrir a tela de escolha). */
+  private selosNoInicio = 0;
+  /** o periodo do dia QUANDO A LUTA COMECOU, capturado uma vez — pra uma luta
+   *  comprida nao mudar de bonus no meio se o relogio virar de periodo
+   *  (dados/conteudo.ts, Criatura.bonusPorPeriodo). */
+  private periodoDoEncontro: Periodo = "manha";
 
   constructor() {
     super("Combate");
@@ -187,6 +202,8 @@ export class Combate extends Phaser.Scene {
     this.coracoesMax = st0.coracoesMax;
     this.coracoes = st0.coracoes;
     this.atributos = poderesDoHeroi(ficha);
+    this.selosNoInicio = st0.selos;
+    this.periodoDoEncontro = periodoAtual();
 
     // goblin nao tem textura propria ("goblin" sozinho nunca foi carregado) -
     // os 3 corpos de verdade entram todos aqui, e cada instancia escolhe o
@@ -230,7 +247,11 @@ export class Combate extends Phaser.Scene {
       // (spriteDoGoblin) sai da MESMA casa que o Mundo usou pra desenhar a
       // versao decorativa, entao os dois sempre concordam.
       const spriteChave = e.id === "goblin" ? spriteDoGoblin(casa.tx, casa.ty) : b.sprite;
-      this.porCriatura(`${e.id}-${i}`, e.id, e.chave, spriteChave, nome, b.bonus, casa.tx, casa.ty, b.coracoes);
+      // base fixa da criatura (conteudo.ts, revisao 2026-09-05) mais o
+      // extra de periodo (aranha fica mais perigosa de noite, por exemplo) -
+      // as duas escalas de dificuldade somam, nao competem.
+      const bonus = b.bonus + (b.bonusPorPeriodo?.[this.periodoDoEncontro] ?? 0);
+      this.porCriatura(`${e.id}-${i}`, e.id, e.chave, spriteChave, nome, bonus, casa.tx, casa.ty, b.coracoes);
     });
 
     // a camera de Combate so desenha o que ELE acrescenta (barra, mira, os
@@ -299,8 +320,8 @@ export class Combate extends Phaser.Scene {
       id, bicharioId, chave, nome, bonus,
       retrato: ICONE.retrato[spriteChave.replace("goblin-", "")] ?? 1,
       sprite: s, corpo: s.body as Phaser.Physics.Arcade.Body, tipo: "criatura",
-      coracoes, coracoesMax: coracoes, mostrarAte: 0, rota: [], condicoes: [],
-      jaAtacouDeSurpresa: false,
+      coracoes, coracoesMax: coracoes, mostrarAte: 0, rota: [],
+      jaAtacouDeSurpresa: false, condicoes: [],
     });
   }
 
@@ -320,7 +341,9 @@ export class Combate extends Phaser.Scene {
     this.trilhaIniciativa = fixo(this.add.container(14 + LARGURA_VIDA, 2));
 
     const acoes = acoesDoHeroi(estado().heroi);
-    const area = { x: 6, y: ALTURA - SLOT - 2, largura: LARGURA - 56, altura: SLOT };
+    // -56 virou -76: sobra os 20px que o toggle de passar automaticamente
+    // precisa no canto, sem disputar espaco com o ultimo slot de acao.
+    const area = { x: 6, y: ALTURA - SLOT - 2, largura: LARGURA - 76, altura: SLOT };
     const linha = fileira(area, SLOT, GAP);
     const cabem = Math.min(linha.cabem(), acoes.length);
     this.topoDaBarra = area.y - 14;
@@ -360,7 +383,35 @@ export class Combate extends Phaser.Scene {
     this.botaoPassar = fixo(this.add.container(px, py, [fundoP, txtP]));
     this.botaoPassar.setSize(44, 16).setInteractive({ useHandCursor: true });
     this.botaoPassar.on("pointerdown", () => this.passarAVez());
-    this.botaoPassar.setVisible(false);
+
+    // --------------------------------------- passar automaticamente (toggle)
+    // Nao cabe rotulo de texto do lado do PASSAR (44x16 ja ocupa o canto
+    // inteiro) — e so um quadradinho com visto, que muda de cor conforme a
+    // preferencia. O PASSAR continua existindo do jeito de sempre; isto so
+    // decide se `fimDaAcao()` chama `passarAVez()` sozinho depois que a acao
+    // do turno for usada (ver fimDaAcao()), sem exigir o clique manual.
+    const paX = px - 32;
+    const paY = py;
+    this.fundoAutoPassar = fixo(
+      this.add.nineslice(paX, paY, "painel-escuro", undefined, 18, 16, 6, 6, 6, 6).setOrigin(0.5)
+    );
+    this.marcaAutoPassar = fixo(this.add.graphics());
+    this.desenharAutoPassar(paX, paY);
+    this.alvoAutoPassar = fixo(
+      this.add.rectangle(paX, paY, 22, 22, 0x000000, 0).setInteractive({ useHandCursor: true })
+    );
+    this.alvoAutoPassar.on("pointerdown", () => {
+      definirPreferencia("passarAutomaticamente", !preferencias().passarAutomaticamente);
+      this.desenharAutoPassar(paX, paY);
+    });
+    this.alvoAutoPassar.on("pointerover", () =>
+      this.mostrarDicaLinhas(
+        ["PASSAR SOZINHO", preferencias().passarAutomaticamente ? "LIGADO" : "DESLIGADO"],
+        paX
+      )
+    );
+    this.alvoAutoPassar.on("pointerout", () => this.esconderDica());
+    this.mostrarBotaoPassar(false);
 
     this.chapaRotulo = fixo(this.add.nineslice(LARGURA / 2, this.topoDaBarra, "painel-escuro", undefined, 8, 12, 8, 8, 8, 8).setOrigin(0.5, 0));
     this.chapaRotulo.setVisible(false);
@@ -385,7 +436,13 @@ export class Combate extends Phaser.Scene {
     const linha3 = a.escopo === "porLuta" ? "UMA VEZ POR LUTA"
       : a.escopo === "porAventura" ? "UMA VEZ POR AVENTURA"
       : "TODO TURNO";
-    const linhas = [a.nome, linha2, linha3];
+    this.mostrarDicaLinhas([a.nome, linha2, linha3], xSlot);
+  }
+
+  /** O nucleo de `mostrarDica`, sem depender de uma `AcaoDeHeroi` — serve
+   *  qualquer dica de texto simples na mesma caixa, como o toggle de passar
+   *  automaticamente (que nao e uma acao do heroi, so uma preferencia). */
+  private mostrarDicaLinhas(linhas: string[], xAlvo: number) {
     const ENTRE = 2;
     const alturaTexto = linhas.length * (10 + ENTRE) - ENTRE;
     const altura = alturaTexto + 10;
@@ -394,12 +451,38 @@ export class Combate extends Phaser.Scene {
     this.dicaTexto.setLineSpacing(ENTRE);
     this.dicaTexto.setY(-altura + 5);
     this.dicaChapa.setSize(largura, altura);
-    const x = Phaser.Math.Clamp(xSlot, largura / 2 + 2, LARGURA - largura / 2 - 2);
+    const x = Phaser.Math.Clamp(xAlvo, largura / 2 + 2, LARGURA - largura / 2 - 2);
     this.dicaCaixa.setPosition(x, this.topoDaBarra - 2).setVisible(true);
   }
 
   private esconderDica() {
     this.dicaCaixa.setVisible(false);
+  }
+
+  /** Visto dourado (ligado) ou quadrado apagado (desligado) — o mesmo
+   *  vocabulario visual da borda que ja marca a acao selecionada nos slots,
+   *  so que aqui e um interruptor, nao uma selecao temporaria. */
+  private desenharAutoPassar(x: number, y: number) {
+    const ligado = preferencias().passarAutomaticamente;
+    const cor = ligado ? 0xf5b62b : 0x6b6484;
+    this.marcaAutoPassar.clear();
+    this.marcaAutoPassar.lineStyle(2, cor, 1).strokeRect(x - 6, y - 6, 12, 12);
+    if (!ligado) return;
+    this.marcaAutoPassar.lineStyle(2, cor, 1);
+    this.marcaAutoPassar.beginPath();
+    this.marcaAutoPassar.moveTo(x - 3, y);
+    this.marcaAutoPassar.lineTo(x - 1, y + 3);
+    this.marcaAutoPassar.lineTo(x + 4, y - 4);
+    this.marcaAutoPassar.strokePath();
+  }
+
+  /** PASSAR e o toggle de passar-automaticamente sempre aparecem e somem
+   *  juntos: os dois so fazem sentido durante o turno do heroi. */
+  private mostrarBotaoPassar(visivel: boolean) {
+    this.botaoPassar.setVisible(visivel);
+    this.fundoAutoPassar.setVisible(visivel);
+    this.marcaAutoPassar.setVisible(visivel);
+    this.alvoAutoPassar.setVisible(visivel);
   }
 
   private dizer(nome: string) {
@@ -479,7 +562,7 @@ export class Combate extends Phaser.Scene {
     this.desenharIniciativa();
     if (vez.id === "heroi") {
       this.fase = "meuTurno";
-      this.botaoPassar.setVisible(true);
+      this.mostrarBotaoPassar(true);
       this.anunciar("SUA VEZ", 600);
       this.calcularAlcance();
       return;
@@ -487,7 +570,7 @@ export class Combate extends Phaser.Scene {
     const dele = this.bichos.find((b) => b.id === vez.id);
     this.anunciar(`VEZ DO ${dele?.nome ?? "INIMIGO"}`, 500);
     this.fase = "vezDaCriatura";
-    this.botaoPassar.setVisible(false);
+    this.mostrarBotaoPassar(false);
     this.pincelCasas.clear();
     this.time.delayedCall(320, () => this.jogarCriatura(vez.id));
   }
@@ -503,7 +586,7 @@ export class Combate extends Phaser.Scene {
   private acabarCombate() {
     this.ordem.encerrar();
     this.fase = "resolvendo";
-    this.botaoPassar.setVisible(false);
+    this.mostrarBotaoPassar(false);
     this.pincelCasas.clear();
     this.pincel.clear();
     this.dizer("");
@@ -517,6 +600,16 @@ export class Combate extends Phaser.Scene {
     this.time.delayedCall(700, () => {
       this.scene.stop();
       this.mundo.sairDeCombate();
+      // cruzou uma leva de 3 selos nesta luta? a tela de escolha abre por
+      // cima do Mundo, que sairDeCombate() acabou de liberar — congela os
+      // dois de novo, mesmo padrao que Mundo.pausar() usa pra Pausa
+      const antes = Math.floor(this.selosNoInicio / 3);
+      const agora = Math.floor(estado().selos / 3);
+      if (agora > antes) {
+        this.scene.pause("Mundo");
+        this.scene.pause("Interface");
+        this.scene.launch("EscolhaDeSelo");
+      }
     });
   }
 
@@ -913,26 +1006,20 @@ export class Combate extends Phaser.Scene {
       // "livre" (sistemas/alvo.ts): a acao age no proprio heroi ou numa casa
       // vazia, entao pegos() vazio e o resultado ESPERADO, nunca um erro.
       const semAlvoNecessario = acao.alvo === "livre";
-      if (!foiSucesso(resultado.desfecho)) {
-        this.poeira(cx, cy - 8);
-        tocarFicha(IMPACTOS.errou);
-        this.time.delayedCall(500, () => this.fimDaAcao());
-        return;
-      }
-      // mesmo com sucesso (o golpe ia acertar), uma criatura agil pode
-      // esquivar por conta propria -- `esquivaChance` (conteudo.ts), pedido
-      // pelo Hugo em 2026-09-05. O DADO continua sendo quem decide o
-      // resultado; isto so filtra por cima dele, depois que ja sabemos que
-      // acertaria. No critico de sucesso ninguem esquiva: critico "sempre
-      // funciona" (docs/modelo-de-combate.md secao 3) nao abre excecao.
+      const sucesso = foiSucesso(resultado.desfecho);
       const critico = resultado.desfecho === "critico-sucesso";
       const dano = this.danoDaAcao(acao, bonus, critico);
-      const esquivaram = critico
-        ? []
+      // mesmo com sucesso no dado, uma criatura agil pode esquivar por conta
+      // propria -- `esquivaChance` (conteudo.ts), o atributo novo pedido pelo
+      // Hugo em 2026-09-05. O DADO continua sendo de quem decide o resultado;
+      // isto so filtra por cima dele. Sem sucesso no dado ninguem tem chance
+      // de novo: ja errou por causa do dado, nao por sorte dupla.
+      const esquivaram = !sucesso
+        ? pegos
         : pegos.filter((b) => Math.random() < (acharCriatura(b.bicharioId)?.esquivaChance ?? 0));
       if (esquivaram.length > 0) {
-        // nao "nada aconteceu" - ele ESQUIVOU do golpe, e por isso toca a
-        // animacao propria, nunca a de errou generico.
+        // falha com bicho na mira, ou esquiva de verdade: nao "nada
+        // aconteceu", ele ESQUIVOU do golpe -- e por isso que o heroi errou.
         esquivaram.forEach((b) => {
           const chave = b.sprite.texture.key;
           const dir = direcaoDe(this.heroi.x - b.sprite.x, this.heroi.y - b.sprite.y) ?? "baixo";
@@ -941,7 +1028,12 @@ export class Combate extends Phaser.Scene {
         });
       }
       const atingidos = pegos.filter((b) => !esquivaram.includes(b));
-      if (atingidos.length === 0 && !semAlvoNecessario) {
+      // errou se: o dado falhou, ou precisava de alvo e nao tinha nenhum, ou
+      // tinha alvo e todos esquivaram -- as tres causas de "nada foi atingido"
+      // sao diferentes e so a ultima depende da esquiva calculada acima.
+      const semAlvoQuandoPrecisava = pegos.length === 0 && !semAlvoNecessario;
+      const todosEsquivaram = pegos.length > 0 && atingidos.length === 0;
+      if (!sucesso || semAlvoQuandoPrecisava || todosEsquivaram) {
         this.poeira(cx, cy - 8);
         tocarFicha(IMPACTOS.errou);
       } else if (acao.id === "golpe-arco" || acao.id === "golpe-funda") {
@@ -1048,7 +1140,15 @@ export class Combate extends Phaser.Scene {
   private fimDaAcao() {
     this.dizer("");
     if (this.criaturasVivas().length === 0) return this.acabarCombate();
-    if (this.ordem.acabou()) {
+    // ordem.acabou() so fecha o turno quando NEM movimento nem acao sobraram
+    // — sem a preferencia, ainda da pra andar depois de atacar. Com ela
+    // ligada (padrao), a acao sozinha ja basta: o jogador nao precisa clicar
+    // PASSAR so porque tinha movimento de sobra que nao pretendia usar.
+    // "acao" aqui e a unica que existe hoje (Ordem.acaoUsada); quando o
+    // combate ganhar mais de uma acao por turno, esta checagem passa a olhar
+    // todas, nao so a primeira.
+    const semAcaoDeSobra = preferencias().passarAutomaticamente && this.ordem.agora()?.acaoUsada;
+    if (this.ordem.acabou() || semAcaoDeSobra) {
       this.ordem.passar();
       return this.entrarNoTurno();
     }
@@ -1200,6 +1300,9 @@ export class Combate extends Phaser.Scene {
           else guardar(id);
         });
         salvar();
+        // um Selo de Heroi por criatura vencida — o sistema de progressao do
+        // proprio RPG de mesa (CLAUDE.md), sem inventar experiencia nenhuma
+        ganharSelo();
       }
     }
     this.ordem.remover(b.id);

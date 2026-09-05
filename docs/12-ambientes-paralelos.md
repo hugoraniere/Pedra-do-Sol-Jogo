@@ -137,6 +137,25 @@ commitada, e pula frente que ja tem commit proprio divergindo. Essa segunda junt
 com `git merge principal` dentro da pasta, com quem sabe o que aquele trabalho
 estava fazendo, que e a terceira regra ali de cima.
 
+## O pre-voo: `npm run frente-check`
+
+`npm run ambiente listar` fala de atraso de commit. `npm run frente-check` fala
+do resto: entrada de `FRENTES.md` apontando pra worktree que ja fechou, arquivo
+citado por mais de uma frente ao mesmo tempo, `ESTADO-DO-JOGO.md` que uma
+entrega ja marcou como desatualizado e ninguem reescreveu, worktree ja juntada
+ao `principal` e pronta pra fechar, `git stash` parado (ja aconteceu de guardar
+trabalho de outra sessao no meio de um merge), numero de documento repetido em
+`docs/`, e screenshot de `ferramentas/telas/` mais velho que a ultima mudanca em
+`src/cenas`. A skill `frentes` pede pra rodar antes de ler `FRENTES.md` na mao.
+
+```bash
+npm run frente-check                       # confere tudo
+npm run frente-check src/cenas/Ficha.ts    # + confere se ESTE arquivo ja e de outra frente
+```
+
+Sai com codigo 1 se achar algo que bloqueia (colisao de arquivo pedido, numero
+de documento repetido, worktree quebrada), 0 se achar so aviso.
+
 Dentro de um ambiente, o habito e uma linha antes de comecar:
 
 ```bash

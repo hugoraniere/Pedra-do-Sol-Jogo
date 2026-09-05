@@ -217,6 +217,34 @@ def i_lupa():
     return im
 
 
+def i_lixeira():
+    """A zona de jogar fora da mochila (docs/plano-de-itens-e-equipamento.md,
+    secao 17.4). Tampa mais larga que o corpo, corpo afunilando pra baixo,
+    tres ranhuras verticais. Contorno automatico (igual i_seta): mais seguro
+    que contorno manual numa silhueta que muda de largura linha a linha."""
+    im = nova(U, U)
+    ret(im, 6, 3, 4, 1, PEDRA_C)
+    ret(im, 3, 4, 10, 2, PEDRA_C)
+    for j in range(6, 13):
+        estreita = (j - 6) // 3
+        ret(im, 4 + estreita, j, 8 - 2 * estreita, 1, PEDRA)
+    for x in (6, 8, 10):
+        for y in range(7, 12):
+            px(im, x, y, PEDRA_E)
+    base = im.copy()
+    for j in range(U):
+        for i in range(U):
+            if base.getpixel((i, j))[3]:
+                continue
+            vizinho = any(
+                0 <= i + dx < U and 0 <= j + dy < U and base.getpixel((i + dx, j + dy))[3]
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
+            )
+            if vizinho:
+                px(im, i, j, TINTA)
+    return im
+
+
 def i_dado():
     im = nova(U, U)
     ret(im, 3, 3, 10, 10, PAPEL)
@@ -227,6 +255,75 @@ def i_dado():
         px(im, x, y, TINTA); px(im, x + 1, y, TINTA)
         px(im, x, y + 1, TINTA); px(im, x + 1, y + 1, TINTA)
     return im
+
+
+# ------------------------------------------------------- icones de periodo
+# Os 6 periodos do relogio (dados/tempo.ts). Sol cheio pra manha/tarde, sol
+# cortado pelo horizonte pra aurora/por-do-sol (a mesma forma, so a cor e a
+# altura do corte mudam), lua crescente pra noite/madrugada -- a mais escura
+# das duas, coerente com ela ser o ponto mais fundo da noite no relogio.
+def _sol_periodo(cor, raios=True, corte_y=None):
+    im = nova(U, U)
+    cx, cy = 8, 8
+    pontas = [(-6, 0), (6, 0), (0, -6), (0, 6), (-4, -4), (4, -4), (-4, 4), (4, 4)]
+    if raios:
+        for (dx, dy) in pontas:
+            x, y = cx + dx, cy + dy
+            if corte_y is None or y <= corte_y:
+                px(im, x, y, cor)
+    for j in range(U):
+        for i in range(U):
+            if corte_y is not None and j > corte_y:
+                continue
+            d = (i - cx) ** 2 + (j - cy) ** 2
+            if d < 10:
+                px(im, i, j, cor)
+            elif d < 16:
+                px(im, i, j, TINTA)
+    if corte_y is not None:
+        ret(im, 1, corte_y + 1, 14, 1, TINTA)
+    return im
+
+
+def _lua_periodo(cor, estrelas):
+    im = nova(U, U)
+    cx, cy = 8, 8
+    for j in range(U):
+        for i in range(U):
+            cheio = (i - cx) ** 2 + (j - cy) ** 2
+            corte = (i - cx - 3) ** 2 + (j - cy + 2) ** 2
+            if cheio < 20 and corte > 20:
+                px(im, i, j, cor)
+            elif cheio < 26 and corte > 26:
+                px(im, i, j, TINTA)
+    pontos(im, estrelas, PAPEL)
+    return im
+
+
+def i_periodo_madrugada():
+    return _lua_periodo(TINTA_2, [(4, 3), (12, 5)])
+
+
+def i_periodo_aurora():
+    return _sol_periodo(ROSA, raios=False, corte_y=10)
+
+
+def i_periodo_manha():
+    return _sol_periodo(OURO, raios=True)
+
+
+def i_periodo_tarde():
+    im = _sol_periodo(OURO, raios=True)
+    pontos(im, [(7, 6), (8, 6)], (255, 230, 160))
+    return im
+
+
+def i_periodo_por_do_sol():
+    return _sol_periodo(BRASA, raios=True, corte_y=9)
+
+
+def i_periodo_noite():
+    return _lua_periodo(AZUL, [(12, 4)])
 
 
 ICONES = [
@@ -243,6 +340,13 @@ ICONES = [
     ("livro", i_livro()),
     ("lupa", i_lupa()),
     ("dado", i_dado()),
+    ("periodo_madrugada", i_periodo_madrugada()),
+    ("periodo_aurora", i_periodo_aurora()),
+    ("periodo_manha", i_periodo_manha()),
+    ("periodo_tarde", i_periodo_tarde()),
+    ("periodo_por_do_sol", i_periodo_por_do_sol()),
+    ("periodo_noite", i_periodo_noite()),
+    ("lixeira", i_lixeira()),
 ]
 
 

@@ -7,9 +7,11 @@ import { acharCriatura, nomeDoItem, spriteDoGoblin } from "../dados/conteudo";
 import { DIALOGOS, type Escolha } from "../dados/dialogos";
 import { concluirEtapa } from "../sistemas/missoes";
 import {
-  estado, salvar, marcarVisitado, foiDerrotado,
+  estado, salvar, marcarVisitado, foiDerrotado, guardar,
   foiAcesa, acenderFogueira, ultimaFogueiraAcesa,
 } from "../sistemas/estado";
+import { ICONE } from "../sistemas/icones";
+import { ICONE_ITEM } from "../sistemas/icones-itens";
 import type { Encontro } from "./Combate";
 import { Controles } from "../sistemas/controles";
 import { camadasDoHeroi, criarAnimacoes, Heroi } from "../sistemas/heroi";
@@ -52,7 +54,15 @@ type Ponto = { x: number; y: number };
 
 /** Um bicho plantado no mapa, com a chave estavel que o marca como derrotado
  *  em `estado()` e o corpo que precisa sumir junto quando ele perde a luta. */
-type CriaturaViva = { sprite: Phaser.GameObjects.Sprite; corpo: Phaser.GameObjects.Rectangle; id: string; chave: string };
+type CriaturaViva = {
+  sprite: Phaser.GameObjects.Sprite;
+  corpo: Phaser.GameObjects.Rectangle;
+  id: string;
+  chave: string;
+  /** copiado da ficha (dados/conteudo.ts) na hora de nascer, pra nao
+   *  procurar no BESTIARIO de novo a cada frame. undefined = sempre presente. */
+  presencaPeriodos?: Periodo[];
+};
 
 /** Um NPC com rotina (ver `Pessoa.rotina` em dados/mapas.ts): quem ja anda
  *  sozinho de um ponto a outro quando o periodo do dia muda, reusando o
@@ -87,6 +97,12 @@ const FOLGA_PONTEIRO = 6;
  *  mede a partir da frente do heroi) e para o clique (que mede do heroi
  *  ate o alvo, chegando por qualquer lado). */
 const ALCANCE_ACAO = 18;
+/** Raio (em px de mundo) do furo de luz que toda fonte de luz abre no
+ *  `overlayCeu` — ver `atualizarCeu()`. Mesmo raio pra fogueira e, mais pra
+ *  frente, pra tocha: uma so escala de "isso ilumina" no jogo inteiro. */
+const RAIO_LUZ = 70;
+/** Chave da textura de luz gerada em `garantirTexturaDeLuz()`. */
+const TEXTURA_LUZ = "luz-fonte";
 /** um toque/clique fica "indeciso" ate um dos dois limiares estourar: rapido
  *  e sem sair do lugar e toque (anda ate ali por caminho); qualquer um dos
  *  dois passando do limiar vira segurar (anda direto, sem caminho, na
@@ -111,6 +127,13 @@ export class Mundo extends Phaser.Scene {
   private heroi!: Heroi;
   private controles!: Controles;
   private interagiveis: Interagivel[] = [];
+  /** item jogado fora da mochila, visivel no chao ate ser apanhado — chave
+   *  e a mesma que o `Interagivel` correspondente usa (`item-largado:N`).
+   *  NAO persiste no save de proposito (docs/plano-de-itens-e-
+   *  equipamento.md, secao 17.5): so existe enquanto este mapa continuar
+   *  carregado, igual todo `Interagivel` dinamico deste array. */
+  private itensNoChao = new Map<string, { item: string; quantidade: number; sprite: Phaser.GameObjects.Image }>();
+  private proximoIdItemLargado = 0;
   private conversando = false;
   private solidos!: Phaser.Physics.Arcade.StaticGroup;
   private chao!: Phaser.Tilemaps.TilemapLayer;
@@ -152,9 +175,17 @@ export class Mundo extends Phaser.Scene {
    *  mundo, nunca troca de cena nem de mapa. */
   private emCombate = false;
 
-  /** O ceu de dia/noite: um retangulo preso a camera, por cima do mapa
-   *  inteiro. Ver Parte B do plano — a cor/alpha vem de sistemas/tempo.ts. */
-  private overlayCeu!: Phaser.GameObjects.Rectangle;
+  /** O ceu de dia/noite: uma RenderTexture presa a camera, por cima do mapa
+   *  inteiro. Cor/alpha vem de sistemas/tempo.ts, preenchidos em cima dela;
+   *  cada fonte de luz (fogueira, e depois tocha) apaga um circulo de borda
+   *  macia nela via `erase()` — a mesma tecnica de "lanterna" do Phaser. Era
+   *  um Rectangle solido antes disto: precisou virar textura porque um
+   *  retangulo nao tem furo por dentro. */
+  private overlayCeu!: Phaser.GameObjects.RenderTexture;
+  /** Onde a luz sempre acende, de dia ou de noite — hoje so fogueira.
+   *  Populado no loop de objetos de `create()`, lido a cada quadro em
+   *  `atualizarCeu()`. */
+  private fontesDeLuz: { x: number; y: number }[] = [];
   /** So os NPCs que tem `rotina` em mapas.ts entram aqui; o resto continua
    *  100% parado, sem custo nenhum a mais. */
   private npcs: NpcComRotina[] = [];
@@ -197,7 +228,13 @@ export class Mundo extends Phaser.Scene {
     ]);
     this.controles = new Controles(this);
     this.interagiveis = [];
+    this.fontesDeLuz = [];
     this.conversando = false;
+    // sem isto, uma derrota (Combate.derrota() reinicia o Mundo direto, sem
+    // passar por sairDeCombate()) deixava o heroi travado pra sempre: o
+    // proprio campo so nasce false na CONSTRUCAO da cena, nunca de novo a
+    // cada create(), e e ele que barra todo movimento mais abaixo.
+    this.emCombate = false;
     this.solidos = this.physics.add.staticGroup();
     // oito copias escondidas, prontas para copiar textura/quadro/origem de
     // quem estiver em destaque a cada quadro. A textura aqui e so um
@@ -216,6 +253,7 @@ export class Mundo extends Phaser.Scene {
     this.saidas = mapa.saidas ?? [];
     this.trocandoDeMapa = false;
     const fichas = this.cache.json.get("objetos") as Record<string, FichaObjeto>;
+    this.garantirAnimacaoDeFogo();
 
     // ---------------------------------------------------------- chao
     const chao = montarChao(mapa.chao);
@@ -248,8 +286,16 @@ export class Mundo extends Phaser.Scene {
       // ancorado pelo pe: a base do objeto encosta no tile indicado
       const x = peca.x * TILE + TILE / 2;
       const y = peca.y * TILE + TILE;
-      const s = this.add.image(x, y, `obj-${peca.nome}`).setOrigin(0.5, 1);
+      // a fogueira tremeluz de verdade (4 quadros, ver arte/mundo.py) e e
+      // uma fonte de luz que ilumina sempre — todo o resto continua imagem
+      // parada, sem custo de animacao a mais
+      const s: Phaser.GameObjects.Image | Phaser.GameObjects.Sprite =
+        peca.nome === "fogueira"
+          ? this.add.sprite(x, y, "obj-fogueira").play("fogo-tremeluz")
+          : this.add.image(x, y, `obj-${peca.nome}`);
+      s.setOrigin(0.5, 1);
       s.setDepth(y);
+      if (peca.nome === "fogueira") this.fontesDeLuz.push({ x, y: y - ficha.h * 0.6 });
       if (peca.solido !== false && ficha.cw > 0) {
         const corpo = this.add.rectangle(x, y - ficha.ch / 2, ficha.cw, ficha.ch);
         this.solidos.add(corpo);
@@ -351,7 +397,11 @@ export class Mundo extends Phaser.Scene {
       const corpo = this.add.rectangle(x, y - 4, 10, 8);
       this.solidos.add(corpo);
       (corpo.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
-      this.criaturas.push({ sprite: s, corpo, id: bicho.id, chave });
+      if (ficha.presencaPeriodos && !ficha.presencaPeriodos.includes(periodoAtual())) {
+        s.setVisible(false);
+        (corpo.body as Phaser.Physics.Arcade.StaticBody).enable = false;
+      }
+      this.criaturas.push({ sprite: s, corpo, id: bicho.id, chave, presencaPeriodos: ficha.presencaPeriodos });
     });
 
     // ------------------------------------------------------- a malha
@@ -413,18 +463,26 @@ export class Mundo extends Phaser.Scene {
     // Preso a camera (setScrollFactor(0)), por cima do mapa inteiro e por
     // baixo da Interface: como Interface e outra Scene, lancada depois na
     // lista de main.ts, a ordem de cena ja resolve a sobreposicao sozinha,
-    // sem precisar de depth cruzando cena. Cor/alpha vem de corDoCeu().
+    // sem precisar de depth cruzando cena. Cor/alpha vem de corDoCeu(); os
+    // furos de luz vem de `fontesDeLuz`, aplicados em atualizarCeu().
+    this.garantirTexturaDeLuz();
     this.overlayCeu = this.add
-      .rectangle(0, 0, this.cameras.main.width, this.cameras.main.height, COR.tinta, 0)
+      .renderTexture(0, 0, this.cameras.main.width, this.cameras.main.height)
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setDepth(Number.MAX_SAFE_INTEGER);
     refazerAoRedimensionar(this, () =>
-      this.overlayCeu.setSize(this.cameras.main.width, this.cameras.main.height)
+      this.overlayCeu.resize(this.cameras.main.width, this.cameras.main.height)
     );
     this.atualizarCeu();
 
     this.scene.launch("Interface");
+    // garante ativa e visivel mesmo se a ultima saida de combate foi por
+    // derrota: iniciarCombate() pausa/esconde a Interface, e so a vitoria
+    // (sairDeCombate()) desfazia isso ate agora — toda entrada nova no
+    // Mundo tem que comecar de um HUD utilizavel, nao so a normal.
+    this.scene.resume("Interface");
+    this.scene.setVisible(true, "Interface");
     this.scene.get("Interface").events.on("acao", () => this.tentarInteragir());
     this.scene.get("Interface").events.on("pausar", () => this.pausar());
     if (this.derrotaPendente) this.avisarDerrota(this.derrotaPendente);
@@ -441,6 +499,21 @@ export class Mundo extends Phaser.Scene {
     // sair do mundo solta os loops. A musica sobrevive: menu e titulo sao o
     // mesmo lugar do ponto de vista de quem joga, e recomecar a faixa se ouve.
     this.events.once("shutdown", () => calarAmbiente());
+
+    // dica de movimento da Trilha de Chegada: so na primeira vez que este
+    // heroi nasce ali, antes de qualquer outra coisa acontecer. Atrasada um
+    // tick: `this.scene.launch("Interface")` (logo acima) so termina de
+    // montar e registrar o listener de "falar" depois deste create()
+    // encerrar — emitir na hora perdia o evento no vazio (conferido ao
+    // vivo: a caixa nascia invisivel e sem texto nenhum).
+    if (st0.cena === "chegada" && marcarVisitado("dica-movimento-chegada")) {
+      this.time.delayedCall(50, () => {
+        this.abrirFala("Dica", [
+          "Arraste o direcional (ou use as setas) para andar.",
+          "Siga o caminho.",
+        ]);
+      });
+    }
   }
 
   /**
@@ -492,6 +565,19 @@ export class Mundo extends Phaser.Scene {
       );
     }
     if (!alvo) return;
+    // item largado no chao (docs/plano-de-itens-e-equipamento.md, secao
+    // 17.5): apanhar nao e conversa, entao resolve e sai ANTES do lookup em
+    // DIALOGOS — mesmo padrao que fogueira/bau ja usam, so que sem abrir
+    // caixa de fala nenhuma no final.
+    if (alvo.chave.startsWith("item-largado:")) {
+      const dados = this.itensNoChao.get(alvo.chave);
+      if (dados) {
+        guardar(dados.item, dados.quantidade);
+        tocar("moeda");
+        this.removerItemDoChao(alvo.chave);
+      }
+      return;
+    }
     // a fogueira e caso especial, antes do lookup generico: a fala dela
     // depende de QUAL instancia e se ja foi acesa, e o sistema de
     // variantes/condicao de dialogos.ts nao da conta disso (condicao e uma
@@ -624,14 +710,62 @@ export class Mundo extends Phaser.Scene {
     this.atualizarCeu();
   }
 
-  /** A cor do ceu agora, por cima do mapa inteiro. Publico so porque a
-   *  auditoria de UI (`ferramentas/auditar-ui.mjs`) precisa fixar o relogio
-   *  antes do screenshot e forcar esta cor a acompanhar na hora, senao a
-   *  troca so apareceria no quadro seguinte. */
+  /** A cor do ceu agora, por cima do mapa inteiro, com um furo de borda
+   *  macia ao redor de cada fonte de luz (`fontesDeLuz`) — e por isso que a
+   *  fogueira ilumina de noite mesmo o resto da tela escurecendo. Publico so
+   *  porque a auditoria de UI (`ferramentas/auditar-ui.mjs`) precisa fixar o
+   *  relogio antes do screenshot e forcar esta cor a acompanhar na hora,
+   *  senao a troca so apareceria no quadro seguinte. */
   private atualizarCeu() {
     const { cor, alpha } = corDoCeu();
-    this.overlayCeu.setFillStyle(cor, 1);
-    this.overlayCeu.setAlpha(alpha);
+    this.overlayCeu.clear();
+    this.overlayCeu.fill(cor, alpha, 0, 0, this.overlayCeu.width, this.overlayCeu.height);
+    if (alpha < 0.02 || !this.fontesDeLuz.length) return;
+    const cam = this.cameras.main;
+    for (const fonte of this.fontesDeLuz) {
+      const sx = fonte.x - cam.scrollX;
+      const sy = fonte.y - cam.scrollY;
+      if (sx < -RAIO_LUZ || sy < -RAIO_LUZ || sx > cam.width + RAIO_LUZ || sy > cam.height + RAIO_LUZ) {
+        continue;
+      }
+      this.overlayCeu.erase(TEXTURA_LUZ, sx - RAIO_LUZ, sy - RAIO_LUZ);
+    }
+  }
+
+  /** A textura da "lanterna": um circulo branco com borda macia (gradiente
+   *  radial de verdade, via canvas — um Graphics com aneis concentricos nao
+   *  fecha o centro totalmente opaco). Gerada uma vez, reusada por toda
+   *  fonte de luz do jogo inteiro. */
+  private garantirTexturaDeLuz() {
+    if (this.textures.exists(TEXTURA_LUZ)) return;
+    const d = RAIO_LUZ * 2;
+    const tex = this.textures.createCanvas(TEXTURA_LUZ, d, d);
+    // createCanvas so devolve null se a chave ja existisse com outro tipo de
+    // textura — o guard de exists() logo acima ja impede isso na pratica;
+    // isto e so pro tsc parar de reclamar (TS18047), sem mudar nada do
+    // comportamento real.
+    if (!tex) return;
+    const ctx = tex.getContext();
+    const gradiente = ctx.createRadialGradient(RAIO_LUZ, RAIO_LUZ, 0, RAIO_LUZ, RAIO_LUZ, RAIO_LUZ);
+    gradiente.addColorStop(0, "rgba(255,255,255,1)");
+    gradiente.addColorStop(0.6, "rgba(255,255,255,0.55)");
+    gradiente.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = gradiente;
+    ctx.fillRect(0, 0, d, d);
+    tex.refresh();
+  }
+
+  /** A chama tremeluzindo: 4 quadros (arte/mundo.py) tocados em loop. So
+   *  precisa existir uma vez — `anims.create` e global ao jogo, nao por
+   *  cena, e `create()` roda de novo a cada troca de mapa. */
+  private garantirAnimacaoDeFogo() {
+    if (this.anims.exists("fogo-tremeluz")) return;
+    this.anims.create({
+      key: "fogo-tremeluz",
+      frames: ["obj-fogueira", "obj-fogueira-2", "obj-fogueira-3", "obj-fogueira-4"].map((key) => ({ key })),
+      frameRate: 6,
+      repeat: -1,
+    });
   }
 
   /** So para `ferramentas/auditar-ui.mjs`: prende o relogio num horario fixo
@@ -652,6 +786,10 @@ export class Mundo extends Phaser.Scene {
     const periodo = periodoAtual();
     const mudouPeriodo = periodo !== this.ultimoPeriodo;
     this.ultimoPeriodo = periodo;
+    if (mudouPeriodo) {
+      this.scene.get("Interface").events.emit("periodo-mudou", periodo);
+      this.atualizarPresencaDeCriaturas(periodo);
+    }
     this.npcs.forEach((npc) => {
       if (mudouPeriodo) this.tracarRotaDoNpc(npc, npc.pessoa.rotina![periodo]);
       if (!npc.caminho || npc.caminho.length === 0) return;
@@ -668,6 +806,19 @@ export class Mundo extends Phaser.Scene {
         npc.caminho.shift();
         if (npc.caminho.length === 0) this.finalizarRotaDoNpc(npc);
       }
+    });
+  }
+
+  /** So chamada quando o periodo muda de verdade (ver atualizarRotinasDeNpc).
+   *  Esconde/reexibe cada criatura com `presencaPeriodos` (dados/conteudo.ts)
+   *  de acordo com o novo periodo — quem nao tem o campo nunca muda, sempre
+   *  presente, igual o jogo sempre funcionou. Quem ja morreu de vez
+   *  (`removerCriatura`) nem esta mais em `this.criaturas`, entao nunca
+   *  ressuscita por engano aqui. */
+  private atualizarPresencaDeCriaturas(periodo: Periodo) {
+    this.criaturas.forEach((c) => {
+      if (!c.presencaPeriodos) return;
+      this.esconderCriatura(c.chave, c.presencaPeriodos.includes(periodo));
     });
   }
 
@@ -761,11 +912,22 @@ export class Mundo extends Phaser.Scene {
     const hx = Math.floor(this.heroi.x / TILE);
     const hy = Math.floor((this.heroi.y - 1) / TILE);
     const perto = this.criaturas.filter((c) => {
+      // escondida por horario (presencaPeriodos) nunca embosca ninguem
+      if (!c.sprite.visible) return false;
       const cx = Math.floor(c.sprite.x / TILE);
       const cy = Math.floor((c.sprite.y - 1) / TILE);
       return Math.hypot(cx - hx, cy - hy) <= DISTANCIA_DE_ENCONTRO;
     });
     if (perto.length === 0) return;
+    // dica de combate da Trilha de Chegada: so na primeira aproximacao do
+    // goblin de tutorial, antes da luta abrir de vez.
+    if (estado().cena === "chegada" && marcarVisitado("dica-goblin-chegada")) {
+      this.abrirFala("Dica", [
+        "Escolha um golpe na barra, mire no goblin e confirme.",
+        "O dado decide o que acontece.",
+      ]);
+      return;
+    }
     this.iniciarCombate(perto);
   }
 
@@ -798,10 +960,16 @@ export class Mundo extends Phaser.Scene {
     return { tx: Math.floor(c.sprite.x / TILE), ty: Math.floor((c.sprite.y - 1) / TILE) };
   }
 
-  /** Esconde (ou reexibe) a criatura decorativa enquanto a versao de combate
-   *  dela briga por cima. */
+  /** Esconde (ou reexibe) a criatura decorativa — enquanto a versao de
+   *  combate dela briga por cima, ou porque o horario mudou
+   *  (`presencaPeriodos`, ver atualizarPresencaDeCriaturas). O corpo de
+   *  colisao anda junto: escondida sem desligar o corpo virava parede
+   *  invisivel. */
   esconderCriatura(chave: string, visivel: boolean) {
-    this.criaturas.find((c) => c.chave === chave)?.sprite.setVisible(visivel);
+    const c = this.criaturas.find((x) => x.chave === chave);
+    if (!c) return;
+    c.sprite.setVisible(visivel);
+    (c.corpo.body as Phaser.Physics.Arcade.StaticBody).enable = visivel;
   }
 
   /** Ela perdeu a luta de vez: tira do mapa e da lista, pra nao sobrar
@@ -812,6 +980,44 @@ export class Mundo extends Phaser.Scene {
     c.sprite.destroy();
     c.corpo.destroy();
     this.criaturas = this.criaturas.filter((x) => x !== c);
+    // o goblin de tutorial so existe na Trilha de Chegada, entao a chave
+    // "chegada:0" (unica criatura daquele mapa) identifica ele sozinha —
+    // conclui aqui, na derrota, nunca no sorteio de item (so 70% de chance).
+    if (chave === "chegada:0") concluirEtapa("primeiros-passos", "derrotar-o-goblin");
+  }
+
+  /** Larga um item no chao, na posicao atual do heroi — chamado pela Ficha
+   *  quando o jogador joga fora da mochila (docs/plano-de-itens-e-
+   *  equipamento.md, secao 17.5). Reusa o MESMO icone que a mochila ja usa
+   *  (`ICONE_ITEM`/`itens.png`) — nenhum sprite novo de "item no chao"
+   *  precisa existir. Item sem ficha em catalogo nenhum (um item de
+   *  historia solto, tipo "pano-goblin") cai com o icone generico de
+   *  mochila, honesto em vez de fingir um icone que nao existe. */
+  largarItemNoChao(item: string, quantidade: number) {
+    const temIconeProprio = ICONE_ITEM[item] !== undefined;
+    const x = this.heroi.x;
+    const y = this.heroi.y;
+    const sprite = this.add
+      .image(x, y - 6, temIconeProprio ? "itens" : "ui", temIconeProprio ? ICONE_ITEM[item] : ICONE.mochila)
+      .setDepth(500);
+    // cai no chao, um pulo pequeno — o mesmo "isto aconteceu agora" que o
+    // bau ja da com o som "bau-abre" + delay da moeda, so que em movimento
+    this.tweens.add({ targets: sprite, y, duration: 220, ease: "Bounce.easeOut" });
+    const chave = `item-largado:${this.proximoIdItemLargado++}`;
+    this.itensNoChao.set(chave, { item, quantidade, sprite });
+    this.interagiveis.push({ x, y, chave, tipo: "objeto", largura: 12, altura: 12, obj: sprite });
+  }
+
+  /** Tira o item apanhado do chao e da lista de interagiveis — chamado so
+   *  por `tentarInteragir()`, depois de `guardar()` ja ter posto na
+   *  mochila de verdade. */
+  private removerItemDoChao(chave: string) {
+    const dados = this.itensNoChao.get(chave);
+    if (!dados) return;
+    dados.sprite.destroy();
+    this.itensNoChao.delete(chave);
+    const idx = this.interagiveis.findIndex((i) => i.chave === chave);
+    if (idx !== -1) this.interagiveis.splice(idx, 1);
   }
 
   /** O tamanho do mundo em pixel, pra Combate.ts limitar a propria camera
@@ -1157,6 +1363,9 @@ export class Mundo extends Phaser.Scene {
     // nem escolha — a mesma trilha que o guarda ja indica no dialogo dele
     if (st.cena === "vila" && saida.para === "floresta") {
       concluirEtapa("sino-da-vila", "seguir-para-floresta");
+    }
+    if (st.cena === "chegada" && saida.para === "vila") {
+      concluirEtapa("primeiros-passos", "chegar-na-vila");
     }
     st.cena = saida.para;
     st.lugar = destino.lugar;

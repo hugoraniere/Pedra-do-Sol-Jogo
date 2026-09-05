@@ -129,10 +129,3 @@ export class Ordem {
     this.rodadaAtual = 1;
   }
 }
-
-/** 1d6 + atributo, e a faixa da mesa. O sorteio entra de fora para o resultado
- *  poder ser conferido em teste sem depender de aleatorio. */
-export function rolar(atributo: number, sorteio: () => number): { dado: number; total: number } {
-  const dado = sorteio();
-  return { dado, total: dado + atributo };
-}

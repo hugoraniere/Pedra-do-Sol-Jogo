@@ -79,8 +79,6 @@ export class Boot extends Phaser.Scene {
       this.load.spritesheet(c.sprite, `assets/${c.sprite}.png`,
         { frameWidth: q.largura, frameHeight: q.altura });
     });
-    this.load.image("titulo", "assets/titulo.png");
-    this.load.image("logo", "assets/logo.png");
     this.load.bitmapFont("aurora", "assets/fonte.png", "assets/fonte.xml");
     this.load.json("objetos", "assets/objetos.json");
     OBJETOS.forEach((n) => this.load.image(`obj-${n}`, `assets/objetos/${n}.png`));
@@ -92,6 +90,9 @@ export class Boot extends Phaser.Scene {
     // folha propria do combate: retratos, acoes e as seis faces do dado.
     // Separada de ui.png para nao disputar arte/ui.py com o ambiente `sprites`.
     this.load.spritesheet("icones", "assets/icones.png", { frameWidth: 16, frameHeight: 16 });
+    // folha propria dos itens de mochila (consumivel, material, armadura,
+    // acessorio) — ver arte/itens.py.
+    this.load.spritesheet("itens", "assets/itens.png", { frameWidth: 16, frameHeight: 16 });
     ["painel", "painel-creme", "painel-ouro", "painel-escuro"].forEach((n) =>
       this.load.image(n, `assets/${n}.png`)
     );

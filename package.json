@@ -27,9 +27,11 @@
     "teste": "node ferramentas/conferir-teste.mjs",
     "contraste": "python3 ferramentas/contraste.py",
     "ambiente": "node ferramentas/ambiente.mjs",
+    "frente-check": "node ferramentas/frente-check.mjs",
     "icones": "python3 arte/icones.py"
   },
   "dependencies": {
+    "@fontsource/baloo-2": "^5.3.0",
     "@fontsource/silkscreen": "^5.3.0",
     "phaser": "^3.90.0"
   },

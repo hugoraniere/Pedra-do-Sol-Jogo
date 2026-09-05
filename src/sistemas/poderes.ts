@@ -18,10 +18,12 @@ export type Poderes = Record<Atributo, number>;
 
 export const zerados = (): Poderes => ({ forca: 0, destreza: 0, agilidade: 0, inteligencia: 0, vitalidade: 0 });
 
-/** O que a origem do heroi da sozinha: +1 da raca e +1 da classe. */
+/** O que a origem do heroi da sozinha: +1 e +1 da raca (revisao de
+ *  2026-09-05, ver docs/15-lore-e-visual-das-racas.md — o bonus de raca virou
+ *  um ciclo de dois atributos vizinhos) e +1 da classe. */
 export function poderesDaOrigem(raca: string, classe: string): Poderes {
   const poderes = zerados();
-  poderes[acharRaca(raca).bonus] += 1;
+  acharRaca(raca).bonus.forEach((atributo) => { poderes[atributo] += 1; });
   poderes[acharClasse(classe).bonus] += 1;
   return poderes;
 }
@@ -39,13 +41,19 @@ export function poderEscolhidoDoHeroi(heroi: Heroi): Atributo {
   ) {
     return escolhido;
   }
-  return acharRaca(heroi.raca).bonus;
+  // primeiro atributo do ciclo da raca -- so um chute default, valido ate o
+  // jogador escolher; qual dos dois pouco importa aqui.
+  return acharRaca(heroi.raca).bonus[0];
 }
 
-/** O total dos tres poderes: origem mais o +1 do jogador. */
+/** O total dos tres poderes: origem, mais o +1 da criacao, mais qualquer
+ *  Selo de Heroi ja trocado por poder (`estado().heroi.bonusDeSelo`). */
 export function poderesDoHeroi(heroi: Heroi): Poderes {
   const poderes = poderesDaOrigem(heroi.raca, heroi.classe);
   poderes[poderEscolhidoDoHeroi(heroi)] += 1;
+  (Object.keys(poderes) as Atributo[]).forEach((a) => {
+    poderes[a] += heroi.bonusDeSelo?.[a] ?? 0;
+  });
   return poderes;
 }
 

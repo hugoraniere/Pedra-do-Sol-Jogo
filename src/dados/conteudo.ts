@@ -11,6 +11,7 @@ import type { Marca } from "../sistemas/marcas";
 import type { AlvoDeAcao } from "../sistemas/alvo";
 import type { IdCondicao } from "../sistemas/condicoes";
 import type { Dado } from "../sistemas/dado";
+import type { Periodo } from "./tempo";
 
 /** Revisao de 2026-09-04 (CLAUDE.md): os tres da mesa (FORCA, ESPERTEZA,
  *  CORACAO) viraram cinco. "Esperteza" fazia tres trabalhos escondidos - agora
@@ -97,7 +98,12 @@ export type Raca = {
   nome: string;
   /** o nome numa palavra so, para caber embaixo do avatar na criacao */
   curto: string;
-  bonus: Atributo;
+  /** Revisao de 2026-09-05 (docs/15-lore-e-visual-das-racas.md): duas raças
+   *  não bastam mais para justificar cinco atributos, então o bônus virou um
+   *  CICLO de cinco — cada raça soma dois atributos vizinhos (Destreza →
+   *  Agilidade → Vitalidade → Força → Inteligência → e fecha em Destreza).
+   *  Cada atributo cai em exatamente duas raças, e nenhuma dupla se repete. */
+  bonus: [Atributo, Atributo];
   dom: string;
   domTexto: string;
   /** quadro de icones.png. Nunca Desisto reusa `dado-5` (rolar de novo e o
@@ -116,7 +122,7 @@ export const RACAS: Raca[] = [
     id: "vale",
     nome: "Gente do Vale",
     curto: "Vale",
-    bonus: "vitalidade",
+    bonus: ["destreza", "agilidade"],
     dom: "Nunca Desisto",
     domTexto: "Uma vez por aventura voce pode rolar o dado de novo.",
     icone: "dado-5",
@@ -127,7 +133,7 @@ export const RACAS: Raca[] = [
     id: "anao",
     nome: "Anao da Fornalha",
     curto: "Anao",
-    bonus: "forca",
+    bonus: ["vitalidade", "forca"],
     dom: "Casco Duro",
     domTexto: "Voce comeca com 4 coracoes em vez de 3.",
     icone: "dom-casco-duro",
@@ -138,7 +144,7 @@ export const RACAS: Raca[] = [
     id: "elfo",
     nome: "Elfo da Folha",
     curto: "Elfo",
-    bonus: "inteligencia",
+    bonus: ["inteligencia", "destreza"],
     dom: "Olhos de Coruja",
     domTexto: "Voce enxerga no escuro e de bem longe.",
     icone: "dom-olhos-de-coruja",
@@ -149,7 +155,7 @@ export const RACAS: Raca[] = [
     id: "pequenino",
     nome: "Pequenino do Trigo",
     curto: "Pequenino",
-    bonus: "vitalidade",
+    bonus: ["agilidade", "vitalidade"],
     dom: "Pe de Coelho",
     domTexto: "Uma vez por aventura voce troca uma Falha por uma Falha Perto.",
     icone: "dom-pata-de-coelho",
@@ -160,7 +166,7 @@ export const RACAS: Raca[] = [
     id: "dragao",
     nome: "Cria de Dragao",
     curto: "Dragao",
-    bonus: "forca",
+    bonus: ["forca", "inteligencia"],
     dom: "Sopro Quentinho",
     domTexto: "Uma vez por aventura voce solta fogo pela boca.",
     icone: "acao-sopro-quentinho",
@@ -359,6 +365,23 @@ export const ARMAS: Arma[] = [
     origem: "vencer a Bruxa Espinho na Torre",
   },
 ];
+
+// ------------------------------------------------------------- mochilas
+// Tamanho de mochila, igual Stardew Valley (Saco -> Bolsa -> Mochila) e
+// Project Zomboid (mochila pequena vira grande com o jogo). O heroi comeca
+// com a pequena; as outras sao encontradas ou compradas depois — mesma
+// dependencia de loja que o resto do plano (ver secao 7 do documento):
+// `comprarMochila()` em estado.ts ja funciona, so nao ha cena de loja pra
+// chamar ainda.
+export type Mochila = { id: string; nome: string; preco: number; slots: number; texto: string };
+
+export const MOCHILAS: Mochila[] = [
+  { id: "mochila-pequena", nome: "Mochila Pequena", preco: 0, slots: 8, texto: "A que sai da Vila Semente com voce." },
+  { id: "mochila-media", nome: "Mochila de Couro", preco: 15, slots: 16, texto: "Encomendada com Seu Cominho. Cabe o dobro." },
+  { id: "mochila-grande", nome: "Mochila de Viagem", preco: 30, slots: 24, texto: "Pra quem ja nao volta pra casa todo dia." },
+];
+
+export const acharMochila = (id: string): Mochila => MOCHILAS.find((m) => m.id === id) ?? MOCHILAS[0];
 
 // ------------------------------------------------------------------ loja
 export type Item = { id: string; nome: string; preco: number; texto: string };
@@ -600,6 +623,19 @@ export type Criatura = {
   unico?: boolean;
   /** em que lugares ela aparece */
   onde: string[];
+  /** so aparece nestes periodos do dia (dados/tempo.ts); sem isto, aparece
+   *  sempre, igual o jogo sempre funcionou. Ver Mundo.ts, que esconde/reexibe
+   *  a instancia no mapa quando o periodo muda (junto com o corpo de
+   *  colisao, senao vira parede invisivel). Guardiao unico nunca deveria
+   *  usar isto — sumir por horario numa criatura que so existe uma vez
+   *  travaria a missao dela por azar de relogio. */
+  presencaPeriodos?: Periodo[];
+  /** bonus extra no dado de ataque dela quando o encontro comeca num destes
+   *  periodos (ex.: goblin mais dificil de acertar a noite) — soma ao
+   *  `bonus` de sempre, capturado uma vez no inicio da luta em Combate.ts
+   *  pra nao mudar no meio de uma luta comprida. Sem isto, sem bonus, igual
+   *  hoje. */
+  bonusPorPeriodo?: Partial<Record<Periodo, number>>;
 };
 
 export const BESTIARIO: Criatura[] = [
@@ -611,6 +647,9 @@ export const BESTIARIO: Criatura[] = [
     velocidade: 70, alcance: 12, dano: { quantidade: 1, lados: 3 }, bonus: 0, esquivaChance: 0,
     telegrafo: "levanta o pau acima da cabeca e fecha os olhos",
     larga: [{ id: "moeda", chance: 0.7 }], onde: ["floresta", "caverna"],
+    // mais dificil de acertar a noite -- ele e criatura de missao principal,
+    // entao nunca some do mapa (sem presencaPeriodos), so fica mais valente
+    bonusPorPeriodo: { noite: 1 },
   },
   {
     id: "aranha", nome: "Aranha da Teia Doce", coracoes: 8,
@@ -620,6 +659,8 @@ export const BESTIARIO: Criatura[] = [
     velocidade: 34, alcance: 14, dano: { quantidade: 1, lados: 4 }, bonus: 1, esquivaChance: 0.2,
     telegrafo: "encolhe as oito pernas antes do bote",
     larga: [{ id: "teia-doce", chance: 0.55 }, { id: "anel-teia", chance: 0.04 }], onde: ["floresta"],
+    // sai da toca so quando escurece -- de dia so o rastro de teia fica
+    presencaPeriodos: ["noite", "madrugada", "aurora"],
   },
   {
     id: "espantalho", nome: "Espantalho Andarilho", coracoes: 8,
@@ -709,7 +750,9 @@ export const acharCriatura = (id: string) => BESTIARIO.find((c) => c.id === id);
  *  LOJA ou largado por uma criatura (`BESTIARIO[].larga`, que nao tem catalogo
  *  de nome proprio ainda). Sem entrada na LOJA, formata o proprio id
  *  ("teia-doce" -> "Teia Doce") em vez de mostrar a chave crua: nunca um erro
- *  morto na tela, a mesma regra que ja vale pro dado. */
+ *  morto na tela, a mesma regra que ja vale pro dado. Usado pelo resumo de
+ *  derrota (Mundo.ts) - mais simples que `acharQualquerItem()` abaixo porque
+ *  ali so precisa do nome, nunca da categoria. */
 const PREPOSICOES_MINUSCULAS = new Set(["de", "do", "da", "dos", "das"]);
 export function nomeDoItem(id: string): string {
   const item = acharItem(id);

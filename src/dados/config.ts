@@ -46,6 +46,11 @@ export const COR = {
   /** o verde do chao, para as telas que precisam continuar o mundo */
   grama: 0x42804e,
   gramaClara: 0x68b06c,
+  /** terra do caminho e verde de conifera, usados no cenario vetorial da Titulo */
+  terra: 0xc6a06c,
+  terraEscura: 0x9e764c,
+  pinheiro: 0x4c8c68,
+  pinheiroEscuro: 0x1e483c,
 } as const;
 
 /** Indices do tileset.png, na mesma ordem de arte/tiles.py */
@@ -72,7 +77,7 @@ export const T = {
   // bordasDeGrama() escolhe entre esta e a de cima medindo a largura real.
   beiraNFina: 36, beiraSFina: 37, beiraLFina: 38, beiraOFina: 39,
   beiraNOFina: 40, beiraNLFina: 41, beiraSOFina: 42, beiraSLFina: 43,
-  // interior: parede da Casa de Cura (arte/tiles.py, parede_interior())
+  // a Casa de Cura, por dentro (arte/tiles.py, parede_interior())
   paredeInterior: 44,
 } as const;
 
@@ -229,6 +234,21 @@ export const ARMA_DA_CLASSE: Record<string, string> = {
   ferreiro: "martelo",
 };
 
+/** So estas 5 `Arma.id` (de `dados/conteudo.ts`) tem sprite de verdade
+ *  (`arte/equipamento.py`, DESENHOS) — as outras 6 armas "encontradas" e o
+ *  escudo/machado/adaga/lendarias ainda nao tem desenho. Chave e o id da
+ *  arma, valor e a chave do sprite: so "espada-curta" diverge (o desenho
+ *  chama "espada", nome de classe, nao de arma). Equipar uma arma sem
+ *  entrada aqui quebraria a camada visual do heroi — ver Ficha.ts,
+ *  `grupoDoItem()`, e docs/plano-de-itens-e-equipamento.md, Fase C. */
+export const SPRITE_DA_ARMA: Record<string, string> = {
+  "espada-curta": "espada",
+  cajado: "cajado",
+  arco: "arco",
+  funda: "funda",
+  martelo: "martelo",
+};
+
 export const CHAPEUS = [
   { id: "nenhum", nome: "Sem chapeu" },
   { id: "pontudo", nome: "Pontudo" },
@@ -277,6 +297,12 @@ export const OBJETOS = [
   "fogueira", "bau", "placa", "varal",
   "pinheiro", "pinheiro-baixo", "grande-ouvinte", "arvore-raio", "tronco-caido",
   "toco", "samambaia", "cogumelo", "cogumelo-azul", "pedra-musgo", "teia", "raizes",
+  "cama", "prateleira-pocoes", "caldeirao",
+  "mesa", "tapete", "armario", "banco", "forja", "bigorna", "suporte-armas",
+  "estante-livros", "forno-padaria", "prateleira-pao",
+  // os outros 3 quadros da chama da fogueira tremeluzindo (ver Mundo.ts,
+  // garantirAnimacaoDeFogo) -- nunca plantados sozinhos num mapa
+  "fogueira-2", "fogueira-3", "fogueira-4",
 ] as const;
 
 export const CABELOS = [

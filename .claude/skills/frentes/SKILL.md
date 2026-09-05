@@ -1,6 +1,6 @@
 ---
 name: frentes
-description: O registro das frentes de trabalho paralelas do Reino de Aurora. Use SEMPRE ao comecar uma tarefa nesta pasta, antes de editar o primeiro arquivo, e de novo ao terminar. Diz quem esta mexendo em que agora, o que ja foi entregue, e o que uma frente esta esperando da outra. Tambem use quando precisar de algo que pertence a outra frente, quando quiser saber por que um arquivo esta como esta, ou quando o usuario perguntar o que esta acontecendo no projeto.
+description: O registro das frentes de trabalho paralelas do Reino de Aurora. Use SEMPRE ao comecar uma tarefa nesta pasta, antes de editar o primeiro arquivo, e de novo ao terminar. Diz quem esta mexendo em que agora, o que ja foi entregue, e o que uma frente esta esperando da outra. Tambem use quando precisar de algo que pertence a outra frente, quando quiser saber por que um arquivo esta como esta, ou quando o usuario perguntar o que esta acontecendo no projeto. Cobre tambem `ESTADO-DO-JOGO.md`, o resumo condensado (nome do jogo, sistema de dado, atributos) que toda sessao le ANTES do CLAUDE.md da propria pasta.
 ---
 
 # As frentes de trabalho
@@ -29,11 +29,51 @@ REGISTRO="$(dirname "$(git rev-parse --git-common-dir)")/FRENTES.md"
 
 Se `FRENTES.md` nao existir, crie com o modelo que esta no fim deste arquivo.
 
+## `npm run frente-check`, o pre-voo automatico
+
+Antes de ler os dois arquivos na mao, rode `npm run frente-check`. Ele confere
+sozinho boa parte do que esta skill pede pra olhar: entrada de `Acontecendo
+agora` apontando pra worktree que ja fechou, arquivo citado por mais de uma
+frente, `ESTADO-DO-JOGO.md` que uma entrega ja marcou como desatualizado e
+ninguem reescreveu, worktree ja juntada e pronta pra fechar, stash parado,
+numero de documento repetido, screenshot mais velho que a cena que ele deveria
+provar. Nao substitui a leitura — so evita que voce descubra na mao um problema
+que um script acha em segundo.
+
+Rode `npm run frente-check <arquivo> <arquivo>` com os arquivos que voce esta
+prestes a mexer: se algum ja estiver reivindicado por outra frente em
+`Acontecendo agora`, vira erro ali mesmo, antes de voce editar a primeira
+linha.
+
+## `ESTADO-DO-JOGO.md`, o resumo de uma tela
+
+Mesma pasta, mesmo mecanismo (fora do git, resolvido pelo mesmo
+`git rev-parse --git-common-dir`), mas **outro papel**: `FRENTES.md` e o
+historico (cresce por `Entregue`, nunca apaga); `ESTADO-DO-JOGO.md` e o
+retrato de AGORA (nome do jogo, sistema de dado, atributos, e o que ja foi
+DECIDIDO mas ainda nao chegou em toda branch) — cada secao e **sobrescrita**,
+nunca acrescentada. Nasceu de um caso real: uma decisao inteira (o jogo virou
+1d20, 5 atributos, novo nome) ficou 1 dia inteira presa numa branch, invisivel
+pra quem trabalhava em `principal` no mesmo periodo, porque `CLAUDE.md` so
+existe dentro do git — uma copia por branch, sem ninguem avisando as outras.
+
+**Leia-o ANTES do `CLAUDE.md` da sua propria pasta**, toda vez. Se os dois
+contradisserem, `ESTADO-DO-JOGO.md` ganha: sua pasta esta atras de uma decisao
+tomada em outro lugar.
+
+**Termine uma entrega que mudou nome do jogo, sistema de dado/teste, lista de
+atributos, ou a propria relacao com a referencia da mesa? Reescreva a secao
+certa em `ESTADO-DO-JOGO.md` antes de sair** — alem de registrar em
+`FRENTES.md` como sempre. Detalhe de implementacao (uma funcao nova, um
+arquivo que mudou) fica so em `FRENTES.md`; `ESTADO-DO-JOGO.md` e so pros
+poucos fatos que mudam o que TODA frente presume sobre o jogo.
+
 ## O que fazer, e quando
 
 **1. Ao comecar qualquer tarefa, antes de editar o primeiro arquivo.**
 
-Leia o registro inteiro. Depois escreva a sua entrada em `## Acontecendo agora`:
+Leia `ESTADO-DO-JOGO.md` primeiro, depois o registro inteiro de `FRENTES.md`.
+Depois escreva a sua entrada em `## Acontecendo agora`:
 o galho, a pasta, o que voce vai fazer e **quais arquivos voce vai tocar**. A
 lista de arquivos e a parte que importa: e ela que deixa outra conversa descobrir
 a colisao antes de acontecer.

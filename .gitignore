@@ -16,3 +16,8 @@ AMBIENTE.md
 # teria a sua copia e as conversas so se veriam depois do merge. Ver a skill
 # `frentes` em .claude/skills/frentes/SKILL.md
 FRENTES.md
+
+# o estado atual do jogo (nome, sistema de dado, atributos, tom) — condensado,
+# sobrescrito a cada decisao, nao um historico. Mesmo motivo do FRENTES.md
+# acima: fora do git pra toda frente ver a mesma verdade sem esperar merge.
+ESTADO-DO-JOGO.md

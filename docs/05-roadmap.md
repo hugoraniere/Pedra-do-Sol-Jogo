@@ -43,17 +43,19 @@ esbocadas.
 ## Fase 1, o sistema . AGORA
 
 **O maior buraco do projeto ja tem chao.** O combate joga de verdade, os
-atributos vem da raca/classe/escolha, dom e magia gastam uso de aventura. Falta
-o que fecha o risco de verdade: derrota, fogueira e selo ainda nao existem.
+atributos vem da raca/classe/escolha, dom e magia gastam uso de aventura, e
+agora o risco de verdade fecha: derrota, fogueira e Selo de Heroi funcionam de
+ponta a ponta.
 
 Tudo estreia **na Vila Semente**, que ja existe e e pequena. Nao se estreia sistema
 em mapa novo.
 
-- [ ] **O dado, como sistema proprio.** A conta (1d6 + atributo, tres faixas) existe
-      espalhada — `rolar()` em `sistemas/turnos.ts`, `faixaDoDado()` em
-      `dados/sons.ts` — mas nunca juntou num `sistemas/dado.ts` puro e testavel.
-      Os modificadores do material impresso (+1 com ajuda, +1 com o item certo,
-      -1 se dificil) **nao existem em lugar nenhum do codigo ainda**.
+- [x] **O dado, como sistema proprio.** Descricao original desta linha (1d6,
+      `sistemas/dado.ts`) ficou pra tras com o merge do `ambiente/combate` —
+      ver a decisao de 2026-09-05 abaixo. O dado de verdade hoje e 1d20 + ND
+      em `sistemas/teste.ts` (`testar()`), puro e testavel. **Ainda falta:**
+      os modificadores do material impresso (+1 com ajuda, +1 com o item
+      certo, -1 se dificil) **nao existem em lugar nenhum do codigo**.
 - [x] **Atributos no estado.** `poderesDoHeroi()` (`sistemas/poderes.ts`) soma
       raca (+1) + classe (+1) + a escolha do jogador (`heroi.poderEscolhido`),
       igual o manual pede.
@@ -66,11 +68,13 @@ em mapa novo.
       e salva no estado). Falta o resto: comer e dormir nao enchem nada ainda, e o
       Anao continua nascendo com 3 coracoes em vez de 4 (`coracoesMax` e fixo em
       `novoJogo()`, o dom dele nao esta ligado).
-- [ ] **Derrota e fogueira.** Ainda nao existe nenhuma das duas. Comentario no
-      proprio codigo (`Combate.ts`, `heroiApanha()`) admite: com zero coracoes o
-      heroi so fica tonto 1.2s e volta com 1 coracao — nunca cai, nunca acorda em
-      fogueira, nunca perde o que carregava. E o proprio "risco de verdade" do
-      CLAUDE.md que ainda falta.
+- [x] **Derrota e fogueira.** Zero coracoes nocauteia de verdade. **Descricao
+      original desta linha (acorda na ULTIMA fogueira acesa,
+      `Mundo.acordarNaFogueira()`) ficou pra tras com o merge do
+      `ambiente/combate`** — ver a decisao de 2026-09-05 abaixo: agora acorda
+      no Hospital (`aplicarDerrota()` em `estado.ts`), perdendo moedas e ate 3
+      itens da mochila. Acender uma fogueira continua permanente e continua
+      curando (`acenderFogueira()`), so deixou de ser o ponto de resgate.
 - [x] **Combate, o laco inteiro** — mas **o modelo mudou**. Ver a decisao logo
       abaixo: nao e mais tempo real com mira, e por turnos.
 - [ ] **O modo de alvo.** A fase de mira existe de verdade (`Combate.ts`): anel de
@@ -80,17 +84,24 @@ em mapa novo.
       passar pela mira.
 - [x] **Barra de habilidades**, com recarga visivel (pontinhos) e atalho 1-6 no
       teclado. `Combate.ts`.
-- [ ] **Selos de Heroi.** Existe so a conta pura (`selosParaProximaEscolha()` em
-      `sistemas/poderes.ts`), **nunca chamada**. `estado().selos` nunca e
-      incrementado em lugar nenhum do jogo — nao ha fluxo que gere selo, nem
-      tela de escolha.
+- [x] **Selos de Heroi.** Cada criatura vencida rende um selo (`ganharSelo()`,
+      `Combate.ts`); a cada 3, `acabarCombate()` abre a tela nova
+      `EscolhaDeSelo.ts` por cima do Mundo (mesmo padrao de `Pausa.ts`), igual
+      o manual manda: +1 coracao, +1 num poder (`heroi.bonusDeSelo`, somado em
+      `poderesDoHeroi()`), ou uma magia nova (sorteada entre as ainda nao
+      aprendidas).
 - [x] **Dom de raca e as tres magias**, 1 uso por aventura cada, de verdade
       (`estado().usosDeAventura`, `registrarUso()` chamado ao executar em
       `Combate.ts`).
 
-Pronto quando: da para tomar um susto na vila, perder, acordar na fogueira, e
-entender exatamente o que custou. **Ainda nao esta pronto** — falta justamente
-a derrota e a fogueira, o coracao do "risco de verdade".
+Pronto quando: da para tomar um susto na vila, perder, acordar no Hospital, e
+entender exatamente o que custou. **O risco de verdade ja joga de ponta a
+ponta** (so o destino do resgate mudou de fogueira pra Hospital, ver a decisao
+de 2026-09-05 abaixo). O que ainda falta pra fechar a fase de vez: coracoes
+cheios por comer/dormir e o Anao com 4, os dois passos que faltam no modo de
+alvo (confirmacao e previa de area), e o achado da mesma data — decidir se o
+combate migra de vez pra tempo real (o que `docs/modelo-de-combate.md` ja diz)
+ou se essa decisao volta atras.
 
 **Decisao, registrada em `docs/plano-do-combate.md`: o combate deixou de ser
 tempo real com mira e virou por turnos** (estilo mesa, decidido e construido
@@ -118,10 +129,52 @@ dia/noite ao jogo), entraram fora de ordem:
 O motivo: dar vida ao elenco antes de repetir o metodo em outro lugar, em vez de
 esperar o sistema de dado/combate fechar primeiro.
 
+**Decisao, 2026-09-05: o ciclo do dia aprofundou de 4 pra 6 periodos**
+(madrugada, aurora, manha, tarde, por-do-sol, noite — os dois crepusculos
+como janelas curtas de transicao), com icone no HUD mostrando o periodo,
+criaturas que aparecem/ficam mais fortes por horario (aranha so a noite,
+goblin mais dificil de acertar a noite), e um primeiro passo de peixe-por-
+horario (`dados/peixes.ts`, so catalogo + fala do Seu Fagundes — a pescaria
+completa com peixes brasileiros e Portomares segue documentada como fase
+posterior em `docs/02-roteiro.md`). Plano completo e registro do que ficou
+de fora de proposito em `docs/plano-de-ciclo-do-dia.md`.
+
 **Decisao, 2026-09-05: o resto da Fase 1.2 tambem foi adiantado**, a pedido
 direto (falas condicionadas + missoes + opcoes de dialogo). Ver os itens
 marcados abaixo — o unico que ficou de proposito pra depois foi ramificacao de
 dialogo em mais de um nivel, pra nao inventar mecanismo demais antes da hora.
+
+**Decisao, 2026-09-05: `ambiente/combate` foi mergeada em `principal`**
+(`6b3391a`) — a maior mudanca de fundo do projeto ate aqui, ver
+`ESTADO-DO-JOGO.md` pro resumo e `CLAUDE.md` pro texto completo. Isto
+reescreve boa parte do que este roadmap dizia sobre o sistema:
+- **O dado virou 1d20 + ND, cinco desfechos** (critico-sucesso, sucesso,
+  falha-perto, falha, critico-fracasso), nao mais 1d6 em tres faixas. Vive
+  em `sistemas/teste.ts` (`testar()`), puro e testavel — o item "o dado como
+  sistema proprio" abaixo, que pedia exatamente isto, esta feito, so que por
+  um caminho diferente do `sistemas/dado.ts` que existia antes (esse continua
+  vivo, mas so o `Provador.ts` ainda usa; `Combate.ts` ja rola d20).
+- **Atributos: 3 viraram 5** (Forca, Destreza, Agilidade, Inteligencia,
+  Vitalidade). `poderesDoHeroi()` continua somando raca+classe+escolha+selo,
+  so que espalhado pelas 5 opcoes agora.
+- **Derrota nao acorda mais na fogueira — acorda no Hospital.** O item
+  "Derrota e fogueira" abaixo, marcado feito, descreve o comportamento
+  ANTIGO (`Mundo.acordarNaFogueira()`); o de agora e `aplicarDerrota()` em
+  `estado.ts`, um predio fixo na Vila (`arte/mundo.py:hospital()`). A
+  fogueira continua sendo onde se salva/descansa, so deixou de ser o ponto
+  de resgate. Perde-se **todas as moedas** e uma selecao aleatoria de ate 3
+  itens da mochila (nunca item `chave-*`), nao mais so "o que carregava na
+  mao".
+- **Achado, nao decisao: o combate voltou a ser tempo real no PAPEL, mas o
+  CODIGO ainda e por turnos.** `docs/modelo-de-combate.md` (a fonte da
+  verdade do modelo, citado por `CLAUDE.md`) agora diz explicitamente "nao e
+  por turno" — Baldur's Gate em top-down, tempo real com mira. Mas
+  `Combate.ts` ainda importa `Ordem` de `sistemas/turnos.ts` e usa `Fase =
+  "meuTurno" | "vezDaCriatura" | ...`: a estrutura de turno de mesa que a
+  decisao "por turnos" (linha abaixo) descreve continua rodando, so com d20
+  no lugar de d6 por baixo. Ou o documento esta na frente do codigo (migracao
+  ainda por vir) ou o documento ficou desatualizado por engano — nao decidi
+  qual dos dois sozinho, so registrei a divergencia encontrada.
 
 ---
 

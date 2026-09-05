@@ -22,11 +22,12 @@ import { montarChao } from "../dados/mapas";
 import {
   ACOES_DE_PROVA, ARENA, DISTANCIA_QUE_NOTA, ICONE, MOVIMENTO, type AcaoDeProva,
 } from "../dados/provador";
-import { ARMAS, CRIATURAS_SOM, DADO, DESFECHO, IMPACTOS, MAGIAS_SOM, faixaDoDado } from "../dados/sons";
+import { ARMAS, CRIATURAS_SOM, DADO, DESFECHO, IMPACTOS, MAGIAS_SOM } from "../dados/sons";
 import { alcancaveis, caminho, chaveDaCasa, distanciaEmCasas, type Casa } from "../sistemas/alcance";
 import { decidirAcaoDaCriatura, type Comportamento } from "../sistemas/criatura";
 import { passarTurno, type Condicao } from "../sistemas/condicoes";
 import { condicoesDados } from "../dados/condicoes-dados";
+import { faixaDoDado, rolar } from "../sistemas/dadoAntigo";
 import { aplicarMarca } from "../sistemas/marcas";
 import * as fx from "../sistemas/fx";
 import { fileira } from "../sistemas/fileira";
@@ -34,7 +35,7 @@ import { criarAnimacoes, camadasDoHeroi, Heroi } from "../sistemas/heroi";
 import { VAZIO } from "../sistemas/estado";
 import { tocar, tocarFicha } from "../sistemas/som";
 import { texto } from "../sistemas/texto";
-import { Ordem, rolar } from "../sistemas/turnos";
+import { Ordem } from "../sistemas/turnos";
 
 const SLOT = 22;
 const GAP = 2;
@@ -207,7 +208,7 @@ export class Provador extends Phaser.Scene {
     // ESPERTEZA 2 e FORCA 0, e isso aparece na hora de rolar: ele e otimo de
     // magia e ruim de porrada, sem ninguem ter escrito essa regra em lugar nenhum.
     this.atributos = { forca: 0, destreza: 0, agilidade: 0, inteligencia: 0, vitalidade: 0 };
-    this.atributos[acharRaca(ficha.raca).bonus] += 1;
+    acharRaca(ficha.raca).bonus.forEach((atributo) => { this.atributos[atributo] += 1; });
     this.atributos[acharClasse(ficha.classe).bonus] += 1;
 
     criarAnimacoes(this, [

@@ -20,7 +20,6 @@ export class Carregar extends Phaser.Scene {
   create() {
     musica(this, "menu");
     this.add.rectangle(0, 0, LARGURA, ALTURA, COR.grama).setOrigin(0);
-    this.add.image(0, -46, "titulo").setOrigin(0).setAlpha(0.5);
     this.add.rectangle(0, 0, LARGURA, ALTURA, 0x2c2440, 0.5).setOrigin(0);
 
     texto(this, LARGURA / 2, 6, "SEUS JOGOS", { tamanho: 16, cor: 0xfff8ea, ancora: 0.5 });

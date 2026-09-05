@@ -1,4 +1,8 @@
 import "@fontsource/silkscreen";
+// so para o logotipo da tela inicial ("A PEDRA DO SOL"). O resto da interface
+// inteira usa a fonte de bitmap pixel a pixel (sistemas/texto.ts) -- esta e a
+// unica excecao de proposito, o mesmo lugar onde o logo.png antigo era excecao.
+import "@fontsource/baloo-2/800.css";
 import Phaser from "phaser";
 import { COR, definirTamanhoLogico } from "./dados/config";
 import { Boot } from "./cenas/Boot";
@@ -12,6 +16,7 @@ import { Ficha } from "./cenas/Ficha";
 import { Som } from "./cenas/Som";
 import { Provador } from "./cenas/Provador";
 import { Combate } from "./cenas/Combate";
+import { EscolhaDeSelo } from "./cenas/EscolhaDeSelo";
 import { Ponteiro } from "./cenas/Ponteiro";
 import { instalarAuditor } from "./sistemas/auditoria";
 import { medidaDaJanela, vigiarJanela } from "./sistemas/visao";
@@ -53,7 +58,10 @@ function comecar() {
   physics: { default: "arcade", arcade: { gravity: { x: 0, y: 0 }, debug: false } },
     // o Ponteiro e o ULTIMO de proposito: o Phaser desenha as cenas nesta ordem,
     // e o cursor tem que ficar por cima de tudo, inclusive da caixa de fala.
-    scene: [Boot, Titulo, Carregar, Criacao, Mundo, Interface, Pausa, Ficha, Som, Combate, Provador, Ponteiro],
+    scene: [
+      Boot, Titulo, Carregar, Criacao, Mundo, Interface, Pausa, Ficha, Som,
+      Combate, EscolhaDeSelo, Provador, Ponteiro,
+    ],
   });
   // gancho de depuracao: no console do navegador da para fazer
   //   jogo.scene.getScene("Interface").events.emit("falar", {...})
@@ -64,9 +72,16 @@ function comecar() {
   instalarPonteiro(jogo);
 }
 
-// espera a fonte de pixel carregar, senao a primeira tela sai com a fonte do sistema
+// espera a fonte de pixel carregar, senao a primeira tela sai com a fonte do sistema.
+// document.fonts.ready so cobre fonte que o navegador ja decidiu buscar, e
+// @font-face declarado sozinho nao conta -- por isso o load() explicito da
+// Baloo 2 aqui, senao a Titulo desenharia o logotipo com a fonte do sistema
+// na primeira visita (o arquivo so chegaria a tempo do segundo redesenho).
 if (document.fonts?.ready) {
-  document.fonts.ready.then(comecar);
+  Promise.all([
+    document.fonts.load('800 32px "Baloo 2"'),
+    document.fonts.ready,
+  ]).then(comecar);
 } else {
   comecar();
 }

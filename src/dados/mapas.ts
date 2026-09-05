@@ -148,42 +148,80 @@ export const VILA: Mapa = {
     { nome: "arbusto", x: 29, y: 13 },
   ],
   // As rotinas colocam cada um perto da propria casa (ver `objetos` acima) de
-  // madrugada e de noite, e no lugar de sempre de dia. O guarda fica no posto
-  // o dia inteiro — vigia nao larga a trilha por causa da hora — e o pescador
-  // troca o rio pela fogueira da praca a noite, o mesmo fogo que o dialogo da
-  // fogueira ja descreve como "alguem que passou a noite acordado aqui".
+  // madrugada e de noite, e no lugar de sempre de dia. Aurora e por-do-sol (as
+  // duas janelas curtas de transicao, ver dados/tempo.ts) por padrao herdam o
+  // ponto do vizinho mais proximo (aurora ~ manha, por-do-sol ~ tarde: quem
+  // nao tem motivo pra ser diferente so comeca/termina o dia um pouco mais
+  // cedo) — exceto onde a bio (npcs.ts) ja da um motivo pra ser diferente: a
+  // padeira acorda antes do sol pra tirar o pao do forno (fica na padaria
+  // desde a madrugada, nao em casa), o pescador tem a "manha de neblina no
+  // rio" como afinidade (aurora o poe la, nao na fogueira), e as duas
+  // criancas continuam escondidas na aurora (ainda dormindo). O guarda fica
+  // no posto o dia inteiro, madrugada e noite incluidas — vigia nao larga a
+  // trilha por causa da hora — e o pescador so troca o rio pela fogueira da
+  // praca de noite/madrugada de verdade (a bio dele diz "NOITES claras"), o
+  // mesmo fogo que o dialogo da fogueira ja descreve como "alguem que
+  // passou a noite acordado aqui". Continua no rio no por-do-sol: e a
+  // janela do Dourado do Poente (dados/peixes.ts).
   pessoas: [
     {
       quem: "vovo", sprite: "vovo", x: 4, y: 8,
-      rotina: { madrugada: { x: 3, y: 6 }, manha: { x: 4, y: 8 }, tarde: { x: 4, y: 8 }, noite: { x: 3, y: 6 } },
+      rotina: {
+        madrugada: { x: 3, y: 6 }, aurora: { x: 4, y: 8 }, manha: { x: 4, y: 8 },
+        tarde: { x: 4, y: 8 }, "por-do-sol": { x: 4, y: 8 }, noite: { x: 3, y: 6 },
+      },
     },
     {
       quem: "ferreiro", sprite: "ferreiro", x: 22, y: 8,
-      rotina: { madrugada: { x: 22, y: 6 }, manha: { x: 22, y: 8 }, tarde: { x: 22, y: 8 }, noite: { x: 22, y: 6 } },
+      rotina: {
+        madrugada: { x: 22, y: 6 }, aurora: { x: 22, y: 8 }, manha: { x: 22, y: 8 },
+        tarde: { x: 22, y: 8 }, "por-do-sol": { x: 22, y: 8 }, noite: { x: 22, y: 6 },
+      },
     },
     {
       quem: "menina", sprite: "menina", x: 9, y: 14,
-      rotina: { madrugada: "escondido", manha: { x: 9, y: 14 }, tarde: { x: 9, y: 14 }, noite: "escondido" },
+      rotina: {
+        madrugada: "escondido", aurora: "escondido", manha: { x: 9, y: 14 },
+        tarde: { x: 9, y: 14 }, "por-do-sol": { x: 9, y: 14 }, noite: "escondido",
+      },
     },
     {
       quem: "pescador", sprite: "pescador", x: 6, y: 19,
-      rotina: { madrugada: { x: 16, y: 11 }, manha: { x: 6, y: 19 }, tarde: { x: 6, y: 19 }, noite: { x: 16, y: 11 } },
+      // continua no rio no por-do-sol -- e quando o Dourado do Poente
+      // morde a isca (dados/peixes.ts), so sai pra fogueira quando escurece
+      // de verdade, igual a bio dele diz ("nas NOITES claras")
+      rotina: {
+        madrugada: { x: 16, y: 11 }, aurora: { x: 6, y: 19 }, manha: { x: 6, y: 19 },
+        tarde: { x: 6, y: 19 }, "por-do-sol": { x: 6, y: 19 }, noite: { x: 16, y: 11 },
+      },
     },
     {
       quem: "mercador", sprite: "mercador", x: 19, y: 10,
-      rotina: { madrugada: { x: 15, y: 6 }, manha: { x: 19, y: 10 }, tarde: { x: 19, y: 10 }, noite: { x: 15, y: 6 } },
+      rotina: {
+        madrugada: { x: 15, y: 6 }, aurora: { x: 19, y: 10 }, manha: { x: 19, y: 10 },
+        tarde: { x: 19, y: 10 }, "por-do-sol": { x: 19, y: 10 }, noite: { x: 15, y: 6 },
+      },
     },
     {
       quem: "menino", sprite: "menino", x: 25, y: 13,
-      rotina: { madrugada: "escondido", manha: { x: 25, y: 13 }, tarde: { x: 25, y: 13 }, noite: "escondido" },
+      rotina: {
+        madrugada: "escondido", aurora: "escondido", manha: { x: 25, y: 13 },
+        tarde: { x: 25, y: 13 }, "por-do-sol": { x: 25, y: 13 }, noite: "escondido",
+      },
     },
     {
       quem: "padeira", sprite: "padeira", x: 11, y: 8,
-      rotina: { madrugada: { x: 10, y: 6 }, manha: { x: 11, y: 8 }, tarde: { x: 11, y: 8 }, noite: { x: 10, y: 6 } },
+      rotina: {
+        madrugada: { x: 11, y: 8 }, aurora: { x: 11, y: 8 }, manha: { x: 11, y: 8 },
+        tarde: { x: 11, y: 8 }, "por-do-sol": { x: 10, y: 6 }, noite: { x: 10, y: 6 },
+      },
     },
     {
       quem: "guarda", sprite: "guarda", x: 29, y: 11,
-      rotina: { madrugada: { x: 30, y: 11 }, manha: { x: 29, y: 11 }, tarde: { x: 29, y: 11 }, noite: { x: 29, y: 11 } },
+      rotina: {
+        madrugada: { x: 30, y: 11 }, aurora: { x: 29, y: 11 }, manha: { x: 29, y: 11 },
+        tarde: { x: 29, y: 11 }, "por-do-sol": { x: 29, y: 11 }, noite: { x: 29, y: 11 },
+      },
     },
   ],
   entrada: { x: 15, y: 13 },
@@ -191,6 +229,46 @@ export const VILA: Mapa = {
   // "A trilha do leste vai pra Floresta dos Sussurros", diz a placa da vila
   saidas: [
     { x: 35, y: 11, w: 1, h: 2, para: "floresta", entrada: { x: 3, y: 42 } },
+    // a porta da Casa de Cura, bem em frente a casa-vovo (x:2,y:4 em objetos)
+    { x: 2, y: 7, w: 2, h: 1, para: "casa-cura", entrada: { x: 3, y: 5 } },
+    // as outras 4 casas: mesma regra da Casa de Cura, porta 3 linhas abaixo
+    // do objeto (x:objeto, y:objeto+3), pra dar espaco de chegar andando
+    { x: 9, y: 7, w: 2, h: 1, para: "casa-padeira-interior", entrada: { x: 4, y: 6 } },
+    { x: 14, y: 7, w: 2, h: 1, para: "casa-grande-interior", entrada: { x: 5, y: 7 } },
+    { x: 21, y: 7, w: 2, h: 1, para: "ferraria-interior", entrada: { x: 5, y: 7 } },
+    { x: 23, y: 19, w: 2, h: 1, para: "casa-pequena-interior", entrada: { x: 4, y: 6 } },
+    // a terceira casa-pequena (x27,y4) so tinha decoracao ate aqui
+    { x: 27, y: 7, w: 2, h: 1, para: "casa-guarda-interior", entrada: { x: 4, y: 6 } },
+  ],
+};
+
+/** O comodo da Vovo Aurora, por dentro. Ver docs/14-casa-de-cura.md: um
+ *  comodo so, pequeno de proposito, sem cama pro heroi -- a fogueira continua
+ *  o unico lugar que revive de verdade.
+ *
+ *  8 x 7 tiles. Parede em W (solida), chao de madeira em m. A brecha na
+ *  parede sul (linha 6, colunas 3-4) e a porta: pisar nela volta pra Vila,
+ *  bem no lugar de onde se entrou. */
+export const CASA_CURA: Mapa = {
+  chao: [
+    "WWWWWWWW",
+    "WmmmmmmW",
+    "WmmmmmmW",
+    "WmmmmmmW",
+    "WmmmmmmW",
+    "WmmmmmmW",
+    "WWWmmWWW",
+  ],
+  objetos: [
+    { nome: "cama", x: 1, y: 1 },
+    { nome: "prateleira-pocoes", x: 4, y: 0 },
+    { nome: "caldeirao", x: 4, y: 4 },
+  ],
+  pessoas: [],
+  entrada: { x: 3, y: 4 },
+  lugar: "Casa de Cura",
+  saidas: [
+    { x: 3, y: 6, w: 2, h: 1, para: "vila", entrada: { x: 3, y: 9 } },
   ],
 };
 
@@ -199,6 +277,160 @@ export const VILA: Mapa = {
  *  Um tile a frente da porta do predio "hospital" (ver VILA.objetos), que e
  *  ancorado pelo pe em (29, 21) - a mesma conta de qualquer Saida.entrada. */
 export const HOSPITAL_ENTRADA = { x: 29, y: 22 };
+
+/** As outras 4 casas da Vila, por dentro. Pedido do Hugo depois de ver a Casa
+ *  de Cura funcionando: "as casas podem ser maiores e mais detalhadas".
+ *  Continuam um comodo so (nada de multi-comodo ainda), mas bem mais largas
+ *  que os 8x7 da Casa de Cura, com bem mais mobilia. Cada uma reusa parede-
+ *  interior e madeira-chao/chao-caverna -- so a mobilia muda de casa pra
+ *  casa (ver arte/mundo.py, secao "as outras casas da Vila, por dentro"). */
+export const FERRARIA_INTERIOR: Mapa = {
+  chao: [
+    "WWWWWWWWWWWWW",
+    "WcccccccccccW",
+    "WcccccccccccW",
+    "WcccccccccccW",
+    "WcccccccccccW",
+    "WcccccccccccW",
+    "WcccccccccccW",
+    "WcccccccccccW",
+    "WcccccccccccW",
+    "WWWWWccWWWWWW",
+  ],
+  objetos: [
+    { nome: "suporte-armas", x: 2, y: 0 },
+    { nome: "suporte-armas", x: 10, y: 0 },
+    { nome: "forja", x: 6, y: 1 },
+    { nome: "bigorna", x: 4, y: 3 },
+    { nome: "banco", x: 6, y: 4 },
+    { nome: "mesa", x: 9, y: 6 },
+    { nome: "bau", x: 2, y: 7 },
+  ],
+  pessoas: [],
+  entrada: { x: 5, y: 7 },
+  lugar: "Ferraria",
+  saidas: [
+    { x: 5, y: 9, w: 2, h: 1, para: "vila", entrada: { x: 22, y: 9 } },
+  ],
+};
+
+export const CASA_GRANDE_INTERIOR: Mapa = {
+  chao: [
+    "WWWWWWWWWWWWW",
+    "WmmmmmmmmmmmW",
+    "WmmmmmmmmmmmW",
+    "WmmmmmmmmmmmW",
+    "WmmmmmmmmmmmW",
+    "WmmmmmmmmmmmW",
+    "WmmmmmmmmmmmW",
+    "WmmmmmmmmmmmW",
+    "WmmmmmmmmmmmW",
+    "WWWWWmmWWWWWW",
+  ],
+  objetos: [
+    { nome: "estante-livros", x: 2, y: 0 },
+    { nome: "cama", x: 2, y: 1 },
+    { nome: "armario", x: 10, y: 2 },
+    { nome: "tapete", x: 6, y: 4 },
+    { nome: "mesa", x: 6, y: 6 },
+    { nome: "banco", x: 4, y: 7 },
+    { nome: "banco", x: 8, y: 7 },
+    { nome: "bau", x: 10, y: 7 },
+  ],
+  pessoas: [],
+  // entrada longe de qualquer movel -- o banco que estava aqui empurrava o
+  // heroi bem em cima do proprio banco ao entrar
+  entrada: { x: 5, y: 7 },
+  lugar: "Casa do Mercador",
+  saidas: [
+    { x: 5, y: 9, w: 2, h: 1, para: "vila", entrada: { x: 15, y: 9 } },
+  ],
+};
+
+export const CASA_PADEIRA_INTERIOR: Mapa = {
+  chao: [
+    "WWWWWWWWWWW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WWWWmmWWWWW",
+  ],
+  objetos: [
+    { nome: "prateleira-pao", x: 2, y: 0 },
+    { nome: "forno-padaria", x: 6, y: 1 },
+    { nome: "mesa", x: 3, y: 5 },
+    { nome: "banco", x: 3, y: 6 },
+    { nome: "tapete", x: 7, y: 5 },
+  ],
+  pessoas: [],
+  entrada: { x: 4, y: 6 },
+  lugar: "Casa da Padeira",
+  saidas: [
+    { x: 4, y: 8, w: 2, h: 1, para: "vila", entrada: { x: 10, y: 9 } },
+  ],
+};
+
+export const CASA_PEQUENA_INTERIOR: Mapa = {
+  chao: [
+    "WWWWWWWWWWW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WWWWmmWWWWW",
+  ],
+  objetos: [
+    { nome: "cama", x: 2, y: 1 },
+    { nome: "armario", x: 8, y: 1 },
+    { nome: "tapete", x: 5, y: 4 },
+    { nome: "mesa", x: 3, y: 5 },
+    { nome: "banco", x: 3, y: 6 },
+    { nome: "bau", x: 8, y: 6 },
+  ],
+  pessoas: [],
+  entrada: { x: 4, y: 6 },
+  lugar: "Casa da Vila",
+  saidas: [
+    { x: 4, y: 8, w: 2, h: 1, para: "vila", entrada: { x: 24, y: 21 } },
+  ],
+};
+
+/** A terceira `casa-pequena` da Vila (x27,y4) so tinha decoracao ate agora.
+ *  Casa do guarda -- o unico dos 8 NPCs sem casa atribuida antes desta. */
+export const CASA_GUARDA_INTERIOR: Mapa = {
+  chao: [
+    "WWWWWWWWWWW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WWWWmmWWWWW",
+  ],
+  objetos: [
+    { nome: "suporte-armas", x: 2, y: 0 },
+    { nome: "cama", x: 7, y: 1 },
+    { nome: "tapete", x: 5, y: 3 },
+    { nome: "mesa", x: 3, y: 5 },
+    { nome: "banco", x: 3, y: 6 },
+    { nome: "bau", x: 7, y: 6 },
+  ],
+  pessoas: [],
+  entrada: { x: 4, y: 6 },
+  lugar: "Casa do Guarda",
+  saidas: [
+    { x: 4, y: 8, w: 2, h: 1, para: "vila", entrada: { x: 28, y: 9 } },
+  ],
+};
 
 /** A Floresta dos Sussurros, 120 x 84 tiles.
  *
@@ -379,10 +611,46 @@ export const FLORESTA: Mapa = {
   ],
 };
 
+/** Trilha de Chegada, 30 x 13 tiles — onde toda partida nova comeca agora
+ *  (ver `VAZIO.cena` em sistemas/estado.ts). Um caminho so, guiado, bordado
+ *  de mata como a Floresta: nasce, passa por uma placa (ensina interacao),
+ *  passa por um goblin (ensina combate), sai na Vila. Pequeno de proposito
+ *  — anda-se de ponta a ponta em poucos segundos, sem contar as paradas. */
+export const TRILHA_DE_CHEGADA: Mapa = {
+  chao: [
+    "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+    "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+    "TT..........................TT",
+    "TT..........................TT",
+    "TT..........................TT",
+    "TT..........................TT",
+    "TTttttttttttttttttttttttttttTT",
+    "TT..........................TT",
+    "TT..........................TT",
+    "TT..........................TT",
+    "TT..........................TT",
+    "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+    "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  ],
+  objetos: [{ nome: "placa", x: 9, y: 6 }],
+  pessoas: [],
+  criaturas: [{ id: "goblin", x: 17, y: 6 }],
+  entrada: { x: 3, y: 6 },
+  lugar: "Trilha de Chegada",
+  saidas: [{ x: 27, y: 6, w: 1, h: 1, para: "vila", entrada: { x: 15, y: 13 } }],
+};
+
 /** Todo mapa do jogo, pela chave que fica em `estado().cena`. */
 export const MAPAS: Record<string, Mapa> = {
+  chegada: TRILHA_DE_CHEGADA,
   vila: VILA,
   floresta: FLORESTA,
+  "casa-cura": CASA_CURA,
+  "ferraria-interior": FERRARIA_INTERIOR,
+  "casa-grande-interior": CASA_GRANDE_INTERIOR,
+  "casa-padeira-interior": CASA_PADEIRA_INTERIOR,
+  "casa-pequena-interior": CASA_PEQUENA_INTERIOR,
+  "casa-guarda-interior": CASA_GUARDA_INTERIOR,
 };
 
 export type ChaoPronto = number[][];

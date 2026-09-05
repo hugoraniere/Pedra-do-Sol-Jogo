@@ -18,6 +18,18 @@ export type Missao = {
 };
 
 export const MISSOES: Record<string, Missao> = {
+  "primeiros-passos": {
+    titulo: "Primeiros passos",
+    tipo: "principal",
+    // sem NPC: comeca sozinha ao nascer na Trilha de Chegada. "nenhum" e
+    // proposital, pra nao virar um id de NPC falso (ver dados/dialogos.ts).
+    quemDa: "nenhum",
+    etapas: [
+      { id: "ler-a-placa", descricao: "Ler a placa na Trilha de Chegada" },
+      { id: "derrotar-o-goblin", descricao: "Derrotar o goblin que atravessa o caminho" },
+      { id: "chegar-na-vila", descricao: "Seguir a trilha ate a Vila Semente" },
+    ],
+  },
   "sino-da-vila": {
     titulo: "O sino sumiu",
     tipo: "principal",

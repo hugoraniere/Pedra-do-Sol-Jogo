@@ -7,6 +7,13 @@ export type NivelZoom = "perto" | "normal" | "longe";
 export type Preferencias = {
   zoom: NivelZoom;
   som: boolean;
+  /** Setas + botao A na tela. Desligado serve quem joga so de teclado — o
+   *  proprio Controles continua ouvindo as teclas de qualquer jeito, isto so
+   *  tira o desenho e a area de toque. */
+  controlesNaTela: boolean;
+  /** Combate: passar a vez sozinho assim que a acao do turno for usada, sem
+   *  esperar o clique em PASSAR. Ver Combate.ts, entrarNoTurno/executar. */
+  passarAutomaticamente: boolean;
 };
 
 /** Cada nivel e um DEGRAU na escala inteira, nao uma resolucao propria.
@@ -35,7 +42,12 @@ export const ZOOM: Record<NivelZoom, { degrau: number; nome: string }> = {
 export const ORDEM_ZOOM: NivelZoom[] = ["perto", "normal", "longe"];
 
 const CHAVE = "aurora-preferencias";
-const PADRAO: Preferencias = { zoom: "normal", som: true };
+const PADRAO: Preferencias = {
+  zoom: "normal",
+  som: true,
+  controlesNaTela: true,
+  passarAutomaticamente: true,
+};
 
 let atuais: Preferencias = { ...PADRAO };
 
