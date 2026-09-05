@@ -190,6 +190,38 @@ export const VILA: Mapa = {
   // "A trilha do leste vai pra Floresta dos Sussurros", diz a placa da vila
   saidas: [
     { x: 35, y: 11, w: 1, h: 2, para: "floresta", entrada: { x: 3, y: 42 } },
+    // a porta da Casa de Cura, bem em frente a casa-vovo (x:2,y:4 em objetos)
+    { x: 2, y: 7, w: 2, h: 1, para: "casa-cura", entrada: { x: 3, y: 5 } },
+  ],
+};
+
+/** O comodo da Vovo Aurora, por dentro. Ver docs/14-casa-de-cura.md: um
+ *  comodo so, pequeno de proposito, sem cama pro heroi -- a fogueira continua
+ *  o unico lugar que revive de verdade.
+ *
+ *  8 x 7 tiles. Parede em W (solida), chao de madeira em m. A brecha na
+ *  parede sul (linha 6, colunas 3-4) e a porta: pisar nela volta pra Vila,
+ *  bem no lugar de onde se entrou. */
+export const CASA_CURA: Mapa = {
+  chao: [
+    "WWWWWWWW",
+    "WmmmmmmW",
+    "WmmmmmmW",
+    "WmmmmmmW",
+    "WmmmmmmW",
+    "WmmmmmmW",
+    "WWWmmWWW",
+  ],
+  objetos: [
+    { nome: "cama", x: 1, y: 1 },
+    { nome: "prateleira-pocoes", x: 4, y: 0 },
+    { nome: "caldeirao", x: 4, y: 4 },
+  ],
+  pessoas: [],
+  entrada: { x: 3, y: 4 },
+  lugar: "Casa de Cura",
+  saidas: [
+    { x: 3, y: 6, w: 2, h: 1, para: "vila", entrada: { x: 3, y: 9 } },
   ],
 };
 
@@ -376,6 +408,7 @@ export const FLORESTA: Mapa = {
 export const MAPAS: Record<string, Mapa> = {
   vila: VILA,
   floresta: FLORESTA,
+  "casa-cura": CASA_CURA,
 };
 
 export type ChaoPronto = number[][];
