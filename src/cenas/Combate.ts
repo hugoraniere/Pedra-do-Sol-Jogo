@@ -18,7 +18,7 @@ import { alcancaveis, caminho, chaveDaCasa, distanciaEmCasas, type Casa } from "
 import { acoesDoHeroi, type AcaoDeHeroi } from "../sistemas/acao";
 import { fileira } from "../sistemas/fileira";
 import { criarAnimacoes, camadasDoHeroi, Heroi } from "../sistemas/heroi";
-import { agachar, hitstop, projetilOrientado } from "../sistemas/fx";
+import { agachar, hitstop, ondaDeConjuracao, piscar, projetilOrientado } from "../sistemas/fx";
 import { aplicarDerrota, estado, guardar, marcarDerrotado, registrarUso, salvar, usosGastos } from "../sistemas/estado";
 import { HOSPITAL_ENTRADA, VILA } from "../dados/mapas";
 import { poderesDoHeroi } from "../sistemas/poderes";
@@ -675,6 +675,25 @@ export class Combate extends Phaser.Scene {
           this.time.delayedCall(500, () => this.fimDaAcao());
         });
         return;
+      } else if (acao.id === "bafo-gelado") {
+        // sopro em leque: um projetil por casa da linha, saindo quase junto
+        // mas escalonado (40ms), pra ler como cone e nao parede - passo 6 do
+        // plano. Gelo pisca fosco no impacto (piscar), nunca o flash branco
+        // generico de fogo/golpe - a diferenca sozinha ja separa os dois.
+        ondaDeConjuracao(this, this.heroi.x, this.heroi.y, 0x7ec4f2, 14);
+        this.casasNaLinha(casa, acao.alcance).forEach((c, i) => {
+          this.time.delayedCall(i * 40, () => {
+            const [px, py] = this.centroDaCasa(c.tx, c.ty);
+            projetilOrientado(this, this.heroi.x, this.heroi.y - 8, px, py, 0x7ec4f2, 5, 6, 160, () => {
+              pegos
+                .filter((b) => this.mesmaCasa(this.casaDoBicho(b), c.tx, c.ty))
+                .forEach((b) => this.atingir(b, px, py, faixa === "oba", "gelo"));
+            });
+          });
+        });
+        this.cameras.main.shake(70, 0.0015);
+        this.time.delayedCall(600, () => this.fimDaAcao());
+        return;
       } else {
         pegos.forEach((b) => this.atingir(b, cx, cy, faixa === "oba"));
         // o martelo pesa mais que espada, cajado ou soco: o mesmo golpe corpo
@@ -721,28 +740,46 @@ export class Combate extends Phaser.Scene {
     });
   }
 
+  /** As casas em linha reta do heroi ate `casa`, uma por passo do alcance -
+   *  a mesma conta que `pegos()` ja fazia pra "linha", so devolvendo a CASA
+   *  em vez do bicho que estiver nela. `executar()` usa isto pra desenhar um
+   *  projetil por casa (Bafo Gelado, passo 6), mesmo nas casas vazias do meio
+   *  do cone - sem isso o sopro pularia direto pro alvo, sem ler como cone. */
+  private casasNaLinha(casa: Casa, alcance: number): Casa[] {
+    const eu = this.casaDoHeroi();
+    const dx = Math.sign(casa.tx - eu.tx);
+    const dy = Math.sign(casa.ty - eu.ty);
+    const casas: Casa[] = [];
+    for (let i = 1; i <= alcance; i++) casas.push({ tx: eu.tx + dx * i, ty: eu.ty + dy * i });
+    return casas;
+  }
+
   private pegos(acao: AcaoDeHeroi, casa: Casa): Bicho[] {
     const eu = this.casaDoHeroi();
     if (acao.forma === "aoRedor") {
       return this.bichos.filter((b) => distanciaEmCasas(this.casaDoBicho(b), eu) <= acao.alcance);
     }
     if (acao.forma === "linha") {
-      const dx = Math.sign(casa.tx - eu.tx);
-      const dy = Math.sign(casa.ty - eu.ty);
       const naLinha: Bicho[] = [];
-      for (let i = 1; i <= acao.alcance; i++) {
-        const c = { tx: eu.tx + dx * i, ty: eu.ty + dy * i };
+      this.casasNaLinha(casa, acao.alcance).forEach((c) => {
         this.bichos.forEach((b) => { if (this.mesmaCasa(this.casaDoBicho(b), c.tx, c.ty)) naLinha.push(b); });
-      }
+      });
       return naLinha;
     }
     return this.bichos.filter((b) => this.mesmaCasa(this.casaDoBicho(b), casa.tx, casa.ty));
   }
 
-  private atingir(b: Bicho, dex: number, dey: number, cheio: boolean) {
+  /** `estilo` muda so o sinal visual do impacto: "flash" (branco, quente -
+   *  golpe e fogo) ou "gelo" (pisca fosco, `piscar()` de fx.ts) - a mesma
+   *  distincao que faz o jogador ler "isso foi frio" sem precisar de texto. */
+  private atingir(b: Bicho, dex: number, dey: number, cheio: boolean, estilo: "flash" | "gelo" = "flash") {
     tocarFicha(b.tipo === "arbusto" ? IMPACTOS.madeira : IMPACTOS.bicho);
-    b.sprite.setTintFill(0xfff8ea);
-    this.time.delayedCall(70, () => b.sprite.clearTint());
+    if (estilo === "gelo") {
+      piscar(this, b.sprite, 90, 2, 0.5);
+    } else {
+      b.sprite.setTintFill(0xfff8ea);
+      this.time.delayedCall(70, () => b.sprite.clearTint());
+    }
     this.tweens.add({ targets: b.sprite, scaleY: 0.8, duration: 80, yoyo: true });
     if (cheio && b.corpo) {
       const fuga = new Phaser.Math.Vector2(b.sprite.x - dex, b.sprite.y - dey).normalize().scale(70);

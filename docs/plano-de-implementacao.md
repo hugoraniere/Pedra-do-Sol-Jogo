@@ -1189,6 +1189,19 @@ demorado — `ms` de `projetilOrientado` escala com `alcance`).
 Tamanho: P
 
 ### 6. Bafo Gelado, com identidade propria
+
+> **Feita, checada por leitura de codigo, nao ao vivo** (esta sessao, mesma
+> ressalva do passo 5). Fiz uma peca nova, `casasNaLinha()`, extraida do
+> proprio miolo que `pegos()` ja tinha pra "linha" - assim as duas fontes
+> (quem e atingido, e onde desenhar o projetil) nunca podem divergir. O
+> impacto de gelo usa `piscar()` (fosco) no lugar do `setTintFill` branco de
+> sempre - `atingir()` ganhou um quinto parametro opcional (`estilo`),
+> default `"flash"`, entao nenhum outro golpe muda de comportamento. Tentei
+> testar ao vivo de novo e a aba continuou presa em `document.hidden` -
+> fechar e reabrir a aba nao resolveu desta vez. Registrado como pendente de
+> imagem outra vez; se isso persistir nos proximos passos, vale investigar o
+> ambiente do navegador em vez de repetir a tentativa.
+
 Arquivo: `src/cenas/Combate.ts`
 Faz: `ondaDeConjuracao(pesDoHeroi, cor gelo)` (ja existe) + um leque de 1 a 3
 `projetilOrientado` (um por casa da linha atingida, `TABELA_DE_MAGIA["bafo-gelado"].forma === "linha"`
