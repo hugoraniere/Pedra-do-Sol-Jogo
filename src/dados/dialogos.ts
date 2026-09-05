@@ -8,6 +8,12 @@
 import { noPeriodo, etapaFeita } from "../sistemas/condicoes-de-fala";
 import { concluirEtapa } from "../sistemas/missoes";
 import { estado, guardar, mudarAfinidade } from "../sistemas/estado";
+import { PEIXES } from "./peixes";
+
+/** Os periodos de um peixe do catalogo (dados/peixes.ts), pra condicionar
+ *  fala sem duplicar a lista de periodos na mao — se o peixe mudar de
+ *  horario, a fala anda junto sozinha. */
+const periodosDoPeixe = (id: string) => PEIXES.find((p) => p.id === id)!.periodos;
 
 /** Uma resposta que o jogador pode escolher no fim de uma fala. `efeito`
  *  roda na hora (marca missao, muda afinidade, guarda item); `resposta`, se
@@ -90,8 +96,26 @@ export const DIALOGOS: Record<string, Fala> = {
     quem: "Seu Fagundes",
     variantes: [
       {
+        id: "prata-da-neblina",
+        condicao: noPeriodo(...periodosDoPeixe("prata-da-neblina")),
+        linhas: [
+          "Psiu. Nao espanta o peixe.",
+          "A Prata da Neblina so sobe com essa bruma no rio. Nao dura.",
+        ],
+        efeito: () => concluirEtapa("peixes-sumindo", "ouvir-fagundes"),
+      },
+      {
+        id: "dourado-do-poente",
+        condicao: noPeriodo(...periodosDoPeixe("dourado-do-poente")),
+        linhas: [
+          "Olha a escama dele pegando o sol se deitando.",
+          "So morde agora. Depois que escurecer, nem adianta.",
+        ],
+        efeito: () => concluirEtapa("peixes-sumindo", "ouvir-fagundes"),
+      },
+      {
         id: "de-noite-na-fogueira",
-        condicao: noPeriodo("por-do-sol", "noite", "madrugada"),
+        condicao: noPeriodo("noite", "madrugada"),
         linhas: [
           "As estrelas ficam bonitas daqui, olhando o fogo.",
           "Amanha cedo eu volto pro rio. Os peixes nao esperam.",

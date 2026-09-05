@@ -157,9 +157,11 @@ export const VILA: Mapa = {
   // rio" como afinidade (aurora o poe la, nao na fogueira), e as duas
   // criancas continuam escondidas na aurora (ainda dormindo). O guarda fica
   // no posto o dia inteiro, madrugada e noite incluidas — vigia nao larga a
-  // trilha por causa da hora — e o pescador troca o rio pela fogueira da
-  // praca no por-do-sol/noite, o mesmo fogo que o dialogo da fogueira ja
-  // descreve como "alguem que passou a noite acordado aqui".
+  // trilha por causa da hora — e o pescador so troca o rio pela fogueira da
+  // praca de noite/madrugada de verdade (a bio dele diz "NOITES claras"), o
+  // mesmo fogo que o dialogo da fogueira ja descreve como "alguem que
+  // passou a noite acordado aqui". Continua no rio no por-do-sol: e a
+  // janela do Dourado do Poente (dados/peixes.ts).
   pessoas: [
     {
       quem: "vovo", sprite: "vovo", x: 4, y: 8,
@@ -184,9 +186,12 @@ export const VILA: Mapa = {
     },
     {
       quem: "pescador", sprite: "pescador", x: 6, y: 19,
+      // continua no rio no por-do-sol -- e quando o Dourado do Poente
+      // morde a isca (dados/peixes.ts), so sai pra fogueira quando escurece
+      // de verdade, igual a bio dele diz ("nas NOITES claras")
       rotina: {
         madrugada: { x: 16, y: 11 }, aurora: { x: 6, y: 19 }, manha: { x: 6, y: 19 },
-        tarde: { x: 6, y: 19 }, "por-do-sol": { x: 16, y: 11 }, noite: { x: 16, y: 11 },
+        tarde: { x: 6, y: 19 }, "por-do-sol": { x: 6, y: 19 }, noite: { x: 16, y: 11 },
       },
     },
     {
