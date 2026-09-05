@@ -206,7 +206,8 @@ export const DIALOGOS: Record<string, Fala> = {
     variantes: [
       {
         id: "padrao",
-        linhas: ["Leva um biscoito, menino.", "Voce ganhou 1 moeda de ouro!"],
+        linhas: ["Leva um pao, ainda quente.", "Ninguem passa fome perto de mim."],
+        efeito: () => guardar("pao"),
       },
     ],
   },

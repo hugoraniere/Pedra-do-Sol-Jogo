@@ -394,6 +394,7 @@ export const LOJA: Item[] = [
   { id: "mapa-que-fala", nome: "Mapa Que Fala", preco: 4, texto: "Ele diz em voz alta pra onde voce deve ir." },
   { id: "saco-sem-fundo", nome: "Saco Sem Fundo", preco: 7, texto: "Cabe tudo. Achar de novo e outra historia." },
   { id: "chave-mestra", nome: "Chave Mestra", preco: 5, texto: "Abre qualquer fechadura comum. Uma vez." },
+  { id: "pao", nome: "Pao da Padeira", preco: 2, texto: "Ainda quente. Mata a fome por um bom tempo." },
 ];
 
 // --------------------------------------------------------- materiais

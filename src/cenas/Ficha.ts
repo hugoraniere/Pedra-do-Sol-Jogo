@@ -39,7 +39,8 @@ import {
   capacidadeDaMochila,
   type SlotDaMochila,
 } from "../sistemas/estado";
-import { temEfeitoForaDeCombate, usarConsumivel } from "../sistemas/consumiveis";
+import { precisaAgora, temEfeitoForaDeCombate, usarConsumivel } from "../sistemas/consumiveis";
+import { nivelDoMoodle, type NivelDeMoodle } from "../sistemas/moodles";
 import { MISSOES } from "../dados/missoes";
 import { missaoAceita, etapaAtual } from "../sistemas/missoes";
 import { Heroi, camadasDoHeroi, criarAnimacoes } from "../sistemas/heroi";
@@ -204,6 +205,15 @@ export class Ficha extends Phaser.Scene {
     const chips = (textos: string[]): Bloco => ({ tipo: "chips", linhas: arrumarChips(this, textos, largura) });
     const paragrafo = (conteudo: string): Bloco => ({ tipo: "texto", linhas: quebrar(conteudo, largura) });
 
+    // rotulo em PALAVRA, nunca numero cru — a gravidade fala por si so
+    // (Legibilidade). Ver sistemas/moodles.ts.
+    const ROTULO_FOME: Record<NivelDeMoodle, string> = {
+      normal: "Bem alimentado", alerta: "Com fome", critico: "Faminto",
+    };
+    const ROTULO_SONO: Record<NivelDeMoodle, string> = {
+      normal: "Descansado", alerta: "Cansado", critico: "Exausto",
+    };
+
     // um recado honesto no lugar de fingir que existe conteudo: a mochila e o
     // diario ainda nao tem dado nenhum por tras, entao nao inventamos um aqui
     const emConstrucao = (recado: string): Pagina => ({
@@ -237,6 +247,10 @@ export class Ficha extends Phaser.Scene {
           [
             { tipo: "titulo", conteudo: "MINHA ARMA E MEU DOM" },
             chips([arma?.nome ?? "Sem arma", raca.dom]),
+          ],
+          [
+            { tipo: "titulo", conteudo: "COMO VOCE ESTA" },
+            chips([ROTULO_FOME[nivelDoMoodle("fome")], ROTULO_SONO[nivelDoMoodle("sono")]]),
           ],
         ],
       },
@@ -688,7 +702,7 @@ export class Ficha extends Phaser.Scene {
     const st = estado();
     const info = acharQualquerItem(slot.item);
     const acoes: { rotulo: string; aoTocar: () => void }[] = [];
-    if (info.categoria === "consumivel" && temEfeitoForaDeCombate(slot.item) && st.coracoes < st.coracoesMax) {
+    if (info.categoria === "consumivel" && temEfeitoForaDeCombate(slot.item) && precisaAgora(slot.item)) {
       acoes.push({ rotulo: "USAR", aoTocar: () => { usarConsumivel(slot.item); this.desenhar(); } });
     } else if (info.categoria === "material") {
       acoes.push({
