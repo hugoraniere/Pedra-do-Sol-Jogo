@@ -232,6 +232,8 @@ export const VILA: Mapa = {
     { x: 14, y: 7, w: 2, h: 1, para: "casa-grande-interior", entrada: { x: 5, y: 7 } },
     { x: 21, y: 7, w: 2, h: 1, para: "ferraria-interior", entrada: { x: 5, y: 7 } },
     { x: 23, y: 19, w: 2, h: 1, para: "casa-pequena-interior", entrada: { x: 4, y: 6 } },
+    // a terceira casa-pequena (x27,y4) so tinha decoracao ate aqui
+    { x: 27, y: 7, w: 2, h: 1, para: "casa-guarda-interior", entrada: { x: 4, y: 6 } },
   ],
 };
 
@@ -392,6 +394,36 @@ export const CASA_PEQUENA_INTERIOR: Mapa = {
   lugar: "Casa da Vila",
   saidas: [
     { x: 4, y: 8, w: 2, h: 1, para: "vila", entrada: { x: 24, y: 21 } },
+  ],
+};
+
+/** A terceira `casa-pequena` da Vila (x27,y4) so tinha decoracao ate agora.
+ *  Casa do guarda -- o unico dos 8 NPCs sem casa atribuida antes desta. */
+export const CASA_GUARDA_INTERIOR: Mapa = {
+  chao: [
+    "WWWWWWWWWWW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WWWWmmWWWWW",
+  ],
+  objetos: [
+    { nome: "suporte-armas", x: 2, y: 0 },
+    { nome: "cama", x: 7, y: 1 },
+    { nome: "tapete", x: 5, y: 3 },
+    { nome: "mesa", x: 3, y: 5 },
+    { nome: "banco", x: 3, y: 6 },
+    { nome: "bau", x: 7, y: 6 },
+  ],
+  pessoas: [],
+  entrada: { x: 4, y: 6 },
+  lugar: "Casa do Guarda",
+  saidas: [
+    { x: 4, y: 8, w: 2, h: 1, para: "vila", entrada: { x: 28, y: 9 } },
   ],
 };
 
@@ -583,6 +615,7 @@ export const MAPAS: Record<string, Mapa> = {
   "casa-grande-interior": CASA_GRANDE_INTERIOR,
   "casa-padeira-interior": CASA_PADEIRA_INTERIOR,
   "casa-pequena-interior": CASA_PEQUENA_INTERIOR,
+  "casa-guarda-interior": CASA_GUARDA_INTERIOR,
 };
 
 export type ChaoPronto = number[][];

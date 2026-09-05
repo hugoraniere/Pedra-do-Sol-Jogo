@@ -52,7 +52,15 @@ type Ponto = { x: number; y: number };
 
 /** Um bicho plantado no mapa, com a chave estavel que o marca como derrotado
  *  em `estado()` e o corpo que precisa sumir junto quando ele perde a luta. */
-type CriaturaViva = { sprite: Phaser.GameObjects.Sprite; corpo: Phaser.GameObjects.Rectangle; id: string; chave: string };
+type CriaturaViva = {
+  sprite: Phaser.GameObjects.Sprite;
+  corpo: Phaser.GameObjects.Rectangle;
+  id: string;
+  chave: string;
+  /** copiado da ficha (dados/conteudo.ts) na hora de nascer, pra nao
+   *  procurar no BESTIARIO de novo a cada frame. undefined = sempre presente. */
+  presencaPeriodos?: Periodo[];
+};
 
 /** Um NPC com rotina (ver `Pessoa.rotina` em dados/mapas.ts): quem ja anda
  *  sozinho de um ponto a outro quando o periodo do dia muda, reusando o
@@ -351,7 +359,11 @@ export class Mundo extends Phaser.Scene {
       const corpo = this.add.rectangle(x, y - 4, 10, 8);
       this.solidos.add(corpo);
       (corpo.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
-      this.criaturas.push({ sprite: s, corpo, id: bicho.id, chave });
+      if (ficha.presencaPeriodos && !ficha.presencaPeriodos.includes(periodoAtual())) {
+        s.setVisible(false);
+        (corpo.body as Phaser.Physics.Arcade.StaticBody).enable = false;
+      }
+      this.criaturas.push({ sprite: s, corpo, id: bicho.id, chave, presencaPeriodos: ficha.presencaPeriodos });
     });
 
     // ------------------------------------------------------- a malha
@@ -652,7 +664,10 @@ export class Mundo extends Phaser.Scene {
     const periodo = periodoAtual();
     const mudouPeriodo = periodo !== this.ultimoPeriodo;
     this.ultimoPeriodo = periodo;
-    if (mudouPeriodo) this.scene.get("Interface").events.emit("periodo-mudou", periodo);
+    if (mudouPeriodo) {
+      this.scene.get("Interface").events.emit("periodo-mudou", periodo);
+      this.atualizarPresencaDeCriaturas(periodo);
+    }
     this.npcs.forEach((npc) => {
       if (mudouPeriodo) this.tracarRotaDoNpc(npc, npc.pessoa.rotina![periodo]);
       if (!npc.caminho || npc.caminho.length === 0) return;
@@ -669,6 +684,19 @@ export class Mundo extends Phaser.Scene {
         npc.caminho.shift();
         if (npc.caminho.length === 0) this.finalizarRotaDoNpc(npc);
       }
+    });
+  }
+
+  /** So chamada quando o periodo muda de verdade (ver atualizarRotinasDeNpc).
+   *  Esconde/reexibe cada criatura com `presencaPeriodos` (dados/conteudo.ts)
+   *  de acordo com o novo periodo — quem nao tem o campo nunca muda, sempre
+   *  presente, igual o jogo sempre funcionou. Quem ja morreu de vez
+   *  (`removerCriatura`) nem esta mais em `this.criaturas`, entao nunca
+   *  ressuscita por engano aqui. */
+  private atualizarPresencaDeCriaturas(periodo: Periodo) {
+    this.criaturas.forEach((c) => {
+      if (!c.presencaPeriodos) return;
+      this.esconderCriatura(c.chave, c.presencaPeriodos.includes(periodo));
     });
   }
 
@@ -762,6 +790,8 @@ export class Mundo extends Phaser.Scene {
     const hx = Math.floor(this.heroi.x / TILE);
     const hy = Math.floor((this.heroi.y - 1) / TILE);
     const perto = this.criaturas.filter((c) => {
+      // escondida por horario (presencaPeriodos) nunca embosca ninguem
+      if (!c.sprite.visible) return false;
       const cx = Math.floor(c.sprite.x / TILE);
       const cy = Math.floor((c.sprite.y - 1) / TILE);
       return Math.hypot(cx - hx, cy - hy) <= DISTANCIA_DE_ENCONTRO;
@@ -799,10 +829,16 @@ export class Mundo extends Phaser.Scene {
     return { tx: Math.floor(c.sprite.x / TILE), ty: Math.floor((c.sprite.y - 1) / TILE) };
   }
 
-  /** Esconde (ou reexibe) a criatura decorativa enquanto a versao de combate
-   *  dela briga por cima. */
+  /** Esconde (ou reexibe) a criatura decorativa — enquanto a versao de
+   *  combate dela briga por cima, ou porque o horario mudou
+   *  (`presencaPeriodos`, ver atualizarPresencaDeCriaturas). O corpo de
+   *  colisao anda junto: escondida sem desligar o corpo virava parede
+   *  invisivel. */
   esconderCriatura(chave: string, visivel: boolean) {
-    this.criaturas.find((c) => c.chave === chave)?.sprite.setVisible(visivel);
+    const c = this.criaturas.find((x) => x.chave === chave);
+    if (!c) return;
+    c.sprite.setVisible(visivel);
+    (c.corpo.body as Phaser.Physics.Arcade.StaticBody).enable = visivel;
   }
 
   /** Ela perdeu a luta de vez: tira do mapa e da lista, pra nao sobrar
