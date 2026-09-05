@@ -9,6 +9,7 @@
  */
 import type { Marca } from "../sistemas/marcas";
 import type { IdCondicao } from "../sistemas/condicoes";
+import type { Periodo } from "./tempo";
 
 export type Atributo = "forca" | "esperteza" | "coracao";
 
@@ -575,6 +576,19 @@ export type Criatura = {
   unico?: boolean;
   /** em que lugares ela aparece */
   onde: string[];
+  /** so aparece nestes periodos do dia (dados/tempo.ts); sem isto, aparece
+   *  sempre, igual o jogo sempre funcionou. Ver Mundo.ts, que esconde/reexibe
+   *  a instancia no mapa quando o periodo muda (junto com o corpo de
+   *  colisao, senao vira parede invisivel). Guardiao unico nunca deveria
+   *  usar isto — sumir por horario numa criatura que so existe uma vez
+   *  travaria a missao dela por azar de relogio. */
+  presencaPeriodos?: Periodo[];
+  /** bonus extra no dado de ataque dela quando o encontro comeca num destes
+   *  periodos (ex.: goblin mais dificil de acertar a noite) — soma ao
+   *  `bonus` de sempre, capturado uma vez no inicio da luta em Combate.ts
+   *  pra nao mudar no meio de uma luta comprida. Sem isto, sem bonus, igual
+   *  hoje. */
+  bonusPorPeriodo?: Partial<Record<Periodo, number>>;
 };
 
 export const BESTIARIO: Criatura[] = [
@@ -586,6 +600,9 @@ export const BESTIARIO: Criatura[] = [
     velocidade: 70, alcance: 12, dano: 1, esquivaChance: 0,
     telegrafo: "levanta o pau acima da cabeca e fecha os olhos",
     larga: [{ id: "moeda", chance: 0.7 }], onde: ["floresta", "caverna"],
+    // mais dificil de acertar a noite -- ele e criatura de missao principal,
+    // entao nunca some do mapa (sem presencaPeriodos), so fica mais valente
+    bonusPorPeriodo: { noite: 1 },
   },
   {
     id: "aranha", nome: "Aranha da Teia Doce", coracoes: 2,
@@ -595,6 +612,8 @@ export const BESTIARIO: Criatura[] = [
     velocidade: 34, alcance: 14, dano: 1, esquivaChance: 0.2,
     telegrafo: "encolhe as oito pernas antes do bote",
     larga: [{ id: "teia-doce", chance: 0.55 }, { id: "anel-teia", chance: 0.04 }], onde: ["floresta"],
+    // sai da toca so quando escurece -- de dia so o rastro de teia fica
+    presencaPeriodos: ["noite", "madrugada", "aurora"],
   },
   {
     id: "espantalho", nome: "Espantalho Andarilho", coracoes: 2,

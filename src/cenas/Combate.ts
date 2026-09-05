@@ -25,6 +25,8 @@ import { poderesDoHeroi } from "../sistemas/poderes";
 import type { Atributo } from "../dados/conteudo";
 import { tocar, tocarFicha } from "../sistemas/som";
 import { texto } from "../sistemas/texto";
+import { periodoAtual } from "../sistemas/tempo";
+import type { Periodo } from "../dados/tempo";
 import { Ordem } from "../sistemas/turnos";
 import type { Mundo } from "./Mundo";
 
@@ -133,6 +135,10 @@ export class Combate extends Phaser.Scene {
   /** selos no INICIO desta luta, pra saber ao final se algum selo ganho aqui
    *  completou uma leva de 3 (e por isso deve abrir a tela de escolha). */
   private selosNoInicio = 0;
+  /** o periodo do dia QUANDO A LUTA COMECOU, capturado uma vez — pra uma luta
+   *  comprida nao mudar de bonus no meio se o relogio virar de periodo
+   *  (dados/conteudo.ts, Criatura.bonusPorPeriodo). */
+  private periodoDoEncontro: Periodo = "manha";
 
   constructor() {
     super("Combate");
@@ -159,6 +165,7 @@ export class Combate extends Phaser.Scene {
     this.coracoes = st0.coracoes;
     this.atributos = poderesDoHeroi(ficha);
     this.selosNoInicio = st0.selos;
+    this.periodoDoEncontro = periodoAtual();
 
     // goblin nao tem textura propria ("goblin" sozinho nunca foi carregado) -
     // os 3 corpos de verdade entram todos aqui, e cada instancia escolhe o
@@ -202,7 +209,8 @@ export class Combate extends Phaser.Scene {
       // (spriteDoGoblin) sai da MESMA casa que o Mundo usou pra desenhar a
       // versao decorativa, entao os dois sempre concordam.
       const spriteChave = e.id === "goblin" ? spriteDoGoblin(casa.tx, casa.ty) : b.sprite;
-      this.porCriatura(`${e.id}-${i}`, e.id, e.chave, spriteChave, nome, 0, casa.tx, casa.ty, b.coracoes);
+      const bonus = b.bonusPorPeriodo?.[this.periodoDoEncontro] ?? 0;
+      this.porCriatura(`${e.id}-${i}`, e.id, e.chave, spriteChave, nome, bonus, casa.tx, casa.ty, b.coracoes);
     });
 
     // a camera de Combate so desenha o que ELE acrescenta (barra, mira, os
