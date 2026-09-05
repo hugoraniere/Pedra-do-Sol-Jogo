@@ -3,32 +3,32 @@
   "total": 138,
   "arquivos": {
     "aranha-filhote.png": {
-      "hash": "9a63f4f83ef4393f",
-      "bytes": 2530,
+      "hash": "ececeb0a0cfcd628",
+      "bytes": 3146,
       "largura": 176,
       "altura": 256
     },
     "aranha-matriarca.png": {
-      "hash": "b628db1954e198c9",
-      "bytes": 3727,
+      "hash": "b3f1652655acf716",
+      "bytes": 4938,
       "largura": 176,
       "altura": 256
     },
     "aranha-media.png": {
-      "hash": "c1a199585e4e7a2a",
-      "bytes": 3036,
+      "hash": "845e1587d2b3086e",
+      "bytes": 3958,
       "largura": 176,
       "altura": 256
     },
     "aranha-pequena.png": {
-      "hash": "cba7da67e5964ee8",
-      "bytes": 3182,
+      "hash": "047311608f8e3e9a",
+      "bytes": 4048,
       "largura": 176,
       "altura": 256
     },
     "aranha.png": {
-      "hash": "c1a199585e4e7a2a",
-      "bytes": 3036,
+      "hash": "845e1587d2b3086e",
+      "bytes": 3958,
       "largura": 176,
       "altura": 256
     },
@@ -393,8 +393,8 @@
       "altura": 16
     },
     "lobo-nevoa.png": {
-      "hash": "342c4899dda49049",
-      "bytes": 4958,
+      "hash": "6a6ed5c0dbba02bb",
+      "bytes": 6157,
       "largura": 176,
       "altura": 256
     },
