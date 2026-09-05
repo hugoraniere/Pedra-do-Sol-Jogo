@@ -74,6 +74,10 @@ export class Titulo extends Phaser.Scene {
     const picoX = L * 0.5, picoBase = horizonte + A * 0.03, picoAltura = A * 0.16;
     const apice = picoBase - picoAltura;
     const pedraX = picoX, pedraY = apice - A * 0.015;
+    // o brilho e os raios usam esta medida, nunca ALTURA sozinha: um celular
+    // em pe tem ALTURA bem maior que LARGURA, e um brilho do tamanho da
+    // altura tomava a tela inteira em vez de ficar do tamanho da pedra
+    const raio = Math.min(L, A);
     const g = this.add.graphics();
 
     // ceu: creme quente em cima, esquentando para o ouro perto do horizonte
@@ -82,18 +86,18 @@ export class Titulo extends Phaser.Scene {
     g.fillGradientStyle(COR.papel2, COR.papel2, COR.ouro, COR.ouro, 1, 1, 0.85, 0.85);
     g.fillRect(0, horizonte * 0.55, L, horizonte * 0.45);
 
-    this.raiosDeSol(g, pedraX, pedraY, A);
-    this.resplendorDaPedra(g, pedraX, pedraY, A, 1);
+    this.raiosDeSol(g, pedraX, pedraY, raio);
+    this.resplendorDaPedra(g, pedraX, pedraY, raio, 1);
     this.montanhas(g, horizonte, COR.roxo, 0.35, A * 0.22, 0.021, 1.3);
     this.montanhas(g, horizonte + A * 0.02, COR.tintaSuave, 0.6, A * 0.13, 0.033, 4.1);
-    this.resplendorDaPedra(g, pedraX, pedraY, A, 0.55);
+    this.resplendorDaPedra(g, pedraX, pedraY, raio, 0.55);
     this.picoCentral(g, picoX, picoBase, apice, L * 0.36);
-    this.resplendorDaPedra(g, pedraX, pedraY, A, 0.45);
-    this.pedraDoSol(g, pedraX, pedraY, A);
+    this.resplendorDaPedra(g, pedraX, pedraY, raio, 0.45);
+    this.pedraDoSol(g, pedraX, pedraY, raio);
     this.matas(g, horizonte, L);
     this.campo(g, horizonte, L, A);
-    this.desenharDragao(picoX, apice, A);
-    this.faiscas(pedraX, pedraY, A);
+    this.desenharDragao(picoX, apice, raio);
+    this.faiscas(pedraX, pedraY, raio);
   }
 
   /** O monte onde a pedra fica em pe: um pico so, mais escuro e mais perto que
@@ -174,20 +178,24 @@ export class Titulo extends Phaser.Scene {
     });
   }
 
-  /** Circulos concentricos com alfa caindo: o jeito barato de simular um
-   *  brilho radial, que Graphics nao desenha de fabrica. `forca` deixa
-   *  desenhar o halo de novo, mais fraco, por cima das montanhas. */
+  /** Catorze circulos concentricos, o de fora bem fraco e grande, o de dentro
+   *  forte e pequeno: o jeito barato de simular um brilho radial suave, que
+   *  Graphics nao desenha de fabrica (so gradiente linear de 4 cantos).
+   *  `forca` deixa desenhar o halo de novo, mais fraco, por cima das
+   *  montanhas. */
   private resplendorDaPedra(
     g: Phaser.GameObjects.Graphics, cx: number, cy: number, a: number, forca: number
   ) {
-    [
-      [0.5, COR.ouro, 0.12],
-      [0.36, COR.ouro, 0.18],
-      [0.24, COR.brasa, 0.28],
-    ].forEach(([r, cor, alfa]) => {
-      g.fillStyle(cor as number, (alfa as number) * forca);
-      g.fillCircle(cx, cy, a * (r as number));
-    });
+    const paradas = 14;
+    for (let i = paradas; i >= 1; i--) {
+      const t = i / paradas;
+      let cor: number = COR.ouro;
+      if (t < 0.6) cor = COR.brasa;
+      if (t < 0.22) cor = COR.papel;
+      const alfa = Math.min(0.9, (1 - t) * 0.5 * forca + 0.015);
+      g.fillStyle(cor, alfa);
+      g.fillCircle(cx, cy, a * 0.46 * t);
+    }
   }
 
   /** Uma cordilheira em silhueta, atravessando a tela inteira. Dois senos de
