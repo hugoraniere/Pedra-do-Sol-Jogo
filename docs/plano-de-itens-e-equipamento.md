@@ -402,12 +402,40 @@ projetado em `docs/11-combate-e-magias.md`, nada implementado aqui.
   uma condicao real ou nomear a criatura de verdade — detalhe item a item
   nas secoes 6/9/10 acima. `npm run build/criatura/conferir` verdes de
   novo.
-- **Fase B — mochila de verdade:** grid, hover, vender material, usar
-  consumivel fora de combate. Precisa de coordenacao com `ambiente/ficha`
-  (secao 15).
-- **Fase C — equipar e progressao:** trocar arma fora da criacao, equipar
-  armadura/acessorio, o gancho de "trazer material pro Seu Cominho" nos
-  dialogos existentes. Precisa dos 22 icones + contorno de 1px.
+- **Fase B — mochila de verdade, FEITA (2026-09-05).** A aba MOCHILA de
+  `Ficha.ts` deixou de ser placeholder: lista todo item de `estado().mochila`
+  (via `acharQualquerItem()`, novo em `conteudo.ts` — resolve id contra
+  LOJA/MATERIAIS/ARMADURAS/ACESSORIOS/ARMAS, ou cai pra "item de historia"
+  com o id humanizado quando nao ha ficha, tipo `pano-goblin`). **Sem grid
+  nem hover**, de proposito: reaproveita os MESMOS tres tipos de `Bloco` que
+  EU/PODERES/MENU ja usavam (titulo com contagem, texto, botao) em vez de
+  inventar UI nova — a descricao fica sempre visivel (melhor pra toque do
+  que hover teria sido, e o projeto ja prioriza toque sobre mouse). Acao por
+  categoria: consumivel com efeito ligado (so Pocao de Morango e Pocao
+  Grandona, via `sistemas/consumiveis.ts` novo — os outros dez da LOJA
+  mostram "(sem efeito fora de combate ainda)", sem botao, em vez de fingir);
+  material ganha "VENDER 1 (+N moedas)" (`venderMaterial()`); armadura/
+  acessorio ganham EQUIPAR/DESEQUIPAR (`equipar()`, dois slots
+  independentes); arma encontrada e item de historia ficam so-leitura (arma
+  avisa que trocar fora da criacao ainda nao existe — gap de sprite real,
+  ver Fase C). Testado ao vivo (`vite preview` numa porta separada, pra nao
+  disputar com o dev server de outra sessao nesta pasta): posse editada no
+  save, USAR encheu coracao e descontou 1 unidade, VENDER somou moeda e
+  descontou material, EQUIPAR/DESEQUIPAR alternou os dois slots sem
+  conflito, item de historia sem ficha mostrou nome humanizado. Nenhum
+  icone novo (nao existe ainda, e continua sendo Fase C) — cada item so
+  mostra nome e texto. `npm run build/criatura/conferir` verdes.
+  **Conferido antes de mexer:** a worktree `ambiente/ficha` estava parada
+  (zero mudanca nao commitada, ultimo commit `23c664f`, bem atras do
+  `principal`) — sem ninguem pra avisar de verdade, mas registrado aqui pra
+  quem retomar aquela pasta saber que `Ficha.ts`/`estado().mochila` mudaram.
+- **Fase C — arma e progressao (equipar armadura/acessorio ja saiu na Fase
+  B, mais cedo que o previsto — era simples e sem risco de sprite):**
+  trocar arma fora da criacao (esbarra no gap de sprite: so 5 armas tem
+  desenho, as 6 encontradas nao — precisa decidir o que fazer antes:
+  desenhar sprite novo, ou esconder a opcao so pras armas que ja tem
+  desenho), e o gancho de "trazer material pro Seu Cominho" nos dialogos
+  existentes. Precisa dos 22 icones + contorno de 1px.
 - **Fase D, dependencia externa a este plano:** o modificador de teste em
   `rolar()` (secao 6) so vale a pena implementar quando a Fase 1 (roadmap)
   chegar nos modificadores do manual — sem isso, o bonus de item fica
