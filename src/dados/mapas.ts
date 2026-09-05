@@ -225,6 +225,12 @@ export const VILA: Mapa = {
     { x: 35, y: 11, w: 1, h: 2, para: "floresta", entrada: { x: 3, y: 42 } },
     // a porta da Casa de Cura, bem em frente a casa-vovo (x:2,y:4 em objetos)
     { x: 2, y: 7, w: 2, h: 1, para: "casa-cura", entrada: { x: 3, y: 5 } },
+    // as outras 4 casas: mesma regra da Casa de Cura, porta 3 linhas abaixo
+    // do objeto (x:objeto, y:objeto+3), pra dar espaco de chegar andando
+    { x: 9, y: 7, w: 2, h: 1, para: "casa-padeira-interior", entrada: { x: 4, y: 6 } },
+    { x: 14, y: 7, w: 2, h: 1, para: "casa-grande-interior", entrada: { x: 5, y: 7 } },
+    { x: 21, y: 7, w: 2, h: 1, para: "ferraria-interior", entrada: { x: 5, y: 7 } },
+    { x: 23, y: 19, w: 2, h: 1, para: "casa-pequena-interior", entrada: { x: 4, y: 6 } },
   ],
 };
 
@@ -255,6 +261,130 @@ export const CASA_CURA: Mapa = {
   lugar: "Casa de Cura",
   saidas: [
     { x: 3, y: 6, w: 2, h: 1, para: "vila", entrada: { x: 3, y: 9 } },
+  ],
+};
+
+/** As outras 4 casas da Vila, por dentro. Pedido do Hugo depois de ver a Casa
+ *  de Cura funcionando: "as casas podem ser maiores e mais detalhadas".
+ *  Continuam um comodo so (nada de multi-comodo ainda), mas bem mais largas
+ *  que os 8x7 da Casa de Cura, com bem mais mobilia. Cada uma reusa parede-
+ *  interior e madeira-chao/chao-caverna -- so a mobilia muda de casa pra
+ *  casa (ver arte/mundo.py, secao "as outras casas da Vila, por dentro"). */
+export const FERRARIA_INTERIOR: Mapa = {
+  chao: [
+    "WWWWWWWWWWWWW",
+    "WcccccccccccW",
+    "WcccccccccccW",
+    "WcccccccccccW",
+    "WcccccccccccW",
+    "WcccccccccccW",
+    "WcccccccccccW",
+    "WcccccccccccW",
+    "WcccccccccccW",
+    "WWWWWccWWWWWW",
+  ],
+  objetos: [
+    { nome: "suporte-armas", x: 2, y: 0 },
+    { nome: "suporte-armas", x: 10, y: 0 },
+    { nome: "forja", x: 6, y: 1 },
+    { nome: "bigorna", x: 4, y: 3 },
+    { nome: "banco", x: 6, y: 4 },
+    { nome: "mesa", x: 9, y: 6 },
+    { nome: "bau", x: 2, y: 7 },
+  ],
+  pessoas: [],
+  entrada: { x: 5, y: 7 },
+  lugar: "Ferraria",
+  saidas: [
+    { x: 5, y: 9, w: 2, h: 1, para: "vila", entrada: { x: 22, y: 9 } },
+  ],
+};
+
+export const CASA_GRANDE_INTERIOR: Mapa = {
+  chao: [
+    "WWWWWWWWWWWWW",
+    "WmmmmmmmmmmmW",
+    "WmmmmmmmmmmmW",
+    "WmmmmmmmmmmmW",
+    "WmmmmmmmmmmmW",
+    "WmmmmmmmmmmmW",
+    "WmmmmmmmmmmmW",
+    "WmmmmmmmmmmmW",
+    "WmmmmmmmmmmmW",
+    "WWWWWmmWWWWWW",
+  ],
+  objetos: [
+    { nome: "estante-livros", x: 2, y: 0 },
+    { nome: "cama", x: 2, y: 1 },
+    { nome: "armario", x: 10, y: 2 },
+    { nome: "tapete", x: 6, y: 4 },
+    { nome: "mesa", x: 6, y: 6 },
+    { nome: "banco", x: 4, y: 7 },
+    { nome: "banco", x: 8, y: 7 },
+    { nome: "bau", x: 10, y: 7 },
+  ],
+  pessoas: [],
+  // entrada longe de qualquer movel -- o banco que estava aqui empurrava o
+  // heroi bem em cima do proprio banco ao entrar
+  entrada: { x: 5, y: 7 },
+  lugar: "Casa do Mercador",
+  saidas: [
+    { x: 5, y: 9, w: 2, h: 1, para: "vila", entrada: { x: 15, y: 9 } },
+  ],
+};
+
+export const CASA_PADEIRA_INTERIOR: Mapa = {
+  chao: [
+    "WWWWWWWWWWW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WWWWmmWWWWW",
+  ],
+  objetos: [
+    { nome: "prateleira-pao", x: 2, y: 0 },
+    { nome: "forno-padaria", x: 6, y: 1 },
+    { nome: "mesa", x: 3, y: 5 },
+    { nome: "banco", x: 3, y: 6 },
+    { nome: "tapete", x: 7, y: 5 },
+  ],
+  pessoas: [],
+  entrada: { x: 4, y: 6 },
+  lugar: "Casa da Padeira",
+  saidas: [
+    { x: 4, y: 8, w: 2, h: 1, para: "vila", entrada: { x: 10, y: 9 } },
+  ],
+};
+
+export const CASA_PEQUENA_INTERIOR: Mapa = {
+  chao: [
+    "WWWWWWWWWWW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WmmmmmmmmmW",
+    "WWWWmmWWWWW",
+  ],
+  objetos: [
+    { nome: "cama", x: 2, y: 1 },
+    { nome: "armario", x: 8, y: 1 },
+    { nome: "tapete", x: 5, y: 4 },
+    { nome: "mesa", x: 3, y: 5 },
+    { nome: "banco", x: 3, y: 6 },
+    { nome: "bau", x: 8, y: 6 },
+  ],
+  pessoas: [],
+  entrada: { x: 4, y: 6 },
+  lugar: "Casa da Vila",
+  saidas: [
+    { x: 4, y: 8, w: 2, h: 1, para: "vila", entrada: { x: 24, y: 21 } },
   ],
 };
 
@@ -442,6 +572,10 @@ export const MAPAS: Record<string, Mapa> = {
   vila: VILA,
   floresta: FLORESTA,
   "casa-cura": CASA_CURA,
+  "ferraria-interior": FERRARIA_INTERIOR,
+  "casa-grande-interior": CASA_GRANDE_INTERIOR,
+  "casa-padeira-interior": CASA_PADEIRA_INTERIOR,
+  "casa-pequena-interior": CASA_PEQUENA_INTERIOR,
 };
 
 export type ChaoPronto = number[][];
