@@ -501,6 +501,142 @@ def caldeirao():
     return im
 
 
+# ------------------------------------------ as outras casas da Vila, por dentro
+# Reusa parede-interior e madeira-chao/chao-caverna (arte/tiles.py) -- so a
+# mobilia muda de casa pra casa. Pensada pra reuso: mesa/tapete/armario/banco
+# servem qualquer comodo, o resto e tematico (ferraria, casa-grande, padaria).
+def mesa():
+    im = nova(30, 20)
+    sombra(im, 13, 4, 15, 18)
+    ret(im, 3, 6, 24, 3, MADEIRA_C)
+    ret(im, 3, 6, 24, 1, PAPEL_2)
+    ret(im, 3, 9, 24, 2, MADEIRA)
+    for x in (5, 22):
+        ret(im, x, 11, 3, 7, MADEIRA_E)
+    contorno_alfa(im)
+    return im
+
+
+def tapete():
+    """So decoracao de chao -- sem sombra, sem colisao, como samambaia."""
+    im = nova(32, 20)
+    ret(im, 2, 2, 28, 16, VERMELHO)
+    ret(im, 2, 2, 28, 2, ROXO_C)
+    ret(im, 2, 16, 28, 2, ROXO_C)
+    ret(im, 5, 5, 22, 10, ROXO)
+    contorno_alfa(im)
+    return im
+
+
+def armario():
+    im = nova(22, 34)
+    sombra(im, 10, 3, 11, 32)
+    ret(im, 2, 4, 18, 28, MADEIRA)
+    ret(im, 2, 4, 18, 3, MADEIRA_C)
+    linha_v(im, 11, 4, 28, MADEIRA_E)
+    for x in (6, 16):
+        px(im, x, 18, OURO)
+    contorno_alfa(im)
+    return im
+
+
+def banco():
+    im = nova(20, 14)
+    sombra(im, 9, 3, 10, 12)
+    ret(im, 3, 6, 14, 3, MADEIRA)
+    for x in (4, 15):
+        ret(im, x, 9, 2, 4, MADEIRA_E)
+    contorno_alfa(im)
+    return im
+
+
+def forja():
+    """A forja da Ferraria: brasa de verdade, mesma familia da fogueira."""
+    im = nova(28, 30)
+    sombra(im, 12, 4, 14, 28)
+    ret(im, 2, 6, 24, 22, PEDRA_E)
+    ret(im, 2, 6, 24, 3, PEDRA)
+    ret(im, 8, 14, 12, 10, TINTA)
+    for j in range(16, 23):
+        largura = max(1, 7 - abs(j - 19))
+        ret(im, 14 - largura // 2, j, largura, 1, BRASA)
+    for j in range(18, 23):
+        largura = max(1, 4 - abs(j - 20))
+        ret(im, 14 - largura // 2, j, largura, 1, OURO)
+    contorno_alfa(im)
+    return im
+
+
+def bigorna():
+    im = nova(22, 18)
+    sombra(im, 10, 3, 11, 16)
+    ret(im, 6, 12, 10, 4, MADEIRA_E)
+    ret(im, 3, 6, 16, 5, PEDRA_E)
+    ret(im, 3, 6, 16, 1, PEDRA_C)
+    ret(im, 8, 4, 6, 3, PEDRA_E)
+    contorno_alfa(im)
+    return im
+
+
+def suporte_armas():
+    """Montado na parede, igual prateleira-pocoes: sem sombra de chao. Duas
+    espadas penduradas de ponta-cabeca -- lamina pra cima encostada na barra,
+    guarda no meio, cabo embaixo -- em vez de so duas barras coloridas, que
+    lia como cabo solto e nao como arma."""
+    im = nova(26, 20)
+    ret(im, 2, 2, 22, 2, MADEIRA_E)
+    for x, cor in ((7, PEDRA_C), (17, OURO)):
+        ret(im, x, 4, 2, 11, cor)
+        ret(im, x - 3, 12, 8, 2, MADEIRA_E)
+        ret(im, x - 1, 14, 4, 3, MADEIRA)
+    contorno_alfa(im)
+    return im
+
+
+def estante_livros():
+    im = nova(26, 18)
+    ret(im, 1, 14, 2, 3, MADEIRA_E)
+    ret(im, 23, 14, 2, 3, MADEIRA_E)
+    ret(im, 0, 11, 26, 3, MADEIRA)
+    ret(im, 0, 13, 26, 1, MADEIRA_E)
+    ret(im, 0, 0, 26, 3, MADEIRA)
+    ret(im, 0, 2, 26, 1, MADEIRA_E)
+    for i, cor in enumerate([VERMELHO, AZUL, VERDE, OURO, ROXO]):
+        x = 2 + i * 5
+        ret(im, x, 4, 3, 7, cor)
+        px(im, x + 1, 3, PAPEL)
+    contorno_alfa(im)
+    return im
+
+
+def forno_padaria():
+    im = nova(26, 26)
+    sombra(im, 11, 4, 13, 24)
+    ret(im, 2, 4, 22, 20, TERRA)
+    ret(im, 2, 4, 22, 3, TERRA_C)
+    ret(im, 7, 12, 12, 10, TINTA)
+    ret(im, 8, 13, 10, 8, TINTA_2)
+    for j in range(14, 20):
+        largura = max(1, 6 - abs(j - 17))
+        ret(im, 13 - largura // 2, j, largura, 1, BRASA)
+    contorno_alfa(im)
+    return im
+
+
+def prateleira_pao():
+    im = nova(24, 16)
+    ret(im, 1, 13, 2, 3, MADEIRA_E)
+    ret(im, 21, 13, 2, 3, MADEIRA_E)
+    ret(im, 0, 10, 24, 3, MADEIRA)
+    ret(im, 0, 12, 24, 1, MADEIRA_E)
+    for i in range(4):
+        x = 3 + i * 5
+        ret(im, x, 5, 4, 4, TERRA_C)
+        ret(im, x, 5, 4, 1, PAPEL_2)
+    contorno_alfa(im)
+    return im
+
+
 OBJETOS = [
     ("casa-pequena", casa_pequena, (0.10, 0.55)),
     ("casa-grande", casa_grande, (0.10, 0.55)),
@@ -541,6 +677,17 @@ OBJETOS = [
     ("cama", cama, (0.60, 0.45)),
     ("prateleira-pocoes", prateleira_pocoes, (0.10, 0.15)),
     ("caldeirao", caldeirao, (0.45, 0.40)),
+    # as outras casas da Vila, por dentro
+    ("mesa", mesa, (0.35, 0.35)),
+    ("tapete", tapete, (0, 0)),
+    ("armario", armario, (0.35, 0.12)),
+    ("banco", banco, (0.35, 0.35)),
+    ("forja", forja, (0.35, 0.35)),
+    ("bigorna", bigorna, (0.35, 0.35)),
+    ("suporte-armas", suporte_armas, (0.10, 0.15)),
+    ("estante-livros", estante_livros, (0.10, 0.15)),
+    ("forno-padaria", forno_padaria, (0.35, 0.35)),
+    ("prateleira-pao", prateleira_pao, (0.10, 0.15)),
 ]
 
 
