@@ -759,6 +759,40 @@ que toca mais cena):
    continua existindo em paralelo — arrastar pra lixeira tambem larga no
    chao, mesmo destino final, so o gesto de origem muda).
 
+### 17.8. Entregue (implementacao)
+
+**17.1 — so a unificacao de medida, sem `distribuirFolga`.** Implementado:
+`titulo` sem valor subiu de 10 pra 12px, igual `titulo` com valor e `chips`
+(`alturaDoBloco()`). **Achado que muda o proposto:** `distribuirFolga()` nao
+faz falta — `Ficha.desenhar()` chama `janela(this, { alturaConteudo: usado,
+... })`, e `janela()` sempre dimensiona a propria area pela altura do
+CONTEUDO, nao por um teto fixo da tela. Nao ha "sobra vertical" pra
+redistribuir: a janela encolhe (ou cresce) exatamente do tamanho de quem
+esta dentro dela. O sintoma que o Hugo viu (paginas com alturas diferentes
+entre si) era so a inconsistencia de MEDIDA mesmo, ja corrigida pelo item 1;
+nao existe um segundo problema de distribuicao para resolver.
+
+**17.2, 17.3, 17.4, 17.5 — todos implementados como planejado**, com um
+ajuste: 17.4 (arrastar ate a lixeira) e 17.3/17.5 (JOGAR FORA pelo menu)
+inicialmente ficaram com destinos diferentes — so o menu chamava
+`Mundo.largarItemNoChao()`, o arrasto so descartava. Corrigido: os dois
+gestos agora chamam o mesmo `Ficha.jogarItemFora(indice)`, que sempre
+descarta da mochila E larga no chao.
+
+**Testado ao vivo** (`vite preview`, save de teste isolado): menu abre no
+botao direito sem fechar sozinho (bug de ordem de evento do Phaser corrigido
+com a guarda `ignorarProximoFechamentoDeMenu` — o `pointerdown` do slot e o
+`pointerdown` global da cena disparam no mesmo despacho sincrono, e o
+segundo fechava o menu que o primeiro tinha acabado de abrir); USAR consome
+a pocao e fecha o menu; arrastar ate a lixeira remove da mochila, acende o
+icone vermelho durante o arrasto, e o item aparece de verdade no chao do
+Mundo (`itensNoChao`); apanhar de volta funciona e devolve o item pro
+primeiro slot livre. `npm run build/contraste/conferir` verdes. **Nao
+rodei `auditar` desta vez** — o script quebrou num ponto anterior e
+nao-relacionado (`botao nao encontrado: CONFIGURACOES`), de outra frente
+que mexeu na tela de Pausa depois do merge do d20; os PNGs de
+`ferramentas/telas/` deste commit continuam os de antes desta entrega.
+
 ## 18. Coordenacao necessaria
 
 - `ambiente/ficha` e dona de `Ficha.ts`, `janela.ts`, `design.ts`,
