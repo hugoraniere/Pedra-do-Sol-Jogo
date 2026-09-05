@@ -7,7 +7,13 @@
  *
  *   npm run ambiente listar
  *   npm run ambiente criar pistas "sistema de pistas e diario"
+ *   npm run ambiente atualizar
  *   npm run ambiente fechar pistas
+ *
+ * TODA FRENTE TRABALHA EM CIMA DA ULTIMA VERSAO, e isso e garantido aqui, nao
+ * pela boa memoria de quem abre a conversa. `criar` se recusa a nascer de um
+ * `principal` que esta atras do que a pasta de integracao ja tem, e `atualizar`
+ * puxa o principal para dentro de cada frente limpa de uma vez so.
  *
  * As regras de convivencia estao em docs/12-ambientes-paralelos.md.
  */
@@ -24,8 +30,17 @@ function git(...argumentos) {
 
 /** Onde ficam as pastas dos ambientes: ao lado do repositorio, todas juntas. */
 function pastaDosAmbientes() {
-  const principal = worktrees().find((w) => w.numero === 0)?.caminho ?? RAIZ;
+  const principal = integracao().caminho;
   return join(dirname(principal), `${basename(principal)}-ambientes`);
+}
+
+/** A pasta de integracao e a PRIMEIRA que o git lista, sempre.
+ *
+ *  Nao da para acha-la pelo numero 0: worktree sem `.ambiente` tambem cai em 0,
+ *  e o proprio Claude Code cria os dele em .claude/worktrees. Ja teve mais de um
+ *  zero na lista, e quem chegasse primeiro decidia onde os ambientes iam nascer. */
+function integracao() {
+  return worktrees()[0];
 }
 
 function lerAmbiente(caminho) {
@@ -48,11 +63,33 @@ function worktrees() {
       atual.galho = linha.slice(7).replace("refs/heads/", "");
     }
   }
-  return saida.map((w) => ({ ...w, ...lerAmbiente(w.caminho) }));
+  return saida
+    // .claude/worktrees e do proprio Claude Code, nao e frente de trabalho
+    .filter((w, i) => i === 0 || !w.caminho.includes("/.claude/worktrees/"))
+    .map((w) => ({ ...w, ...lerAmbiente(w.caminho) }));
 }
 
 function sujo(caminho) {
   return execFileSync("git", ["status", "--porcelain"], { cwd: caminho, encoding: "utf-8" }).trim();
+}
+
+function gitEm(caminho, ...argumentos) {
+  return execFileSync("git", argumentos, { cwd: caminho, encoding: "utf-8" }).trim();
+}
+
+/** `a` ja esta inteiro dentro de `b`? */
+function contido(a, b) {
+  try {
+    git("merge-base", "--is-ancestor", a, b);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Quantos commits do principal esta pasta ainda nao tem. */
+function atras(caminho) {
+  return Number(gitEm(caminho, "rev-list", "--count", `HEAD..${GALHO_BASE}`));
 }
 
 function listar() {
@@ -61,7 +98,11 @@ function listar() {
   for (const w of lista) {
     const marca = resolve(w.caminho) === resolve(RAIZ) ? "voce esta aqui" : "";
     const pendente = sujo(w.caminho) ? "com mudanca nao commitada" : "limpo";
-    console.log(`  ${w.numero}  ${(w.nome ?? "?").padEnd(14)} ${w.galho.padEnd(22)} ${pendente}  ${marca}`);
+    const n = atras(w.caminho);
+    // o atraso e o numero que mais importa nesta lista: frente atrasada resolve
+    // conflito que ja foi resolvido e reescreve codigo que ja mudou
+    const idade = n === 0 ? "em dia" : `${n} commit(s) atras do ${GALHO_BASE}`;
+    console.log(`  ${w.numero}  ${(w.nome ?? "?").padEnd(14)} ${w.galho.padEnd(22)} ${pendente}, ${idade}  ${marca}`);
     console.log(`     ${w.caminho}`);
     if (w.dominio) console.log(`     cuida de: ${w.dominio}`);
     if (w.numero > 0) console.log(`     vite ${5173 + w.numero * 10}, auditoria ${4188 + w.numero * 10}`);
@@ -84,6 +125,23 @@ function criar(nome, dominio) {
   const pasta = join(pastaDosAmbientes(), nome);
   if (existsSync(pasta)) erro(`a pasta ${pasta} ja existe`);
   mkdirSync(dirname(pasta), { recursive: true });
+
+  // A GARANTIA: ambiente novo nasce da ultima versao, sempre.
+  //
+  // Ja aconteceu de a pasta de integracao estar num galho proprio enquanto o
+  // `principal` ficava para tras. Quem criasse uma frente ali nascia sem o
+  // trabalho do dia, descobria isso horas depois, e ainda tinha um merge feio
+  // pela frente. O git nao reclama disso: os dois sao commits validos.
+  const casa = integracao();
+  const cabeca = gitEm(casa.caminho, "rev-parse", "HEAD");
+  if (!contido(cabeca, GALHO_BASE)) {
+    erro(
+      `${GALHO_BASE} esta atras da pasta de integracao (${casa.galho}), e o ambiente\n` +
+      `  novo nasceria sem o que ja foi feito. Leve o trabalho para ${GALHO_BASE} antes:\n\n` +
+      `      git -C ${casa.caminho} checkout ${GALHO_BASE}\n` +
+      `      git -C ${casa.caminho} merge ${casa.galho}\n`,
+    );
+  }
 
   const pendente = sujo(RAIZ);
   git("worktree", "add", "-b", `ambiente/${nome}`, pasta, GALHO_BASE);
@@ -110,12 +168,52 @@ function criar(nome, dominio) {
   console.log(`\n  abra uma conversa nova com esta pasta e leia AMBIENTE.md antes de mexer.\n`);
 }
 
+/** Puxa o principal para dentro de cada frente. O mutirao que antes era na mao.
+ *
+ *  So avanca o que da para avancar sem decidir nada: pasta suja fica de fora, e
+ *  frente que ja tem commit proprio divergindo tambem, porque juntar as duas
+ *  pontas e uma decisao com conflito no meio, e conflito se resolve dentro do
+ *  ambiente, com quem sabe o que aquele trabalho estava fazendo. */
+function atualizar() {
+  const lista = worktrees().filter((w) => w.numero > 0);
+  console.log("");
+  if (!lista.length) console.log("  nenhuma frente aberta.\n");
+  let mexeu = 0;
+  for (const w of lista) {
+    const n = atras(w.caminho);
+    const nome = (w.nome ?? "?").padEnd(14);
+    if (n === 0) {
+      console.log(`  ${nome} ja estava em dia`);
+      continue;
+    }
+    if (sujo(w.caminho)) {
+      console.log(`  ${nome} PULADA: tem mudanca nao commitada. commite e rode de novo`);
+      continue;
+    }
+    try {
+      gitEm(w.caminho, "merge", "--ff-only", GALHO_BASE);
+      console.log(`  ${nome} avancou ${n} commit(s)`);
+      mexeu++;
+    } catch {
+      console.log(`  ${nome} PULADA: tem commit proprio fora do ${GALHO_BASE}.`);
+      console.log(`  ${" ".repeat(14)} junte a mao la dentro:  git -C ${w.caminho} merge ${GALHO_BASE}`);
+    }
+  }
+  console.log(`\n  ${mexeu} frente(s) atualizada(s).\n`);
+}
+
 function fechar(nome, forcar) {
   const alvo = worktrees().find((w) => w.nome === nome && w.numero > 0);
   if (!alvo) erro(`nao achei o ambiente ${nome}`);
   if (!forcar) {
     if (sujo(alvo.caminho)) erro(`${nome} tem mudanca nao commitada. commite, ou use --forcar`);
-    const juntados = git("branch", "--merged", GALHO_BASE).split("\n").map((l) => l.trim().replace("* ", ""));
+    // o git marca com "+" o galho que esta aberto em outro worktree, e com "*" o
+    // do worktree atual. Todo galho de ambiente esta aberto no worktree dele, ou
+    // seja: sem tirar o "+", nenhuma frente jamais parecia fundida, e fechar so
+    // funcionava com --forcar, que e justamente o que joga trabalho fora.
+    const juntados = git("branch", "--merged", GALHO_BASE)
+      .split("\n")
+      .map((l) => l.trim().replace(/^[*+]\s+/, ""));
     if (!juntados.includes(alvo.galho)) {
       erro(`${alvo.galho} ainda nao entrou em ${GALHO_BASE}. junte antes, ou use --forcar`);
     }
@@ -148,6 +246,20 @@ jeito de este esquema dar errado.
 - \`node_modules\` e um atalho para o da pasta principal. Se voce mexer nas
   dependencias em package.json, apague o atalho e rode \`npm install\` aqui.
 
+## Fique em cima da ultima versao
+
+Esta pasta nasceu do \`${GALHO_BASE}\` do dia em que foi criada, e o jogo anda
+sem ela. Antes de comecar cada sessao de trabalho:
+
+\`\`\`bash
+git merge principal
+\`\`\`
+
+Frente atrasada resolve conflito que ja foi resolvido e reescreve codigo que ja
+mudou. Da pasta principal, \`npm run ambiente listar\` diz quantos commits cada
+frente esta atras, e \`npm run ambiente atualizar\` avanca todas as que estao
+limpas de uma vez.
+
 ## Antes de dizer que terminou
 
 \`npm run build\`, \`npm run verificar\`, \`npm run auditar\` e \`npm run conferir\`
@@ -169,5 +281,6 @@ const argumentos = resto.filter((a) => a !== "--forcar");
 
 if (comando === "listar" || comando === undefined) listar();
 else if (comando === "criar") criar(argumentos[0], argumentos.slice(1).join(" "));
+else if (comando === "atualizar") atualizar();
 else if (comando === "fechar") fechar(argumentos[0], forcar);
-else erro("comandos: listar, criar <nome> [do que cuida], fechar <nome> [--forcar]");
+else erro("comandos: listar, criar <nome> [do que cuida], atualizar, fechar <nome> [--forcar]");

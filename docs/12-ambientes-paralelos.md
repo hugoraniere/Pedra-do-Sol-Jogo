@@ -111,6 +111,38 @@ npm run ambiente fechar pistas -- --forcar   # joga fora o que nao foi commitado
 
 O `--` antes de `--forcar` e do npm, nao nosso: sem ele o npm engole a opcao.
 
+## Toda frente em cima da ultima versao
+
+Este e o desgaste que aparece sozinho, sem ninguem errar nada: cada frente nasce
+do `principal` de um dia, o jogo anda, e a pasta continua vendo o jogo daquele
+dia. Frente atrasada resolve conflito que ja foi resolvido e reescreve codigo que
+ja mudou. Duas coisas seguram isso.
+
+**A ferramenta se recusa a criar frente atrasada.** Ja aconteceu de a pasta de
+integracao estar num galho proprio enquanto o `principal` ficava para tras. Quem
+criasse um ambiente ali nascia sem o trabalho do dia e so descobria horas depois.
+O git nao reclama disso, os dois sao commits validos. Agora o `criar` confere se
+o `principal` contem o que a pasta de integracao ja tem, e para com o conserto
+escrito na tela quando nao contem.
+
+**O atraso fica visivel, e some com um comando.**
+
+```bash
+npm run ambiente listar      # diz quantos commits cada frente esta atras
+npm run ambiente atualizar   # avanca todas as que da para avancar
+```
+
+O `atualizar` so mexe no que nao exige decisao: pula pasta com mudanca nao
+commitada, e pula frente que ja tem commit proprio divergindo. Essa segunda junta
+com `git merge principal` dentro da pasta, com quem sabe o que aquele trabalho
+estava fazendo, que e a terceira regra ali de cima.
+
+Dentro de um ambiente, o habito e uma linha antes de comecar:
+
+```bash
+git merge principal
+```
+
 ## Coisas que valem lembrar
 
 - **Uma conversa por pasta.** Duas conversas na mesma pasta e o mesmo problema de

@@ -102,7 +102,7 @@ npm run conferir # confere as 25 combinacoes de raca e classe, peca por peca
 npm run folha    # monta a folha com as 25 combinacoes, para olhar
 npm run app      # abre o jogo como aplicativo de desktop (Electron)
 npm run app:build# empacota o aplicativo para instalar
-npm run ambiente # frentes de trabalho paralelas: listar, criar, fechar
+npm run ambiente # frentes paralelas: listar, criar, atualizar, fechar
 ```
 
 ## Regras deste projeto
