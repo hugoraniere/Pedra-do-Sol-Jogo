@@ -72,6 +72,8 @@ export const T = {
   // bordasDeGrama() escolhe entre esta e a de cima medindo a largura real.
   beiraNFina: 36, beiraSFina: 37, beiraLFina: 38, beiraOFina: 39,
   beiraNOFina: 40, beiraNLFina: 41, beiraSOFina: 42, beiraSLFina: 43,
+  // interior: parede da Casa de Cura (arte/tiles.py, parede_interior())
+  paredeInterior: 44,
 } as const;
 
 /** Tiles de chao que o heroi nao atravessa. Objeto tem colisao propria.
@@ -79,7 +81,7 @@ export const T = {
  *  `mata` esta aqui e e por isso que a floresta nao precisa de uma caixa de
  *  colisao por arvore: a parede e o chao, e o pinheiro plantado em cima e so
  *  desenho. Umas oitocentas caixas de colisao a menos. */
-export const SOLIDOS = [T.agua, T.agua2, T.pedra, T.paredeCaverna, T.mata, T.barranco];
+export const SOLIDOS = [T.agua, T.agua2, T.pedra, T.paredeCaverna, T.mata, T.barranco, T.paredeInterior];
 
 /** Altura do frame do personagem. Mudou de 24 para 32 na virada de arte. */
 export const ALTURA_PERSONAGEM = 32;

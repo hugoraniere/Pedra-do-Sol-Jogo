@@ -470,6 +470,57 @@ def varal():
     return im
 
 
+# --------------------------------------------------- a Casa de Cura, por dentro
+# O comodo da Vovo Aurora. Ver docs/14-casa-de-cura.md: um comodo so, pequeno de
+# proposito, sem cama pro heroi deitar (a fogueira continua o unico lugar que
+# revive de verdade -- ver a decisao la no doc, "risco de verdade").
+def cama():
+    """A cama da Vovo, ou do paciente. Nunca do heroi."""
+    im = nova(28, 20)
+    sombra(im, 13, 3, 14, 18)
+    ret(im, 2, 6, 24, 12, MADEIRA)
+    ret(im, 2, 6, 24, 2, MADEIRA_C)
+    ret(im, 2, 16, 24, 2, MADEIRA_E)
+    ret(im, 4, 9, 20, 6, ROXO)
+    ret(im, 4, 9, 20, 1, ROXO_C)
+    ret(im, 5, 7, 7, 4, PAPEL)
+    ret(im, 5, 7, 7, 1, BRANCO)
+    contorno_alfa(im)
+    return im
+
+
+def prateleira_pocoes():
+    """Montada na parede -- sem sombra de chao, porque nao toca o chao."""
+    im = nova(24, 16)
+    ret(im, 1, 13, 2, 3, MADEIRA_E)
+    ret(im, 21, 13, 2, 3, MADEIRA_E)
+    ret(im, 0, 10, 24, 3, MADEIRA)
+    ret(im, 0, 10, 24, 1, MADEIRA_C)
+    ret(im, 0, 12, 24, 1, MADEIRA_E)
+    for i, cor in enumerate([ROXO_C, VERDE, VERMELHO, OURO]):
+        x = 2 + i * 5
+        ret(im, x, 4, 3, 6, cor)
+        ret(im, x, 4, 3, 1, BRANCO)
+        px(im, x + 1, 2, MADEIRA_E)
+    contorno_alfa(im)
+    return im
+
+
+def caldeirao():
+    im = nova(20, 20)
+    sombra(im, 9, 3, 10, 18)
+    for dx in (-6, 0, 6):
+        ret(im, 9 + dx, 12, 2, 6, TINTA_2)
+    ret(im, 2, 5, 16, 2, TINTA_2)
+    ret(im, 3, 6, 14, 8, TINTA)
+    ret(im, 3, 6, 14, 2, TINTA_2)
+    ret(im, 5, 6, 10, 2, VERDE)
+    px(im, 7, 5, VERDE)
+    px(im, 12, 5, ROXO_C)
+    contorno_alfa(im)
+    return im
+
+
 OBJETOS = [
     ("casa-pequena", casa_pequena, (0.10, 0.55)),
     ("casa-grande", casa_grande, (0.10, 0.55)),
@@ -507,6 +558,10 @@ OBJETOS = [
     ("pedra-musgo", floresta.pedra_musgo, (0.45, 0.40)),
     ("teia", floresta.teia, (0, 0)),
     ("raizes", floresta.raizes, (0.40, 0.20)),
+    # a Casa de Cura, por dentro
+    ("cama", cama, (0.60, 0.45)),
+    ("prateleira-pocoes", prateleira_pocoes, (0.10, 0.15)),
+    ("caldeirao", caldeirao, (0.45, 0.40)),
 ]
 
 

@@ -1205,9 +1205,10 @@ export class Combate extends Phaser.Scene {
         this.mundo.removerCriatura(b.chave);
         if (comLoot) {
           const ficha = acharCriatura(b.bicharioId);
-          ficha?.larga.forEach((item) => {
-            if (item === "moeda") estado().moedas += 1;
-            else guardar(item);
+          ficha?.larga.forEach(({ id, chance }) => {
+            if (!ficha.unico && Math.random() > chance) return;
+            if (id === "moeda") estado().moedas += 1;
+            else guardar(id);
           });
         }
         salvar();

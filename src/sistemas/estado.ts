@@ -289,14 +289,16 @@ export function aplicarDerrota(
   const moedasPerdidas = atual.moedas;
   atual.moedas = 0;
 
-  const elegiveis = atual.mochila.filter((id) => !id.startsWith("chave-"));
+  // mochila virou contagem por id (Record), nao lista - perder um item
+  // agora perde a PILHA inteira daquele tipo, nunca uma unidade avulsa.
+  const elegiveis = Object.keys(atual.mochila).filter((id) => !id.startsWith("chave-"));
   const quantidade = Math.min(3, Math.ceil(elegiveis.length / 2));
   const itensPerdidos: string[] = [];
   for (let i = 0; i < quantidade; i++) {
     const indice = Math.floor(sorteio() * elegiveis.length);
     itensPerdidos.push(...elegiveis.splice(indice, 1));
   }
-  atual.mochila = atual.mochila.filter((id) => !itensPerdidos.includes(id));
+  itensPerdidos.forEach((id) => delete atual.mochila[id]);
 
   salvar();
   return { moedasPerdidas, itensPerdidos };
