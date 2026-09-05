@@ -151,6 +151,13 @@ cena e sem sprite, testaveis sozinhas. A cena so mostra o resultado.
 **Depuracao pelo console.** O jogo expoe `window.jogo`. Da para forcar uma fala com
 `jogo.scene.getScene("Interface").events.emit("falar", { quem, linhas, cena: jogo.scene.getScene("Mundo") })`.
 
+**A tela e o espaco que tem.** O jogo enche a area util do navegador, sempre, e a
+escala e sempre um numero inteiro. As duas coisas juntas so fecham de um jeito:
+quem se adapta e a resolucao logica. `LARGURA` e `ALTURA` sao dois numeros que
+voce NAO pode prever — mudam com o tamanho da janela e com a visao escolhida.
+Nada de largura de painel escrita na mao, e toda cena de interface chama
+`refazerAoRedimensionar()`. Ver `docs/07-design-system.md`.
+
 **Nenhuma coordenada Y na mao.** Toda UI usa `caixa()` e `pilha()` de
 `src/sistemas/design.ts`. Se voce somou dois numeros para achar onde vai um botao,
 esta errado. Ver `docs/07-design-system.md`.

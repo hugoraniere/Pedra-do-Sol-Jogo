@@ -10,6 +10,7 @@ import type { Encontro } from "./Combate";
 import { Controles } from "../sistemas/controles";
 import { camadasDoHeroi, criarAnimacoes, Heroi } from "../sistemas/heroi";
 import { COLCHAO, PONTOS } from "../dados/sons";
+import { refazerAoRedimensionar } from "../sistemas/visao";
 import {
   calarAmbiente, montarAmbiente, musica, ouvirDe, passo, soltarPassaros, tocar,
   type FonteDeSom,
@@ -325,8 +326,13 @@ export class Mundo extends Phaser.Scene {
       passo(tile?.index ?? -1);
     });
 
-    this.cameras.main.setBounds(0, 0, tilemap.widthInPixels, tilemap.heightInPixels);
+    this.limitarCamera(tilemap.widthInPixels, tilemap.heightInPixels);
     this.cameras.main.startFollow(this.heroi, true, 0.14, 0.14);
+    // a janela pode mudar de tamanho a qualquer momento, e com ela o quanto de
+    // mundo cabe na tela. Os limites da camera dependem disso.
+    refazerAoRedimensionar(this, () =>
+      this.limitarCamera(tilemap.widthInPixels, tilemap.heightInPixels)
+    );
     this.cameras.main.setBackgroundColor(COR.tinta);
     // zoom sempre 1: quem muda a visao e a resolucao do canvas, ver sistemas/visao.ts.
     // com zoom fracionario a grade de pixels sai do lugar e o mapa pisca ao andar.
@@ -353,6 +359,30 @@ export class Mundo extends Phaser.Scene {
     // sair do mundo solta os loops. A musica sobrevive: menu e titulo sao o
     // mesmo lugar do ponto de vista de quem joga, e recomecar a faixa se ouve.
     this.events.once("shutdown", () => calarAmbiente());
+  }
+
+  /**
+   * Os limites da camera, cuidando do caso do mapa MENOR que a tela.
+   *
+   * A vila tem 576x384. Numa tela grande na visao LONGE o mundo visivel passa
+   * disso, e ai o Phaser encosta o mapa no canto de cima a esquerda e deixa
+   * fundo sobrando dos outros dois lados — justamente quando a vila inteira
+   * caberia bonitinha no meio da tela.
+   *
+   * A correcao e nao deixar o limite ser menor que a camera: ele cresce ate o
+   * tamanho da tela, centrado no mapa. Os limites da FISICA continuam sendo o
+   * mapa de verdade, entao o heroi nao ganha permissao de andar no vazio.
+   */
+  private limitarCamera(mapaLargura: number, mapaAltura: number) {
+    const cam = this.cameras.main;
+    const largura = Math.max(mapaLargura, cam.width);
+    const altura = Math.max(mapaAltura, cam.height);
+    cam.setBounds(
+      Math.round(-(largura - mapaLargura) / 2),
+      Math.round(-(altura - mapaAltura) / 2),
+      largura,
+      altura
+    );
   }
 
   pausar() {

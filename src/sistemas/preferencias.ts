@@ -9,18 +9,27 @@ export type Preferencias = {
   som: boolean;
 };
 
-/** Cada nivel e uma resolucao logica, nao um zoom de camera.
+/** Cada nivel e um DEGRAU na escala inteira, nao uma resolucao propria.
  *
- *  A camera fica sempre em zoom 1. Quem muda e o tamanho do canvas: canvas
- *  menor cabe mais vezes na tela, entao o Phaser o multiplica por um numero
- *  maior e tudo aparece maior. Canvas maior mostra mais mapa.
+ *  A camera fica sempre em zoom 1. Quem muda e o tamanho do pixel na tela: o
+ *  canvas enche a janela inteira sempre, e a escala escolhida decide quantos
+ *  pixels de jogo cabem la dentro. Escala maior = pixel maior = menos mapa na
+ *  tela. Ver sistemas/visao.ts, que faz a conta.
  *
- *  As tres larguras sao multiplas de 16 (o tile) e guardam a mesma proporcao
- *  proporcao larga. Em tiles: 16x10, 20x12 e 25x15. */
-export const ZOOM: Record<NivelZoom, { largura: number; altura: number; nome: string }> = {
-  perto: { largura: 256, altura: 160, nome: "PERTO" },
-  normal: { largura: 320, altura: 192, nome: "NORMAL" },
-  longe: { largura: 400, altura: 240, nome: "LONGE" },
+ *  ANTES CADA NIVEL ERA UMA RESOLUCAO FIXA (256x160, 320x192, 400x240) e isso
+ *  tinha um defeito que so aparecia em algumas janelas: como a escala tem que
+ *  ser inteira, duas resolucoes vizinhas caiam na mesma escala e o botao nao
+ *  mudava nada na tela. Degrau melhora muito isso, mas nao e magica: numa
+ *  janela pequena a escala esbarra no piso ou no teto de visao.ts e dois
+ *  niveis voltam a coincidir. Nas telas que importam — iPad deitado, notebook,
+ *  monitor — os tres sao distintos.
+ *
+ *  O NORMAL e o afastado, e e o padrao. Foi pedido assim: o jogo comeca
+ *  mostrando bastante mapa, PERTO aproxima um degrau e LONGE afasta um. */
+export const ZOOM: Record<NivelZoom, { degrau: number; nome: string }> = {
+  perto: { degrau: 1, nome: "PERTO" },
+  normal: { degrau: 0, nome: "NORMAL" },
+  longe: { degrau: -1, nome: "LONGE" },
 };
 
 export const ORDEM_ZOOM: NivelZoom[] = ["perto", "normal", "longe"];

@@ -15,6 +15,47 @@ acontecer, e um auditor que encontra a que ainda acontecer.
 **Nenhuma cena escreve coordenada Y na mao.** Se voce se pegou somando 34 com 18 para
 achar onde vai um botao, use a pilha.
 
+## A resolucao logica e um valor qualquer
+
+Isto mudou, e muda como voce escreve UI daqui pra frente.
+
+O jogo **enche a area util do navegador, sempre**. Nao existe tarja preta e nao
+existe o jogo ocupando um pedaco da janela. Como a escala tem que ser inteira
+(escala quebrada faz a arte de pixel sair irregular e o mapa piscar ao andar),
+quem se adapta e a resolucao: a escala e escolhida primeiro e o tamanho logico e
+o que sobra da divisao. Ver `src/sistemas/visao.ts`.
+
+Na pratica:
+
+| Janela | Visao NORMAL | Visao PERTO | Visao LONGE |
+|---|---|---|---|
+| 1440 x 900 | 4x, 360 x 225 | 5x, 288 x 180 | 3x, 480 x 300 |
+| 1920 x 1080 | 5x, 384 x 216 | 6x, 320 x 180 | 4x, 480 x 270 |
+| iPad deitado, 1180 x 820 | 3x, 394 x 274 | 4x, 295 x 205 | 2x, 590 x 410 |
+| ultrawide, 2560 x 1080 | 5x, 512 x 216 | 6x, 427 x 180 | 4x, 640 x 270 |
+
+**`LARGURA` e `ALTURA` nao sao mais uma de tres opcoes conhecidas.** Sao dois
+numeros que voce nao pode prever. As consequencias:
+
+- Nada de largura de painel escrita na mao. Use `Math.min(desejada, LARGURA - ESPACO.xl * 2)`,
+  como `larguraCaixa()` na Pausa e `larguraDaJanela()` em `janela.ts`.
+- Antes de empilhar conteudo, pergunte quanto cabe: `alturaUtilDaJanela()`.
+  Mostre o que couber, na ordem de importancia.
+- Toda cena de interface chama `refazerAoRedimensionar()` no `create`. Sem isso
+  ela fica com o desenho do tamanho antigo quando a janela muda.
+- A camera do Mundo tambem depende disso: quando o mundo visivel fica maior que
+  o mapa (a vila tem 576 x 384), o limite da camera cresce ate o tamanho da tela,
+  centrado no mapa. Sem isso o Phaser encosta o mapa no canto. Ver
+  `limitarCamera()` em `src/cenas/Mundo.ts`.
+
+O piso e o teto estao em `visao.ts`: **nenhuma tela precisa saber caber em menos
+que 256 x 160**, que e a menor resolucao que este projeto ja auditou, e nenhuma
+passa de 800 x 480, para o heroi nao virar uma formiga. Quando os dois brigam,
+ganha o piso: fonte pequena e feio, botao fora da tela deixa o Lele preso.
+
+`npm run auditar` roda a criacao inteira nos tres niveis de visao justamente
+porque e ai que a conta de altura aperta.
+
 ## As pecas, em `src/sistemas/design.ts`
 
 ### Escala de espacamento

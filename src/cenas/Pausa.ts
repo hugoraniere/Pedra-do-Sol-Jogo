@@ -20,7 +20,12 @@ import {
 import { salvar } from "../sistemas/estado";
 import { noAplicativo, sairDoJogo } from "../sistemas/armazenamento";
 import { ORDEM_ZOOM, ZOOM, definirPreferencia, preferencias } from "../sistemas/preferencias";
-import { aplicarVisao, refazerAoRedimensionar } from "../sistemas/visao";
+import {
+  alternarTelaCheia,
+  aplicarVisao,
+  emTelaCheia,
+  refazerAoRedimensionar,
+} from "../sistemas/visao";
 import { AJUSTES } from "../dados/sons";
 import { abafarMusica, definirSom, tocar } from "../sistemas/som";
 
@@ -164,6 +169,10 @@ export class Pausa extends Phaser.Scene {
   private desenharConfig() {
     const larguraUtil = larguraCaixa() - TAMANHO.paddingPainel * 2;
     const linhas = quebrar(EXPLICACAO, larguraUtil);
+    // o Safari do iPad nao deixa nada alem de video entrar em tela cheia. La o
+    // botao nao existe, em vez de existir e nao funcionar: botao que nao faz
+    // nada e o pior caso para quem tem 7 anos.
+    const temTelaCheia = this.scale.fullscreen.available;
     const alturaConteudo =
       TAMANHO.linhaTexto +
       ESPACO.md +
@@ -172,6 +181,7 @@ export class Pausa extends Phaser.Scene {
       alturaDoTexto(linhas.length) +
       ESPACO.lg +
       TAMANHO.botao +
+      (temTelaCheia ? ESPACO.lg + TAMANHO.botao : 0) +
       ESPACO.lg +
       TAMANHO.botao;
 
@@ -195,9 +205,13 @@ export class Pausa extends Phaser.Scene {
         () => {
           if (nivel === preferencias().zoom) return;
           definirPreferencia("zoom", nivel);
-          // aplicarVisao redimensiona o jogo, e o resize manda este menu se
-          // remontar. Nao chame desenhar aqui: seriam dois desenhos e um piscar.
           aplicarVisao(this.game);
+          // aplicarVisao quase sempre muda a resolucao, e o resize ja manda este
+          // menu se remontar. Quase: numa janela pequena dois niveis podem cair
+          // na mesma escala inteira, e ai nao vem resize nenhum. Sem esta linha,
+          // nesse caso, a marca ficaria no botao errado. Redesenhar duas vezes
+          // no mesmo quadro nao pisca, porque nada e desenhado entre as duas.
+          this.time.delayedCall(0, () => this.desenhar());
         },
         "painel-creme"
       );
@@ -246,6 +260,31 @@ export class Pausa extends Phaser.Scene {
       b.marcar(ligado === preferencias().som);
       this.painel.add(b);
     });
+
+    // ------------------------------------------------------- tela cheia
+    // O jogo ja enche a janela do navegador sozinho, sempre. Isto aqui e o
+    // passo seguinte: comer tambem a barra de enderecos e as abas.
+    if (temTelaCheia) {
+      const linhaCheia = p.reservar(TAMANHO.botao, ESPACO.lg);
+      const bCheia = botao(
+        this,
+        LARGURA / 2,
+        meio(linhaCheia),
+        Math.min(linhaCheia.largura, 160),
+        linhaCheia.altura,
+        "TELA CHEIA",
+        () => {
+          alternarTelaCheia(this.game);
+          // entrar e sair de tela cheia nem sempre muda a resolucao logica, e
+          // sem mudanca de resolucao nao vem resize: sem isto a marca do botao
+          // ficaria mentindo ate a proxima vez que a tela mudasse de tamanho
+          this.time.delayedCall(0, () => this.desenhar());
+        },
+        "painel-creme"
+      );
+      bCheia.marcar(emTelaCheia(this.game));
+      this.painel.add(bCheia);
+    }
 
     const rVoltar = p.reservar(TAMANHO.botao, ESPACO.lg);
     this.painel.add(
