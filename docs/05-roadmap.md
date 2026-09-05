@@ -125,6 +125,16 @@ dia/noite ao jogo), entraram fora de ordem:
 O motivo: dar vida ao elenco antes de repetir o metodo em outro lugar, em vez de
 esperar o sistema de dado/combate fechar primeiro.
 
+**Decisao, 2026-09-05: o ciclo do dia aprofundou de 4 pra 6 periodos**
+(madrugada, aurora, manha, tarde, por-do-sol, noite — os dois crepusculos
+como janelas curtas de transicao), com icone no HUD mostrando o periodo,
+criaturas que aparecem/ficam mais fortes por horario (aranha so a noite,
+goblin mais dificil de acertar a noite), e um primeiro passo de peixe-por-
+horario (`dados/peixes.ts`, so catalogo + fala do Seu Fagundes — a pescaria
+completa com peixes brasileiros e Portomares segue documentada como fase
+posterior em `docs/02-roteiro.md`). Plano completo e registro do que ficou
+de fora de proposito em `docs/plano-de-ciclo-do-dia.md`.
+
 **Decisao, 2026-09-05: o resto da Fase 1.2 tambem foi adiantado**, a pedido
 direto (falas condicionadas + missoes + opcoes de dialogo). Ver os itens
 marcados abaixo — o unico que ficou de proposito pra depois foi ramificacao de
