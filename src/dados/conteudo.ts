@@ -54,6 +54,10 @@ export type Raca = {
   bonus: Atributo;
   dom: string;
   domTexto: string;
+  /** quadro de icones.png. Nunca Desisto reusa `dado-5` (rolar de novo e o
+   *  dado) e Sopro Quentinho reusa `acao-sopro-quentinho`, que o combate ja
+   *  desenhou -- os outros tres ganharam icone proprio. Ver arte/icones.py. */
+  icone: string;
   coracoes: number;
   cor: number;
   /** so quando o dom da raca e uma acao de LUTA (so a Cria de Dragao tem hoje).
@@ -69,6 +73,7 @@ export const RACAS: Raca[] = [
     bonus: "coracao",
     dom: "Nunca Desisto",
     domTexto: "Uma vez por aventura voce pode rolar o dado de novo.",
+    icone: "dado-5",
     coracoes: 3,
     cor: 0x3e9b62,
   },
@@ -79,6 +84,7 @@ export const RACAS: Raca[] = [
     bonus: "forca",
     dom: "Casco Duro",
     domTexto: "Voce comeca com 4 coracoes em vez de 3.",
+    icone: "dom-casco-duro",
     coracoes: 4,
     cor: 0xf2802b,
   },
@@ -89,6 +95,7 @@ export const RACAS: Raca[] = [
     bonus: "esperteza",
     dom: "Olhos de Coruja",
     domTexto: "Voce enxerga no escuro e de bem longe.",
+    icone: "dom-olhos-de-coruja",
     coracoes: 3,
     cor: 0x3e9b62,
   },
@@ -99,6 +106,7 @@ export const RACAS: Raca[] = [
     bonus: "coracao",
     dom: "Pe de Coelho",
     domTexto: "Uma vez por aventura voce troca um OPS por um QUASE.",
+    icone: "dom-pata-de-coelho",
     coracoes: 3,
     cor: 0xf5b62b,
   },
@@ -109,6 +117,7 @@ export const RACAS: Raca[] = [
     bonus: "forca",
     dom: "Sopro Quentinho",
     domTexto: "Uma vez por aventura voce solta fogo pela boca.",
+    icone: "acao-sopro-quentinho",
     coracoes: 3,
     cor: 0xe2483d,
     acaoDeCombate: {

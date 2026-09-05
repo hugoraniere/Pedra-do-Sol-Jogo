@@ -18,7 +18,13 @@ def cabelo(direcao, coluna, estilo="curto"):
     if estilo == "careca":
         return im
     _, sobe, _ = deslocamento(coluna)
-    topo = esqueleto(PORTE_BASE)["cabeca_topo"] + sobe + (1 if coluna == "tonto" else 0)
+    # o balanco do passo (sobe = -1) empurra a cabeca 1 px para cima. Para o
+    # corpo isso e um bounce sem custo; para cabelo e chapeu, que ja usam o
+    # teto de "3 px de ceu" ate o limite (ver chapeu(), regra 1), esse 1 px a
+    # mais estoura o quadro e corta a ponta durante a caminhada -- e o que
+    # aconteceu com o chapeu pontudo. so sobe NEGATIVO (empurra pra cima) e
+    # perigoso; positivo (respira, desce) sobra espaco de sobra e nao corta.
+    topo = esqueleto(PORTE_BASE)["cabeca_topo"] + max(sobe, 0) + (1 if coluna == "tonto" else 0)
     L = CABECA_L
     X = _lados(L)
     alt = CABECA_ALT
@@ -146,7 +152,13 @@ def chapeu(direcao, coluna, tipo="pontudo"):
     if tipo == "nenhum":
         return im
     _, sobe, _ = deslocamento(coluna)
-    topo = esqueleto(PORTE_BASE)["cabeca_topo"] + sobe + (1 if coluna == "tonto" else 0)
+    # o balanco do passo (sobe = -1) empurra a cabeca 1 px para cima. Para o
+    # corpo isso e um bounce sem custo; para cabelo e chapeu, que ja usam o
+    # teto de "3 px de ceu" ate o limite (ver chapeu(), regra 1), esse 1 px a
+    # mais estoura o quadro e corta a ponta durante a caminhada -- e o que
+    # aconteceu com o chapeu pontudo. so sobe NEGATIVO (empurra pra cima) e
+    # perigoso; positivo (respira, desce) sobra espaco de sobra e nao corta.
+    topo = esqueleto(PORTE_BASE)["cabeca_topo"] + max(sobe, 0) + (1 if coluna == "tonto" else 0)
     L = CABECA_L
     X = _lados(L)
     de_costas = direcao == "cima"

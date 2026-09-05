@@ -206,8 +206,18 @@ def corpo(direcao, coluna, tom=0, raca="vale", **mudancas):
                         (cab_x + cab_l, oy), (cab_x + cab_l, oy + 1),
                         (cab_x + cab_l + 1, oy)] if do_lado_de_tras(p)], pele)
         else:
-            pontos(im, [p for p in [(cab_x - 1, oy + 1), (cab_x + cab_l, oy + 1)]
+            # a orelha redonda era 1 px SO, um ponto perdido na silhueta -- de
+            # perfil, com so uma orelha aparecendo (a outra e escondida por
+            # do_lado_de_tras), 1 px sozinho debaixo de cabelo ou chapeu nao
+            # sobrevive: e o que o Anao, o Vale e o Pequenino tem em comum, e
+            # e por isso que o rosto de perfil deles parecia sem orelha
+            # nenhuma. Tres linhas fazem um lobulo pequeno, mas que se ve.
+            pontos(im, [p for p in [
+                        (cab_x - 1, oy), (cab_x - 1, oy + 1), (cab_x - 1, oy + 2),
+                        (cab_x + cab_l, oy), (cab_x + cab_l, oy + 1), (cab_x + cab_l, oy + 2)]
                         if do_lado_de_tras(p)], pele)
+            pontos(im, [p for p in [(cab_x - 1, oy + 2), (cab_x + cab_l, oy + 2)]
+                        if do_lado_de_tras(p)], sombra_pele)
 
     # ------------------------------------------------------------ chifres
     # dois tocos claros no alto da cabeca, visiveis tambem de costas
@@ -334,13 +344,19 @@ def corpo(direcao, coluna, tom=0, raca="vale", **mudancas):
         De perfil a passada e X puro: a perna avanca e recua, e e assim que se
         anda. De frente ela vai na direcao da camera, entao quase nada dela
         cabe: sobra 1 px de x e o pe do lado de tras subindo, que e o sinal
-        possivel nessa vista."""
+        possivel nessa vista.
+
+        O -1 no perfil (so quando avanca) e o pe DESCOLANDO do chao. Sem ele, o
+        unico sinal de passo era o tom (perna de tras em sombra) trocando de
+        lado -- e sombra de perna e sutil demais, de tao apertada num quadro
+        de 16 px, para o olho ler como passo. Silhueta mudando de posicao E
+        de altura junto e o que finalmente parece andar, nao so reacender."""
         if not bal:
             return 0, 0
         sinal = 1 if bal > 0 else -1
         # 1 px a mais de passada no perfil: com a passada crua os dois pes, que
         # sao mais largos que a perna, se encostam e viram uma tabua so
-        return (bal + sinal, 0) if perfil else (sinal, sinal)
+        return (bal + sinal, -1 if sinal > 0 else 0) if perfil else (sinal, sinal)
 
     for i, (x, bal) in enumerate(((px_esq, perna_bal), (px_dir, -perna_bal))):
         # a de tras, no perfil, sai chapada em tom de sombra e sem luz propria
@@ -394,7 +410,12 @@ def geometria(direcao, coluna, raca="vale", **mudancas):
     e = esqueleto(t["altura"])
     _, sobe, balanco = deslocamento(coluna)
 
-    tr_l = min(12, c["tronco"] + (2 if c["barriga"] else 0))
+    # a MESMA conta de corpo(): de perfil o tronco e 2 px mais fino. Sem repetir
+    # aqui, o braco ficava ancorado na largura de frente enquanto corpo() ja
+    # desenhava um tronco mais estreito -- a mao saia flutuando 1 px fora do
+    # corpo, ou afundada dentro dele, dependendo da direcao.
+    perfil = direcao in ("esquerda", "direita")
+    tr_l = min(12, c["tronco"] + (2 if c["barriga"] else 0)) - (2 if perfil else 0)
     tr_x = _lados(tr_l)
     ombro_y = e["tronco_topo"] + sobe + c["ombro"]
     alt_braco = TRONCO_ALT - c["ombro"]

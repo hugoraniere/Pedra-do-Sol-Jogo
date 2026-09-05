@@ -69,9 +69,12 @@ export class Carregar extends Phaser.Scene {
     const raca = RACAS.find((r) => r.id === f.raca)?.nome ?? f.raca;
     const classe = CLASSES.find((k) => k.id === f.classe)?.nome ?? f.classe;
 
-    c.add(texto(this, 16, y + 5, f.nome.toUpperCase(), { tamanho: 16, cor: 0x2c2440 }));
-    c.add(texto(this, 16, y + 22, `${raca} . ${classe}`, { cor: 0x4a3e64 }));
-    c.add(texto(this, 16, y + 31, `${f.lugar} . ${this.tempo(f.minutos)}`, { cor: 0x4a3e64 }));
+    // as tres linhas se empilham pela TINTA, nao pela caixa: a caixa de 16 px
+    // mede 20 de altura e so tem letra do 4 ao 15, entao encostar caixa em caixa
+    // desperdicaria 8 px e era isso que empurrava o lugar para fora do cartao
+    c.add(texto(this, 16, y + 2, f.nome.toUpperCase(), { tamanho: 16, cor: 0x2c2440 }));
+    c.add(texto(this, 16, y + 19, `${raca} . ${classe}`, { cor: 0x4a3e64 }));
+    c.add(texto(this, 16, y + 29, `${f.lugar} . ${this.tempo(f.minutos)}`, { cor: 0x4a3e64 }));
 
     c.add(this.add.image(LARGURA - 96, y + 13, "ui", 3).setScale(0.8));
     c.add(texto(this, LARGURA - 88, y + 9, String(f.selos), { cor: 0x2c2440 }));

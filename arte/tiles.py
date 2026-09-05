@@ -352,6 +352,75 @@ def barranco():
     return im
 
 
+# --------------------------------------------------------------- as beiras
+# Onde a grama encosta em outro terreno, o corte de 16 px e reto e o mapa lê
+# como tabuleiro de xadrez. A beira conserta isso por SOBREPOSICAO, nao por
+# substituicao: e um tile quase todo transparente, com uma franja de grama
+# desenhada so na borda que precisa, e o jogo o desenha numa segunda camada,
+# por cima do chao que estiver embaixo. Por isso UMA familia de 8 beiras
+# serve para grama-contra-caminho, grama-contra-terra, grama-contra-areia e
+# grama-contra-agua: a beira nao sabe nem precisa saber o que tem debaixo.
+#
+# Sao 8 porque cobrem quatro lados soltos (a grama vem so de cima, so de
+# baixo, so da esquerda, so da direita) e quatro cantos convexos (a grama
+# vem de dois lados vizinhos, tipo cima+esquerda). Grama nos quatro lados ou
+# em lados opostos e raro no formato como os mapas sao desenhados a mao, e
+# quem monta a segunda camada (ver bordasDeGrama em src/dados/mapas.ts)
+# escolhe a aproximacao mais proxima quando isso acontece.
+_LADOS = ["n", "s", "l", "o"]
+
+
+def _franja(k, semente):
+    """Quanto a grama avanca para dentro, na coluna/linha k.
+
+    Anda em TUFOS DE TRES, nao coluna a coluna: variando a cada coluna a
+    franja vira um pente de dentes regulares, que e pior que o corte reto
+    que ela substitui. Grama de verdade avanca em moitas, e tres colunas e o
+    menor tufo que ainda le como moita."""
+    return 1 + ((k // 3) * 5 + semente * 3) % 4
+
+
+def beira(lados, semente=0):
+    """Beira de grama de 16 x 16, transparente exceto nos LADOS pedidos.
+
+    A ponta da franja sai em GRAMA_E: e a sombra que a grama joga sobre o
+    terreno mais baixo. Sem ela a franja parece papel recortado colado por
+    cima, nao grama de verdade avancando."""
+    im = nova()
+    for lado in lados:
+        for k in range(T):
+            f = _franja(k, semente + _LADOS.index(lado))
+            for d in range(f):
+                if lado == "n":
+                    x, y = k, d
+                elif lado == "s":
+                    x, y = k, T - 1 - d
+                elif lado == "o":
+                    x, y = d, k
+                else:
+                    x, y = T - 1 - d, k
+                px(im, x, y, GRAMA_E if d == f - 1 else GRAMA)
+            if (k + semente) % 5 == 0 and f > 3:
+                if lado == "n":
+                    px(im, k, f - 3, GRAMA_C)
+                elif lado == "s":
+                    px(im, k, T - 1 - (f - 3), GRAMA_C)
+                elif lado == "o":
+                    px(im, f - 3, k, GRAMA_C)
+                else:
+                    px(im, T - 1 - (f - 3), k, GRAMA_C)
+    return im
+
+
+#: as 8 combinacoes desenhadas, na mesma ordem em que entram em TILES logo
+#: abaixo -- a ordem aqui e o indice que src/dados/config.ts referencia
+BEIRAS = [
+    ("beira-n", ("n",)), ("beira-s", ("s",)),
+    ("beira-l", ("l",)), ("beira-o", ("o",)),
+    ("beira-no", ("n", "o")), ("beira-nl", ("n", "l")),
+    ("beira-so", ("s", "o")), ("beira-sl", ("s", "l")),
+]
+
 TILES = [
     ("grama", grama(0)),
     ("grama2", grama(1)),
@@ -373,6 +442,7 @@ TILES = [
     ("agua-rasa", agua_rasa()),
     ("barranco", barranco()),
     ("grama-mata", grama_mata()),
+    *[(nome, beira(lados, i)) for i, (nome, lados) in enumerate(BEIRAS)],
 ]
 
 

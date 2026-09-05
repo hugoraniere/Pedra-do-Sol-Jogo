@@ -3,10 +3,17 @@
  * Quatro passos: raca, classe, ponto forte, e o heroi (nome mais aparencia).
  *
  * A REGRA DESTA TELA: quem escolhe, ve o que esta escolhendo. Raca e classe nao
- * sao lista de nomes, sao os cinco bonecos lado a lado, cada um vestido do jeito
- * daquela escolha, e o selecionado com moldura de ouro. Antes eram cinco botoes
- * de texto e um boneco so, que nem trocava quando o dedo trocava a escolha: a
- * crianca escolhia "Anao da Fornalha" sem nunca ter visto um anao.
+ * sao lista de nomes, sao o boneco daquela escolha, na maior escala que a tela
+ * aguenta, com moldura de ouro. Antes eram cinco botoes de texto e um boneco
+ * so, que nem trocava quando o dedo trocava a escolha: a crianca escolhia
+ * "Anao da Fornalha" sem nunca ter visto um anao.
+ *
+ * Antes disso ainda, foram cinco bonecos lado a lado. Resolvia "ver antes de
+ * escolher", mas em 16 px de largura cada, o que faz um Anao ser um Anao —
+ * orelha, altura, barba — cabia no pixel e nao cabia no olho: cinco bonecos
+ * espremidos leem como cinco manequins da mesma cor com roupa diferente. Um
+ * boneco por vez, com setas dos lados, e o que deixa o traco da raca aparecer
+ * antes do nome dela.
  *
  * A ficha embaixo da vitrine diz o que a escolha DA, e nao so o nome dela:
  * o +1 de poder, os coracoes, o dom. Escolher no escuro era o outro buraco.
@@ -99,7 +106,7 @@ export class Criacao extends Phaser.Scene {
   /** o 0 e o boneco grande; do 1 em diante sao os da vitrine */
   private bonecos: Heroi[] = [];
   private rascunho: FichaHeroi = JSON.parse(JSON.stringify(VAZIO.heroi));
-  private comEquipamento = true;
+  private comEquipamento = false;
 
   constructor() {
     super("Criacao");
@@ -110,7 +117,7 @@ export class Criacao extends Phaser.Scene {
     this.passo = 0;
     this.rascunho = JSON.parse(JSON.stringify(VAZIO.heroi));
     this.rascunho.nome = "";
-    this.comEquipamento = true;
+    this.comEquipamento = false;
     this.bonecos = [];
   }
 
@@ -172,10 +179,15 @@ export class Criacao extends Phaser.Scene {
     return h;
   }
 
-  /** o que o boneco grande mostra depende do botao com arma / sem arma */
+  /** O boneco grande do ultimo passo mostra o heroi de verdade (roupa simples,
+   *  sem arma) por padrao — e o jeito honesto de fechar a criacao, porque e
+   *  assim que ele chega na vila. O botao COM ARMA e so um espiar: mostra por
+   *  cima a armadura e a arma que a classe usa, a mesma pose da vitrine do
+   *  passo "Classe", para quem quiser conferir de novo antes de comecar. Nao
+   *  muda `this.rascunho`: `novoJogo()` sempre salva o heroi de verdade. */
   private fichaDoPreview(): FichaHeroi {
-    if (this.comEquipamento) return this.rascunho;
-    return { ...this.rascunho, chapeu: "nenhum", armaSprite: "nenhuma" };
+    if (this.comEquipamento) return { ...this.rascunho, ...this.equipamentoDaClasse(this.rascunho.classe) };
+    return this.rascunho;
   }
 
   private limpar() {
@@ -308,34 +320,42 @@ export class Criacao extends Phaser.Scene {
    *  o resto. A escala do boneco e a maior INTEIRA que cabe na moldura, porque
    *  escala quebrada borra pixel art. Em 400x240 dao bonecos de 3x; em 256x160,
    *  de 1x, e um boneco pequeno e melhor do que um nome cortado. */
+  /** Um boneco por vez, bem grande, com setas dos dois lados.
+   *
+   *  Eram cinco lado a lado antes disso. A 16 px de largura cada, a diferenca
+   *  entre um Anao e um Elfo — orelha, altura, barba — cabia no pixel mas nao
+   *  cabia no olho: cinco bonecos espremidos leem como cinco manequins da
+   *  mesma cor. Um boneco so, na maior escala que a tela aguenta, e o que
+   *  deixa o traco da raca aparecer antes do nome dela.
+   *
+   *  A moldura de ouro fica sempre em volta do boneco: so existe UM mostrado,
+   *  entao ele e sempre "o escolhido". As setas trocam qual e, do mesmo jeito
+   *  que as setas de PELE e CABELO trocam na tela de aparencia — a mesma
+   *  gramatica de toque em todo o fluxo. */
   private vitrine(area: Retangulo, opcoes: Opcao[], selecionado: number, aoEscolher: (i: number) => void) {
     const n = opcoes.length;
-    let vao: number = ESPACO.sm;
-    let carta = Math.floor((area.largura - vao * (n - 1)) / n);
-    if (carta < TAMANHO.alvoMinimo * 2) {
-      vao = ESPACO.xs;
-      carta = Math.floor((area.largura - vao * (n - 1)) / n);
-    }
-    const passo = carta + vao;
+    const opcao = opcoes[selecionado];
+    const larguraCarta = Math.min(area.largura - (SETA + ESPACO.xs) * 2, area.largura * 0.7);
 
-    // o nome inteiro so entra se cada palavra dele couber na coluna. "Cacador de
-    // Dragao" quebra em duas linhas; "Pequenino" sozinho nao cabe em 256 px, e
-    // ali entra o nome curto
-    const larguraRotulo = passo - ESPACO.sm;
-    const rotulos = opcoes.map((o) =>
-      o.nome.split(" ").every((palavra) => medirTexto(this, palavra) <= larguraRotulo)
-        ? o.nome
-        : o.curto
-    );
-    const textos = rotulos.map((rotulo, i) =>
-      texto(this, 0, 0, rotulo, {
-        cor: i === selecionado ? 0x2c2440 : 0x4a3e64,
-        ancora: 0.5,
-        larguraMax: larguraRotulo,
-        alinhamento: 1,
-      })
-    );
-    const alturaRotulo = Math.max(...textos.map((t) => t.height));
+    // o nome inteiro so entra se cada palavra dele couber: "Cacador de Dragao"
+    // quebra em duas, "Pequenino" sozinho as vezes nao cabe em 256 px
+    const rotulo = opcao.nome.split(" ").every((palavra) => medirTexto(this, palavra) <= larguraCarta)
+      ? opcao.nome
+      : opcao.curto;
+    const textoRotulo = texto(this, 0, 0, rotulo, {
+      cor: 0x2c2440,
+      ancora: 0.5,
+      ancoraY: 0.5,
+      larguraMax: larguraCarta,
+      alinhamento: 1,
+    });
+    // FIXA, nao medida do texto de verdade. "Elfo da Folha" cabe numa linha,
+    // "Pequenino do Trigo" as vezes quebra em duas -- medir a altura real
+    // fazia a moldura encolher e crescer a cada troca de raca, porque ela e
+    // definida por "o que sobra depois do rotulo". Reservando sempre o pior
+    // caso (duas linhas), a caixa do heroi nao muda de tamanho nunca, e o
+    // rotulo so centraliza dentro do espaco que ja estava reservado.
+    const alturaRotulo = TAMANHO.linhaTexto * 2 + ESPACO.xs;
 
     const moldura = area.altura - alturaRotulo - ESPACO.xs;
     const escala = Math.max(
@@ -343,61 +363,74 @@ export class Criacao extends Phaser.Scene {
       Math.min(
         ESCALA_MAX,
         Math.floor((moldura - CHAO - ESPACO.sm) / ALTURA_PERSONAGEM),
-        Math.floor((carta - ESPACO.sm) / LARGURA_PERSONAGEM)
+        Math.floor((larguraCarta - ESPACO.sm) / LARGURA_PERSONAGEM)
       )
     );
 
-    opcoes.forEach((opcao, i) => {
-      const cx = Math.round(area.x + i * passo + carta / 2);
-      const escolhida = i === selecionado;
+    const cx = Math.round(area.x + area.largura / 2);
 
-      // a moldura de ouro e um painel 2 px maior por tras do escuro: e a borda
-      // que diz qual esta escolhido sem precisar de seta nem de piscar
-      if (escolhida) {
-        this.fundo.add(
-          marcar(
-            this.add
-              .nineslice(cx, area.y - 2, "painel-ouro", undefined, carta + 4, moldura + 4, 8, 8, 8, 8)
-              .setOrigin(0.5, 0),
-            "fundo"
-          )
-        );
-      }
-      this.fundo.add(
-        marcar(
-          this.add
-            .nineslice(cx, area.y, "painel-escuro", undefined, carta, moldura, 8, 8, 8, 8)
-            .setOrigin(0.5, 0),
-          "fundo"
-        )
-      );
-      this.fundo.add(
-        marcar(
-          this.add
-            .rectangle(cx, area.y + moldura - CHAO, carta - ESPACO.md, CHAO, 0x4a3e64)
-            .setOrigin(0.5, 0),
-          "fundo"
-        )
-      );
+    this.fundo.add(
+      marcar(
+        this.add
+          .nineslice(cx, area.y - 2, "painel-ouro", undefined, larguraCarta + 4, moldura + 4, 8, 8, 8, 8)
+          .setOrigin(0.5, 0),
+        "fundo"
+      )
+    );
+    this.fundo.add(
+      marcar(
+        this.add
+          .nineslice(cx, area.y, "painel-escuro", undefined, larguraCarta, moldura, 8, 8, 8, 8)
+          .setOrigin(0.5, 0),
+        "fundo"
+      )
+    );
+    this.fundo.add(
+      marcar(
+        this.add
+          .rectangle(cx, area.y + moldura - CHAO, larguraCarta - ESPACO.md, CHAO, 0x4a3e64)
+          .setOrigin(0.5, 0),
+        "fundo"
+      )
+    );
 
-      this.mostrarBoneco(i + 1, opcao.ficha, cx, area.y + moldura - CHAO, escala);
+    this.mostrarBoneco(1, opcao.ficha, cx, area.y + moldura - CHAO, escala);
 
-      // a area de toque cobre so a moldura, e nao o nome: assim o auditor pode
-      // continuar cobrando que nada de tocavel encoste no texto de outro
-      const zona = this.add
-        .zone(cx, area.y + moldura / 2, carta, moldura)
-        .setInteractive({ useHandCursor: true });
-      zona.on("pointerdown", () => tocar("menu-confirma"));
-      zona.on("pointerover", () => tocar("menu-foco"));
-      zona.on("pointerup", () => aoEscolher(i));
-      // o nome curto e o que o auditor enxerga: ele nao muda com a resolucao,
-      // entao o teste clica sempre no mesmo lugar do reino
-      this.grupo.add(marcar(zona, "botao", opcao.curto));
+    const ir = (i: number) => {
+      tocar("menu-confirma");
+      aoEscolher((i + n) % n);
+    };
+    this.grupo.add(
+      marcar(
+        botao(this, area.x + SETA / 2, area.y + moldura / 2, SETA, moldura, "<", () => ir(selecionado - 1), "painel-creme"),
+        "botao",
+        "vitrine-anterior"
+      )
+    );
+    this.grupo.add(
+      marcar(
+        botao(
+          this,
+          area.x + area.largura - SETA / 2,
+          area.y + moldura / 2,
+          SETA,
+          moldura,
+          ">",
+          () => ir(selecionado + 1),
+          "painel-creme"
+        ),
+        "botao",
+        "vitrine-proxima"
+      )
+    );
 
-      const t = textos[i];
-      t.setPosition(cx, area.y + moldura + ESPACO.xs);
-      this.grupo.add(t);
-    });
+    // centralizado na FAIXA reservada, nao encostado no topo dela: um nome de
+    // uma linha so fica no meio do espaco de duas, em vez de colado em cima
+    textoRotulo.setPosition(cx, area.y + moldura + ESPACO.xs + alturaRotulo / 2);
+    // marcado com o nome curto da opcao MOSTRADA agora: e como a auditoria
+    // (ferramentas/auditar-ui.mjs) sabe se ja chegou em "Anao" ou se precisa
+    // clicar em ">" de novo, ja que so existe um boneco por vez agora
+    this.grupo.add(marcar(textoRotulo, "texto", opcao.curto));
   }
 
   // -------------------------------------------------------------- ficha
@@ -681,14 +714,18 @@ export class Criacao extends Phaser.Scene {
         const c = CLASSES[k];
         this.rascunho.classe = c.id;
         this.rascunho.magias = [...c.magias];
-        Object.assign(this.rascunho, this.equipamentoDaClasse(c.id));
         this.desenharPasso();
       }
     );
   }
 
-  /** A classe ja veste e ja arma o personagem: ninguem sai daqui com um mago de
-   *  avental por ter passado batido pela aparencia. */
+  /** So para a VITRINE: mostra a armadura e a arma da classe no boneco deste
+   *  passo, para o jogador ver o que aquela classe usa. O heroi de verdade
+   *  comeca de roupa simples e sem arma (`estado.ts`, `VAZIO.heroi`) em
+   *  qualquer classe escolhida — a armadura do Cavaleiro e o cajado do Mago
+   *  sao coisa que se acha ou se compra depois, nao um figurino de largada.
+   *  Por isso este metodo nunca escreve em `this.rascunho`: so monta a ficha
+   *  de mentira que a vitrine usa para desenhar o boneco. */
   private equipamentoDaClasse(id: string) {
     return {
       estiloRoupa: ROUPA_DA_CLASSE[id] ?? "tunica",

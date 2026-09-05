@@ -105,10 +105,47 @@ entao isso nao foi feito aqui.
 3. **A rampa de 5 tons na paleta**, para casa, arbusto, pedra e cerca ganharem o
    mesmo tratamento da arvore. Metade do ganho de qualidade mora aqui e nao
    custa pixel nenhum.
-4. **Os tiles de chao**: hoje sao ruido aleatorio. Precisam de tufo com direcao
-   e de aglomerado que atravessa a borda do tile.
+4. ~~Os tiles de chao: hoje sao ruido aleatorio.~~ **Feito, secao 5.1.**
 5. **Sombra projetada nos objetos grandes.** A casa nao tem nenhuma. Uma sombra
    e um beiral fazem mais por ela que dobrar a resolucao.
+
+---
+
+## 5.1 O chao: de ruido para tufo
+
+Implementado depois da secao 5 ser escrita, a partir do feedback "o chao e
+pobre e igual, cheio de informacao" -- que descreve exatamente o que
+`ruido()` fazia: espalhar 1 pixel por vez, em posicao aleatoria, pelo tile
+inteiro. Muita informacao (pixel em toda parte) e nenhuma variedade (a mesma
+nuvem de estatica, so troca a semente).
+
+A troca, em `arte/tiles.py`: **tufo em vez de ruido**. Cada decisao aleatoria
+planta um aglomerado pequeno com forma (touceira de grama, seixo em L, faceta
+de pedra), e entre os aglomerados fica o tom base, liso. Mesmo principio da
+arvore: espaco negativo e o que separa textura rica de borrao.
+
+Duas armadilhas encontradas fazendo isto, as duas por causa de repeticao:
+
+- **grade com jitter vira treliça.** A primeira tentativa espalhava as ancoras
+  numa grade com deslocamento aleatorio. Como o tile SE REPETE, uma grade fixa
+  fica visivel assim que dois tiles ficam lado a lado. Trocado por sorteio com
+  rejeicao (tenta uma posicao, descarta se ficou perto demais de outra): a
+  unica regra e distancia minima, nada alinha em linha ou coluna.
+- **um split que cobre o tile inteiro vira zigue-zague.** A pedra, na primeira
+  versao, tinha uma linha de fronteira andando de cima a baixo dividindo o
+  tile em dois blocos. Cobrindo 100% da area, essa linha se repete a cada 16 px
+  e forma um chevron continuo quando os tiles se encostam -- pior que as
+  faixas horizontais que estava substituindo. A correcao foi a mesma ideia da
+  grama: blocos SOLTOS (2-3 poligonos irregulares, ao estilo da bossa da copa
+  da arvore), com o tom base como espaco negativo entre eles.
+
+**O que continua sem resolver:** um tile estatico e deterministico sempre
+mostra periodicidade numa area grande e plana, porque e o MESMO desenho
+repetindo a cada 16 px. A grama ja tem tres variantes (`grama`, `grama2`,
+`grama3`) que `plantarMata()` mistura para quebrar isso; terra, caminho e
+chao-caverna tem uma variante so cada. O proximo passo de verdade e dar a eles
+o mesmo tratamento -- e isso e `Mundo.ts` e `config.ts`, fora do dominio deste
+ambiente.
 
 ---
 
@@ -116,7 +153,9 @@ entao isso nao foi feito aqui.
 
 - **As beiras nao estao no jogo.** So no esboco.
 - **A casa, o arbusto e a cerca** continuam como estavam.
-- **Os tiles de chao** nao foram tocados.
+- **Os tiles de chao ganharam tufo** (secao 5.1), mas so tem uma variante cada
+  (exceto grama). A periodicidade de tile unico continua, e o proximo passo e
+  variantes + mistura em `Mundo.ts`, igual a grama.
 - **A resolucao** continua a decisao aberta do `docs/estudo-de-resolucao.md`.
   A arvore nova cresceu como prop, que e independente dessa decisao; os tiles
   nao sao.

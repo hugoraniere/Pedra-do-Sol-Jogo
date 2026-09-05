@@ -51,6 +51,10 @@ LEGENDA = {
     "s": PELE,
     "S": PELE_C,
     "e": PELE_E,
+    "n": MADEIRA_E,
+    "t": PEDRA,
+    "T": PEDRA_C,
+    "u": PEDRA_E,
 }
 
 # ------------------------------------------------------------- os retratos
@@ -299,6 +303,235 @@ ACOES = [
     ("acao-sopro-quentinho", SOPRO_QUENTINHO),
 ]
 
+# --------------------------------------------------- atributo, dom, habilidade
+# Ver docs/plano-de-icones-e-diagramacao.md. A ficha da criacao (raca, classe)
+# e so texto corrido hoje; estes iconazinhos sao o que da uma ancora visual a
+# cada linha, sem mudar o texto que ja existe.
+#
+# Ficam NO FIM da folha de propósito: RETRATOS e ACOES ja tem indice fixo em
+# src/dados/provador.ts (o dicionario ICONE), e qualquer icone novo entre eles
+# desloca esse indice. Acrescentando so depois, ninguem mais precisa mudar.
+
+FORCA = [
+    "................",
+    "................",
+    "....kkkk........",
+    "...kSSSSk.......",
+    "...kSSSSk.......",
+    "...kSeSk.kkkk...",
+    "....kek.kSSSSk..",
+    "....kek.kSSSSSk.",
+    "...kkek.kSSSSSk.",
+    "..kSSekkkSSSSk..",
+    "..kSSSSSSSSSk...",
+    "..kSSSSSSSSk....",
+    "...kkSSSSkk.....",
+    "....kkkkk.......",
+    "................",
+    "................",
+]
+
+ESPERTEZA = [
+    "................",
+    "......kkkk......",
+    ".....kooook.....",
+    "....kooooook....",
+    "....kooWWook....",
+    "....kooWWook....",
+    "....kooooook....",
+    ".....kOOOOk.....",
+    "......kOOk......",
+    ".......nn.......",
+    ".......nn.......",
+    "......nnnn......",
+    "................",
+    "................",
+    "................",
+    "................",
+]
+
+# o coracao-atributo REUSA coracao_cheio de ui.png -- ver ATRIBUTOS.coracao em
+# conteudo.ts. Nao ha CORACAO aqui: e o mesmo icone que ja existe, so lido de
+# outra folha na hora de desenhar.
+
+CASCO_DURO = [
+    "................",
+    "..kkkkkkkkkkk...",
+    ".kTTTTTTTTTTTk..",
+    ".kTtttttttttTk..",
+    ".kTtuuuuuuuttk..",
+    ".kTtuTtuTtuutk..",
+    ".kTtuuuuuuuttk..",
+    "..kTtuTtuTtutk..",
+    "..kTtuuuuuuutk..",
+    "...kTtuuuuutk...",
+    "....kTtuuutk....",
+    ".....kTtutk.....",
+    "......kTtk......",
+    ".......kk.......",
+    "................",
+    "................",
+]
+
+OLHOS_DE_CORUJA = [
+    "................",
+    "................",
+    "..mmm....mmm....",
+    ".mWWWm..mWWWm...",
+    "mWkkkWmmWkkkWm..",
+    "mWkKkWmmWkKkWm..",
+    "mWkkkWmmWkkkWm..",
+    ".mWWWm..mWWWm...",
+    "..mmm....mmm....",
+    "....m.mm.m......",
+    ".....mOOm.......",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+]
+
+PATA_DE_COELHO = [
+    "................",
+    "....ss..ss......",
+    "...ssss.ssss....",
+    "...ssss.ssss.ss.",
+    "....ss...ssssss.",
+    ".........ssssss.",
+    "........esssssk.",
+    ".......esssssk..",
+    "......esssssk...",
+    ".....esssssk....",
+    "....esssssk.....",
+    "....essssk......",
+    ".....eeek.......",
+    "................",
+    "................",
+    "................",
+]
+
+# o dom do Vale ("Nunca Desisto", rolar de novo) REUSA o icone `dado` de
+# ui.py -- rolar de novo E o dado, nao precisa de desenho proprio. E o dom do
+# Dragao ("Sopro Quentinho") REUSA acao-sopro-quentinho, duas linhas acima:
+# mesmo bicho, mesmo sopro, o combate ja desenhou.
+
+GOLPE_TROVAO = [
+    "................",
+    "....W......oo...",
+    "....W.....ooo...",
+    "....W....ooo....",
+    "..kkOkk.ooo.....",
+    "....W..oooooo...",
+    "....W.ooooooo...",
+    "....W...ooo.....",
+    "....W..ooo......",
+    "....W.ooo.......",
+    "....Woo.........",
+    "....n...........",
+    "................",
+    "................",
+    "................",
+    "................",
+]
+
+TRES_MAGIAS = [
+    "................",
+    "......o...o.....",
+    ".......o........",
+    "...o............",
+    "..nnnnn.mmmmm...",
+    ".nwwwwnnmwwwwm..",
+    ".nwwwwn.nwwwwm..",
+    ".nwwwwn.nwwwwm..",
+    ".nwwwwn.nwwwwm..",
+    ".nwwwwn.nwwwwm..",
+    ".nnnnnn.nmmmmm..",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+]
+
+OLHO_DE_ALVO = [
+    "................",
+    "......kkkk......",
+    "....kkWWWWkk....",
+    "...kWWrrrrWWk...",
+    "..kWWrWWWWrWWk..",
+    "..kWrWWkkWWrWk..",
+    ".kWWrWkOOkWrWWk.",
+    ".kWWrWkOOkWrWWk.",
+    "..kWrWWkkWWrWk..",
+    "..kWWrWWWWrWWk..",
+    "...kWWrrrrWWk...",
+    "....kkWWWWkk....",
+    "......kkkk......",
+    "................",
+    "................",
+    "................",
+]
+
+FALA_BICHO = [
+    "................",
+    "..kkkkkkkkk.....",
+    ".kwwwwwwwwwk....",
+    ".kwwwwwwwwwk....",
+    ".kww.kk.kwwk....",
+    ".kww.kk.kwwk....",
+    ".kwwwwwwwwwk....",
+    ".kwwwkkkwwwk....",
+    ".kkwwwwwwkk.....",
+    "..kk.kk.kk......",
+    "...k......k.....",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+]
+
+CONSERTA_TUDO = [
+    "................",
+    "...tt.......tt..",
+    "..tTTt.....tTTt.",
+    "..tTTt.....tTTt.",
+    "..tTTtt...ttTTt.",
+    "...tTTtt.ttTTt..",
+    "....tTTtTTTt....",
+    ".....tTTTTt.....",
+    "......tTTt......",
+    ".....tTTTt......",
+    "....tTt.tTt.....",
+    "...tTt...tTt....",
+    "................",
+    "................",
+    "................",
+    "................",
+]
+
+ATRIBUTOS_ICONES = [
+    # nomes SEM prefixo "atributo-": ATRIBUTOS[x].icone em conteudo.ts ja
+    # aponta para "forca" e "esperteza" ha tempos, so a arte nunca chegou
+    ("forca", FORCA),
+    ("esperteza", ESPERTEZA),
+]
+
+DONS = [
+    ("dom-casco-duro", CASCO_DURO),
+    ("dom-olhos-de-coruja", OLHOS_DE_CORUJA),
+    ("dom-pata-de-coelho", PATA_DE_COELHO),
+]
+
+HABILIDADES = [
+    ("habilidade-golpe-trovao", GOLPE_TROVAO),
+    ("habilidade-tres-magias", TRES_MAGIAS),
+    ("habilidade-olho-de-alvo", OLHO_DE_ALVO),
+    ("habilidade-fala-bicho", FALA_BICHO),
+    ("habilidade-conserta-tudo", CONSERTA_TUDO),
+]
+
 
 def do_texto(linhas):
     """Um bloco de 16 linhas de 16 letras vira uma imagem de 16x16."""
@@ -346,6 +579,8 @@ def gerar(saida):
     """Monta public/assets/icones.png e devolve o indice nome -> quadro."""
     itens = [(n, do_texto(d)) for n, d in RETRATOS + ACOES]
     itens += [(f"dado-{n}", face_do_dado(n)) for n in range(1, 7)]
+    # no FIM, de proposito: ver o comentario acima de ATRIBUTOS_ICONES
+    itens += [(n, do_texto(d)) for n, d in ATRIBUTOS_ICONES + DONS + HABILIDADES]
     folha = Image.new("RGBA", (U * len(itens), U), (0, 0, 0, 0))
     for i, (_, im) in enumerate(itens):
         folha.paste(im, (i * U, 0))

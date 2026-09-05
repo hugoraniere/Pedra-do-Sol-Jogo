@@ -314,6 +314,54 @@ export function montarChao(desenho: string[]): ChaoPronto {
   );
 }
 
+/** Todo tile que conta como GRAMA para fins de beira: e ele que "avanca"
+ *  sobre o vizinho, nunca o contrario. */
+const GRAMAS = new Set<number>([T.grama, T.grama2, T.grama3, T.flores, T.gramaAlta, T.gramaMata]);
+
+const BEIRA_POR_LADOS: Record<string, number> = {
+  n: T.beiraN, s: T.beiraS, o: T.beiraO, l: T.beiraL,
+  no: T.beiraNO, nl: T.beiraNL, so: T.beiraSO, sl: T.beiraSL,
+};
+
+/** As 15 combinacoes possiveis de vizinho-com-grama, reduzidas as 8 beiras
+ *  que existem desenhadas (arte/tiles.py). Grama nos quatro lados, em lados
+ *  opostos, ou em tres lados e rara no jeito como o chao e desenhado a mao;
+ *  quando acontece, cai na aproximacao de um lado so, a que mais aparece. */
+const APROXIMA: Record<string, string> = {
+  n: "n", s: "s", o: "o", l: "l",
+  no: "no", nl: "nl", so: "so", sl: "sl",
+  ns: "n", ol: "o", nso: "no", nsl: "nl", nol: "n", sol: "s", nsol: "n",
+};
+
+/** Onde a grama avanca sobre o vizinho: uma segunda camada, quase toda vazia
+ *  (-1, que o Phaser nao desenha), com a beira certa em cada celula que NAO e
+ *  grama mas tem grama do lado.
+ *
+ *  A escolha e por TILE, nao por letra do desenho: `montarChao` ja decidiu
+ *  entre grama/grama2/grama3 pela posicao, e e esse resultado que decide se a
+ *  celula "e grama" para a beira. Ler a letra de novo aqui duplicaria a conta
+ *  e podia divergir dela.
+ *
+ *  So GRAMA planta beira, e sempre em cima de quem nao e grama: e a grama que
+ *  cresce sobre a terra, nao a terra que invade a grama. Por isso um unico
+ *  conjunto de 8 desenhos serve para grama-contra-qualquer-coisa — a beira
+ *  nao sabe nem precisa saber o que tem debaixo dela. */
+export function bordasDeGrama(chao: ChaoPronto): ChaoPronto {
+  const ehGrama = (x: number, y: number) => GRAMAS.has(chao[y]?.[x] ?? -1);
+  return chao.map((linha, y) =>
+    linha.map((_tile, x) => {
+      if (ehGrama(x, y)) return -1;
+      let chave = "";
+      if (ehGrama(x, y - 1)) chave += "n";
+      if (ehGrama(x, y + 1)) chave += "s";
+      if (ehGrama(x - 1, y)) chave += "o";
+      if (ehGrama(x + 1, y)) chave += "l";
+      const usar = APROXIMA[chave];
+      return usar ? BEIRA_POR_LADOS[usar] : -1;
+    })
+  );
+}
+
 
 /** Planta a mata e o enfeite de chao a partir do desenho.
  *
