@@ -429,13 +429,22 @@ projetado em `docs/11-combate-e-magias.md`, nada implementado aqui.
   (zero mudanca nao commitada, ultimo commit `23c664f`, bem atras do
   `principal`) — sem ninguem pra avisar de verdade, mas registrado aqui pra
   quem retomar aquela pasta saber que `Ficha.ts`/`estado().mochila` mudaram.
-- **Fase C — arma e progressao (equipar armadura/acessorio ja saiu na Fase
-  B, mais cedo que o previsto — era simples e sem risco de sprite):**
-  trocar arma fora da criacao (esbarra no gap de sprite: so 5 armas tem
-  desenho, as 6 encontradas nao — precisa decidir o que fazer antes:
-  desenhar sprite novo, ou esconder a opcao so pras armas que ja tem
-  desenho), e o gancho de "trazer material pro Seu Cominho" nos dialogos
-  existentes. Precisa dos 22 icones + contorno de 1px.
+- **Fase C — arma, PARCIAL (2026-09-05).** Trocar arma fora da criacao **das
+  5 armas com sprite de verdade** (`config.ts`, `SPRITE_DA_ARMA` — mapeia
+  `Arma.id` pra chave do desenho; so "espada-curta" diverge de "espada").
+  `Ficha.ts` mostra EMPUNHAR/DESEMPUNHAR pra essas 5, e mantem a mensagem
+  so-leitura pras outras 6 "encontradas" + escudo/machado/adaga/lendarias
+  (equipar sem desenho quebraria a camada visual do heroi). Testado ao vivo
+  (`vite preview`): cajado e arco alternam certo (o mesmo `heroi.armaSprite`
+  so guarda um por vez, empunhar o segundo desempunha o primeiro sozinho),
+  adaga continua so-leitura. **Ainda faltam da Fase C:** o gancho de
+  "trazer material pro Seu Cominho" nos dialogos — **achado novo, muda a
+  conta:** nao ha cena de loja nenhuma no jogo ainda (`LOJA`/`ARMAS` sao so
+  dado), entao "comprar depois de trazer material" nao tem onde acontecer
+  de verdade por enquanto; e os 22 icones + contorno de 1px, que dependem
+  da skill `desenhar-sprite` e do pipeline Python (`arte/ui.py`) — trabalho
+  de arte separado, nao encaixa no mesmo tipo de edicao deste plano.
+  `npm run build` verde.
 - **Fase D, dependencia externa a este plano:** o modificador de teste em
   `rolar()` (secao 6) so vale a pena implementar quando a Fase 1 (roadmap)
   chegar nos modificadores do manual — sem isso, o bonus de item fica

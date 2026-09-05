@@ -19,7 +19,7 @@
  * colunas dividem. Ver docs/07-design-system.md.
  */
 import Phaser from "phaser";
-import { ALTURA_PERSONAGEM, COR } from "../dados/config";
+import { ALTURA_PERSONAGEM, COR, SPRITE_DA_ARMA } from "../dados/config";
 import {
   ATRIBUTOS,
   ORDEM_PODERES,
@@ -194,10 +194,22 @@ export class Ficha extends Phaser.Scene {
 
       if (info.categoria === "arma") {
         const base = info.origem ? `${info.bonus} (${info.origem})` : info.bonus;
-        // trocar de arma fora da criacao ainda nao existe (Fase C do plano
-        // de itens — precisa dos icones e de decidir o que fazer com armas
-        // "encontradas" que ainda nao tem sprite proprio)
-        return [titulo, paragrafo(`${base}. Ainda nao da pra trocar de arma fora da criacao.`)];
+        const spriteDaArma = SPRITE_DA_ARMA[id];
+        if (spriteDaArma) {
+          const equipada = st.heroi.armaSprite === spriteDaArma;
+          return [
+            titulo, paragrafo(base),
+            {
+              tipo: "acao", rotulo: equipada ? "DESEMPUNHAR" : "EMPUNHAR",
+              aoTocar: () => { equipar("arma", equipada ? null : spriteDaArma); this.desenhar(); },
+            },
+          ];
+        }
+        // as 6 armas "encontradas" e escudo/machado/adaga/lendarias ainda
+        // nao tem sprite proprio (SPRITE_DA_ARMA, config.ts) — equipar
+        // quebraria a camada visual do heroi. Ver docs/plano-de-itens-e-
+        // equipamento.md, Fase C.
+        return [titulo, paragrafo(`${base}. Ainda nao da pra equipar (sem desenho proprio ainda).`)];
       }
 
       return [titulo, paragrafo("Item de historia. Guarde para quando fizer sentido usar.")];

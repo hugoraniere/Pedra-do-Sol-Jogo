@@ -229,6 +229,21 @@ export const ARMA_DA_CLASSE: Record<string, string> = {
   ferreiro: "martelo",
 };
 
+/** So estas 5 `Arma.id` (de `dados/conteudo.ts`) tem sprite de verdade
+ *  (`arte/equipamento.py`, DESENHOS) — as outras 6 armas "encontradas" e o
+ *  escudo/machado/adaga/lendarias ainda nao tem desenho. Chave e o id da
+ *  arma, valor e a chave do sprite: so "espada-curta" diverge (o desenho
+ *  chama "espada", nome de classe, nao de arma). Equipar uma arma sem
+ *  entrada aqui quebraria a camada visual do heroi — ver Ficha.ts,
+ *  `grupoDoItem()`, e docs/plano-de-itens-e-equipamento.md, Fase C. */
+export const SPRITE_DA_ARMA: Record<string, string> = {
+  "espada-curta": "espada",
+  cajado: "cajado",
+  arco: "arco",
+  funda: "funda",
+  martelo: "martelo",
+};
+
 export const CHAPEUS = [
   { id: "nenhum", nome: "Sem chapeu" },
   { id: "pontudo", nome: "Pontudo" },
