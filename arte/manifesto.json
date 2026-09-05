@@ -1,6 +1,6 @@
 {
   "gerado_por": "npm run arte",
-  "total": 138,
+  "total": 141,
   "arquivos": {
     "aranha-filhote.png": {
       "hash": "ececeb0a0cfcd628",
@@ -518,6 +518,18 @@
       "largura": 20,
       "altura": 18
     },
+    "objetos/caldeirao.png": {
+      "hash": "9b4b9456eacf56e5",
+      "bytes": 240,
+      "largura": 20,
+      "altura": 20
+    },
+    "objetos/cama.png": {
+      "hash": "4a2d5c72c82422a7",
+      "bytes": 233,
+      "largura": 28,
+      "altura": 20
+    },
     "objetos/casa-grande.png": {
       "hash": "fd459e92ba9ef758",
       "bytes": 776,
@@ -619,6 +631,12 @@
       "bytes": 303,
       "largura": 20,
       "altura": 46
+    },
+    "objetos/prateleira-pocoes.png": {
+      "hash": "b71a6a89d7a7a392",
+      "bytes": 210,
+      "largura": 24,
+      "altura": 16
     },
     "objetos/raizes.png": {
       "hash": "9a3d55dd47e1d27a",
@@ -813,8 +831,8 @@
       "altura": 320
     },
     "tileset.png": {
-      "hash": "35a1b8d11c95782a",
-      "bytes": 2864,
+      "hash": "b62b88e6aba0ed77",
+      "bytes": 2903,
       "largura": 128,
       "altura": 96
     },
