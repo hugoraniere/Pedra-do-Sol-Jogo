@@ -387,9 +387,9 @@
       "altura": 256
     },
     "icones.png": {
-      "hash": "e542661f41b69200",
-      "bytes": 2221,
-      "largura": 432,
+      "hash": "082578e9dd0cbfea",
+      "bytes": 2414,
+      "largura": 464,
       "altura": 16
     },
     "lobo-nevoa.png": {
@@ -813,8 +813,8 @@
       "altura": 320
     },
     "tileset.png": {
-      "hash": "08b8eaa8b02d2ae3",
-      "bytes": 2840,
+      "hash": "35a1b8d11c95782a",
+      "bytes": 2864,
       "largura": 128,
       "altura": 96
     },

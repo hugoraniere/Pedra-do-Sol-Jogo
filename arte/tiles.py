@@ -477,19 +477,15 @@ def _franja(k, semente, perfil):
 def beira(lados, semente=0, perfil=_PERFIL_GRANDE):
     """Beira de grama de 16 x 16, transparente exceto nos LADOS pedidos.
 
-    Cada lado sombreia a SI MESMO, nao um contorno unico compartilhado com
-    o terreno vizinho: a ponta da franja sai em GRAMA_E (a propria grama
-    mais escura), e so nos lados "s" e "l" -- onde o chao mais baixo fica
-    na direcao para onde a sombra cai (baixo-direita, luz de cima-esquerda,
-    igual toda sombra do jogo) -- 1 px semi-transparente escuro cai UM
-    PASSO ALEM da grama. Semi-transparente porque esta camada e generica
-    por cima de QUALQUER chao (terra, caminho, areia, agua): nao da pra
-    pintar uma cor de sombra fixa sem saber o que tem embaixo, mas dá pra
-    escurecer o que tiver la."""
+    A ponta da franja sai em GRAMA_E (a propria grama mais escura), e logo
+    ALEM dela, 1 px solido em TINTA -- o mesmo contorno que separa todo
+    personagem e todo objeto do chao (ver contorno_seletivo em
+    arte/base.py). Sem esse traço a beira e só duas variações de verde
+    encostadas, e some contra o proprio mapa; com ele, a borda le como
+    borda em qualquer chao por baixo (terra, caminho, areia, agua)."""
     im = nova()
-    SOMBRA_CHAO = (20, 30, 22, 90)
+    CONTORNO = TINTA + (255,) if len(TINTA) == 3 else TINTA
     for lado in lados:
-        tem_sombra = lado in ("s", "l")
         for k in range(T):
             f = _franja(k, semente + _LADOS.index(lado), perfil)
             for d in range(f):
@@ -502,16 +498,15 @@ def beira(lados, semente=0, perfil=_PERFIL_GRANDE):
                 else:
                     x, y = T - 1 - d, k
                 px(im, x, y, GRAMA_E if d == f - 1 else GRAMA)
-            if tem_sombra:
-                if lado == "n":
-                    x, y = k, f
-                elif lado == "s":
-                    x, y = k, T - 1 - f
-                elif lado == "o":
-                    x, y = f, k
-                else:
-                    x, y = T - 1 - f, k
-                px(im, x, y, SOMBRA_CHAO)
+            if lado == "n":
+                x, y = k, f
+            elif lado == "s":
+                x, y = k, T - 1 - f
+            elif lado == "o":
+                x, y = f, k
+            else:
+                x, y = T - 1 - f, k
+            px(im, x, y, CONTORNO)
     return im
 
 
