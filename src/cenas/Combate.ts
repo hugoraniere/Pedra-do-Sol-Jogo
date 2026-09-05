@@ -26,6 +26,7 @@ import {
 } from "../sistemas/estado";
 import { HOSPITAL_ENTRADA, VILA } from "../dados/mapas";
 import { poderesDoHeroi } from "../sistemas/poderes";
+import { algumMoodleCritico, nivelDoMoodle } from "../sistemas/moodles";
 import type { Atributo } from "../dados/conteudo";
 import { tocar, tocarFicha } from "../sistemas/som";
 import { texto } from "../sistemas/texto";
@@ -198,6 +199,9 @@ export class Combate extends Phaser.Scene {
     this.coracoesMax = st0.coracoesMax;
     this.coracoes = st0.coracoes;
     this.atributos = poderesDoHeroi(ficha);
+    if (algumMoodleCritico()) {
+      (Object.keys(this.atributos) as Atributo[]).forEach((a) => (this.atributos[a] -= 1));
+    }
     this.selosNoInicio = st0.selos;
     this.periodoDoEncontro = periodoAtual();
 
@@ -526,6 +530,12 @@ export class Combate extends Phaser.Scene {
     const [ax, ay] = this.centroDaCasa(minha.tx, minha.ty);
     this.tweens.add({ targets: this.heroi, x: ax, y: ay, duration: 160, ease: "Quad.easeOut" });
     this.anunciar("COMBATE!");
+    if (algumMoodleCritico()) {
+      const frase = nivelDoMoodle("fome") === "critico"
+        ? "Voce entra faminto. Os golpes saem mais fracos."
+        : "Voce entra exausto. Os golpes saem mais fracos.";
+      this.time.delayedCall(900, () => this.anunciar(frase, 1200));
+    }
     // com mais de um tipo na mesma luta (ainda nao acontece hoje), a familia
     // do primeiro decide o som -- aproximado de proposito, nao vale a pena
     // tocar dois sons de entrada por cima um do outro.
