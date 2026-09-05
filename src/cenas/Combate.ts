@@ -483,7 +483,14 @@ export class Combate extends Phaser.Scene {
     estado().coracoes = this.coracoes;
     salvar();
     this.tweens.add({ targets: this.heroi, alpha: 0.3, duration: 90, yoyo: true, repeat: 3 });
-    if (this.coracoes > 0) return;
+    if (this.coracoes > 0) {
+      // a pose de levar golpe tambem ja existia e ninguem chamava: o heroi
+      // apanhava piscando, sem mudar de desenho
+      this.heroi.machucar(300);
+      return;
+    }
+    // com zero coracoes quem manda e a tonteira: nada de machucar() aqui, senao
+    // uma pose comeria a outra no mesmo quadro e nenhuma das duas apareceria.
     // Nunca existe derrota: fica tonto, e volta com um coracao. A fogueira de
     // verdade (CLAUDE.md) ainda nao existe; ate la este e o mesmo desfecho que
     // o Provador ja validou.
@@ -592,7 +599,16 @@ export class Combate extends Phaser.Scene {
     this.escolhida = undefined;
     this.pincel.clear();
     this.heroi.parar();
-    this.heroi.conjurar(300);
+    // Vira para o alvo antes de agir. Em combate o heroi ataca parado, e a
+    // direcao dele so mudava andando: sem isto, o braco estica para o lado em
+    // que ele andou pela ultima vez, que quase nunca e o lado do goblin.
+    const minha = this.casaDoHeroi();
+    this.heroi.encarar(casa.tx - minha.tx, casa.ty - minha.ty);
+    // Golpe e magia sao poses diferentes, e os dois quadros existem desde que a
+    // folha de sprite ganhou 8 colunas. Ate aqui toda acao usava a de conjurar,
+    // entao dar uma espadada tinha o mesmo desenho que lancar uma bola de fogo.
+    if (acao.tipo === "magia") this.heroi.conjurar(300);
+    else this.heroi.atacar(300);
 
     const slot = this.slots.find((s) => s.acao.id === acao.id)!;
     if (acao.escopo === "porLuta") slot.gastou = true;

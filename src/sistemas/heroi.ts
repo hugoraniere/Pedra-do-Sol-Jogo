@@ -289,6 +289,23 @@ export class Heroi extends Phaser.GameObjects.Container {
     this.tocar("parado");
   }
 
+  /** Vira para um lado sem sair do lugar.
+   *
+   *  A direcao so mudava dentro de mover(), e por isso quem andava para o norte
+   *  e atacava um goblin a leste sem se mexer atacava com o braco esticado para
+   *  o norte. Andando isso nunca aparece, porque quem anda ja esta olhando para
+   *  onde vai. Em combate e o contrario: o heroi fica parado na casa dele e
+   *  escolhe o alvo com o dedo, entao atacar sem andar e a regra, nao a excecao.
+   *
+   *  Repete a animacao do estado atual na direcao nova em vez de forcar
+   *  "parado": chamar isto no meio de um golpe nao pode cancelar o golpe. */
+  encarar(dx: number, dy: number) {
+    const dir = direcaoDe(dx, dy);
+    if (!dir || dir === this.olhando) return;
+    this.olhando = dir;
+    this.tocar(this.estado);
+  }
+
   /** Pose de conjurar magia, volta sozinha ao normal. */
   conjurar(duracao = 700) {
     this.tocar("conjura");
