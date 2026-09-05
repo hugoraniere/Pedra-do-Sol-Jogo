@@ -218,7 +218,7 @@ MP3 na mao em `public/assets/som`, porque ele seria apagado na proxima geracao. 
 gravado entra por `som/prontos/`, que tem prioridade sobre o gerado, igual
 `arte/sprites/` tem sobre a arte. O que existe e em que volume toca fica em
 `src/dados/sons.ts`; quem toca e `src/sistemas/som.ts`, e nenhuma cena chama
-`this.sound` direto. Ver `docs/11-guia-de-som.md`.
+`this.sound` direto. Ver `docs/16-guia-de-som.md`.
 
 **Nenhuma arvore na mao.** Mata, mato e pedraria saem do desenho do chao em texto,
 plantados por funcao, com variacao estavel pela posicao. Se voce escreveu a
