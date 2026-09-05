@@ -79,8 +79,11 @@ export const ALTURA_PERSONAGEM = 32;
 export const LARGURA_PERSONAGEM = 16;
 
 /** Grade da folha de personagem, igual a de arte/gente.py.
- *  6 colunas por 4 linhas, quadro = linha * 6 + coluna. */
-export const QUADRO = { parado: 0, passoA: 1, passoB: 2, respira: 3, conjura: 4, tonto: 5 } as const;
+ *  8 colunas por 8 linhas, quadro = linha * 8 + coluna. */
+export const QUADRO = {
+  parado: 0, passoA: 1, passoB: 2, respira: 3, conjura: 4, tonto: 5,
+  ataque: 6, machucado: 7,
+} as const;
 /** Linha da folha de sprite para cada uma das oito direcoes.
  *
  *  As quatro primeiras ficaram nos indices de sempre de proposito: nada que ja
@@ -126,7 +129,7 @@ export function direcaoDe(x: number, y: number): NomeDirecao | undefined {
     } as Record<string, NomeDirecao>
   )[String(fatia)];
 }
-export const COLUNAS_FOLHA = 6;
+export const COLUNAS_FOLHA = 8;
 
 /** Ciclo de caminhada no padrao do Stardew: contato, passo, contato, outro passo,
  *  a 5 quadros por segundo. Com 4 quadros diferentes a perna pisca. */

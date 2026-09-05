@@ -179,9 +179,11 @@ def goblin(direcao, coluna, tipo="magricela"):
             ret(im, corpo_x + corpo_l, cab_topo + 1, 2, braco_alt - 2, GOBLIN)
             continue
         bx = corpo_x - 2 if lado < 0 else corpo_x + corpo_l
-        if direcao == "esquerda" and lado > 0:
+        # de perfil so um braco aparece, e e o de TRAS: a barriga lidera na
+        # direcao do olhar, o mesmo defeito e conserto do heroi em pessoa.py
+        if direcao == "esquerda" and lado < 0:
             continue
-        if direcao == "direita" and lado < 0:
+        if direcao == "direita" and lado > 0:
             continue
         ret(im, bx, tronco_topo + 1 + bal, 2, braco_alt, GOBLIN)
         ret(im, bx + 1, tronco_topo + 1 + bal, 1, braco_alt, GOBLIN_E)

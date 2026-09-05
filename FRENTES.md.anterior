@@ -1,0 +1,122 @@
+# Frentes do Reino de Aurora
+
+Registro vivo das conversas paralelas. **Leia antes de editar, escreva antes de
+sair.** Nao esta no git de proposito: se estivesse, cada pasta teria a sua copia
+e as frentes so se veriam depois do merge, que e tarde demais.
+
+Como usar: skill `frentes` (`.claude/skills/frentes/SKILL.md`).
+
+## Acontecendo agora
+
+### ambiente/ficha . reino-de-aurora-jogo-ambientes/ficha
+- **fazendo:** reforma da interface. Feito: a ficha do heroi em tres paginas, os
+  tres poderes no estado, e a correcao de tipografia e escala. A seguir: a janela
+  unica com abas, estilo Stardew, que junta ficha e menu de pausa num lugar so.
+- **arquivos:** `src/cenas/Ficha.ts`, `src/sistemas/janela.ts`, `icones.ts`,
+  `poderes.ts`, `texto.ts`, `design.ts`, `src/cenas/Interface.ts`
+- **vai precisar tocar:** `src/cenas/Pausa.ts` e `src/cenas/Mundo.ts` quando o
+  menu de pausa virar aba. Ainda nao mexeu.
+- **desde:** 2026-09-04
+- **galho renomeado** de `ficha` para `ambiente/ficha`, para bater com as outras.
+  O nome torto veio de quando o historico foi reescrito e a ferramenta `ambiente`
+  nao existia: o worktree foi criado na mao. Quem levar trabalho daqui para o
+  principal use o nome novo.
+
+### floresta-dos-sussurros . reino-de-aurora-jogo (pasta principal)
+- **fazendo:** a Floresta Sussurro. Arte de mata, mapa da floresta e o modelo de
+  combate.
+- **arquivos:** `arte/mundo.py`, `arte/tiles.py`, `arte/paleta.py`,
+  `arte/floresta.py`, `arte/desenho.py`, `public/assets/objetos/*`,
+  `docs/10-mapa-da-floresta.md`, `docs/11-combate-e-magias.md`,
+  `docs/modelo-de-combate.md`, `docs/05-roadmap.md`, `CLAUDE.md`
+- **atencao:** e a unica frente que pode rodar `npm run arte` enquanto estiver
+  com `arte/` aberta.
+- **desde:** 2026-09-04
+
+### claude/upbeat-roentgen-c5c80a . reino-de-aurora-jogo/.claude/worktrees/upbeat-roentgen-c5c80a
+- **fazendo:** consertar a criacao de personagem na visao PERTO, onde a grade de
+  botoes sobe por cima do boneco.
+- **arquivos:** `src/cenas/Criacao.ts`, e provavelmente `src/sistemas/design.ts`
+- **CUIDADO 1:** `design.ts` tambem e da frente `ambiente/ficha`, que acabou de
+  mexer nele (escala, medidas e tipografia). Quem chegar depois resolve no
+  proprio galho.
+- **CUIDADO 2:** esta pasta **nao e um ambiente**. Foi criada pelo Claude Code ao
+  abrir a tarefa, entao nao tem `.ambiente`, nao aparece em
+  `npm run ambiente listar`, e **sobe o vite na 5173, a mesma porta da pasta
+  principal**. Se as duas rodarem `npm run dev` ao mesmo tempo, uma quebra; se as
+  duas rodarem `npm run auditar`, uma audita a tela da outra e passa verde sem
+  motivo. Enquanto ela nao tiver commitado nada, da para realoca-la como ambiente
+  de verdade.
+- **desde:** 2026-09-04
+
+### pistas . reino-de-aurora-jogo-ambientes/pistas
+- **fazendo:** nada em andamento conhecido. Pasta aberta, galho `ambiente/pistas`.
+- **arquivos:** `src/dados/pistas.ts` (novo), `dialogos.ts`, `estado.ts`, o
+  diario e a setinha de destino
+
+### sprites . reino-de-aurora-jogo-ambientes/sprites
+- **fazendo:** nada em andamento conhecido. Pasta aberta, galho `ambiente/sprites`.
+- **arquivos:** `arte/` inteira, `public/assets`, sprites a mao e retratos 32x32
+
+## Pedidos entre frentes
+
+- **ficha -> sprites:** os icones da interface precisam de **contorno de 1 px**.
+  Hoje nenhum tem, e por isso as setas do direcional precisam de uma chapinha
+  escura atras para nao sumirem sobre o painel claro. Ver a analise em
+  `docs/14-analise-de-ui.md`.
+- **ficha -> sprites:** tres icones novos para as abas da janela unica:
+  **magia** (varinha ou estrela), **engrenagem** e o de **ficha do heroi** (para
+  este ultimo a ideia e a cabecinha do proprio heroi, recortada das camadas que o
+  jogo ja monta, em vez de um simbolo generico).
+- **ficha -> sprites:** redesenhar **lupa** (hoje le como uma bolha azul),
+  **livro** (le como uma estante) e **mochila** (le como uma mala).
+- **ficha -> Hugo (decisao, nao e frente):** a fonte nao tem minusculas de
+  verdade. `a` e `A` tem a mesma altura, entao todo texto le como caixa alta.
+  Ou assumimos caixa alta como estilo e paramos de misturar, ou trocamos a fonte,
+  o que muda a cara do jogo inteiro.
+- **ficha -> pistas:** a janela unica reserva uma aba **DIARIO**. Enquanto o
+  sistema de pistas nao existir, ela fica com um recado de "ainda nao tem nada
+  aqui". Quando existir, a frente pistas enche essa aba.
+
+## Achados
+
+- **`src/cenas/Criacao.ts`, visao PERTO (256x160):** a grade de botoes sobe por
+  cima do palco do boneco. No passo da raca os cinco botoes cobrem o personagem
+  inteiro e encostam no titulo. Causa: o palco usa coordenada fixa
+  (`palco(LARGURA/2, 102, 80, 70)` ocupa de y=32 a y=102) e a grade calcula o
+  proprio topo de baixo para cima. O auditor nao pega porque o boneco e marcado
+  como "fundo", e o auditor so compara "texto" e "botao". **Ja tem sessao
+  cuidando disto.**
+- **auditoria de UI:** `ferramentas/telas/*.png` e `auditoria-ui.md` sao
+  relatorio versionado, e toda frente que roda `npm run auditar` reescreve todos.
+  Dois PNG ja deram conflito num merge, e conflito de imagem nao se resolve.
+  Proposta parada esperando o Hugo: tirar do git, ja que se regeneram.
+
+## Atencao agora
+
+- **Todas as frentes estao 9 commits atras do `principal`**, e os 9 sao da frente
+  `ambiente/ficha`. Entre eles esta a correcao de tipografia, que mexe em
+  `texto.ts` e `design.ts` e portanto **muda o visual de toda tela do jogo**:
+  espaco entre letras, centro dos rotulos, medida de quebra de linha e largura
+  dos botoes.
+- Recomendacao: cada frente rodar `git merge principal` **agora**, enquanto o
+  trabalho dela ainda e pequeno, em vez de descobrir a mudanca no fim. A frente
+  `ambiente/combate` e a mais urgente: ja tem mudanca nao commitada.
+
+## Entregue
+
+- **2026-09-04 . ficha:** a ficha do heroi, tres paginas com a folha de papel do
+  Lele: quem eu sou, meus poderes, o que eu sei fazer. Abre tocando no nome no
+  alto da tela. Nasce daqui o sistema de janela que a mochila vai reusar.
+  (`086500e`, `f044005`)
+- **2026-09-04 . ficha:** os tres poderes no estado. FORCA, ESPERTEZA e CORACAO
+  pela regra do manual: raca +1, classe +1, e o jogador escolhe o terceiro num
+  passo novo da criacao. O estado guarda a escolha, nao o total, entao save
+  antigo envelhece bem. (`22669e6`)
+- **2026-09-04 . ficha:** tipografia e escala. Metade da largura de cada letra
+  era vao; a frase encolheu 18% e cabem 64 letras por linha em vez de 51.
+  Corrigidos junto o centro optico dos rotulos, a medida de quebra de linha (que
+  chutava 8 px por letra quando nenhuma passa de 7) e a largura dos botoes.
+  (`fa96bcf`)
+- **2026-09-04 . ambiente/ficha:** a skill `frentes` e este registro, mais a
+  analise de UI medida em `docs/13-analise-de-ui.md`. (`72133e0`)

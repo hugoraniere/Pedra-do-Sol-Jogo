@@ -115,6 +115,16 @@ export function criarAnimacoes(cena: Phaser.Scene, chaves: string[]) {
         frames: [{ key: chave, frame: quadro(dir, QUADRO.tonto) }],
         frameRate: 1,
       });
+      cena.anims.create({
+        key: `${chave}-ataque-${dir}`,
+        frames: [{ key: chave, frame: quadro(dir, QUADRO.ataque) }],
+        frameRate: 1,
+      });
+      cena.anims.create({
+        key: `${chave}-machucado-${dir}`,
+        frames: [{ key: chave, frame: quadro(dir, QUADRO.machucado) }],
+        frameRate: 1,
+      });
     });
   });
 }
@@ -127,7 +137,7 @@ export class Heroi extends Phaser.GameObjects.Container {
   private fichaArma?: FichaArma;
   private raca = "vale";
   private olhando: NomeDirecao = "baixo";
-  private estado: "parado" | "anda" | "conjura" | "tonto" = "parado";
+  private estado: "parado" | "anda" | "conjura" | "tonto" | "ataque" | "machucado" = "parado";
   private avisarPasso?: () => void;
 
   constructor(cena: Phaser.Scene, x: number, y: number, ficha: FichaHeroi) {
@@ -255,7 +265,7 @@ export class Heroi extends Phaser.GameObjects.Container {
   }
 
   mover(dx: number, dy: number) {
-    if (this.estado === "conjura" || this.estado === "tonto") {
+    if (this.estado === "conjura" || this.estado === "tonto" || this.estado === "ataque" || this.estado === "machucado") {
       this.body.setVelocity(0, 0);
       return;
     }
@@ -292,6 +302,23 @@ export class Heroi extends Phaser.GameObjects.Container {
     this.tocar("tonto");
     this.scene.time.delayedCall(duracao, () => {
       if (this.estado === "tonto") this.tocar("parado");
+    });
+  }
+
+  /** O golpe de arma ou sem arma. Volta sozinho ao normal. */
+  atacar(duracao = 400) {
+    this.tocar("ataque");
+    this.scene.time.delayedCall(duracao, () => {
+      if (this.estado === "ataque") this.tocar("parado");
+    });
+  }
+
+  /** Levou um golpe. So a reacao visual: coracao e derrota sao do sistema de
+   *  combate, aqui e so o quadro. */
+  machucar(duracao = 400) {
+    this.tocar("machucado");
+    this.scene.time.delayedCall(duracao, () => {
+      if (this.estado === "machucado") this.tocar("parado");
     });
   }
 

@@ -11,10 +11,12 @@ Este arquivo nao desenha nada. Ele so junta o que os outros desenham:
   arte/goblin.py        os quatro goblins
   arte/aranha.py        as quatro aranhas da teia doce
 
-Cada folha de personagem tem 6 colunas por 4 linhas de 16 x 32:
+Cada folha de personagem tem 8 colunas por 8 linhas de 16 x 32:
 
-  colunas: 0 parado, 1 passo A, 2 passo B, 3 respirando, 4 conjurando, 5 tonto
-  linhas:  0 baixo, 1 esquerda, 2 direita, 3 cima
+  colunas: 0 parado, 1 passo A, 2 passo B, 3 respirando, 4 conjurando, 5 tonto,
+           6 ataque, 7 machucado
+  linhas:  0 baixo, 1 esquerda, 2 direita, 3 cima, 4 baixo-esquerda,
+           5 baixo-direita, 6 cima-esquerda, 7 cima-direita
 
 POR QUE O HEROI VEM EM CAMADAS. Sao 5 racas e 5 classes, ou seja 25
 personagens. Desenhar 25 folhas seria burrice: o corpo vem da raca, a roupa vem
@@ -61,7 +63,8 @@ TIPOS_CORPO = ["magro", "normal", "gordinho"]
 
 #: coluna da folha do corpo -> linha da folha de roupa
 LINHA_DA_ROUPA = {"parado": 0, "passo-a": 1, "passo-b": 2,
-                  "respira": 0, "conjura": 0, "tonto": 0}
+                  "respira": 0, "conjura": 0, "tonto": 0,
+                  "ataque": 0, "machucado": 0}
 #: direcao -> coluna da folha de roupa. As diagonais caem na vista vertical
 #: porque a silhueta de uma roupa de 16 px nao muda entre a frente e os tres
 #: quartos: quem muda de verdade e o rosto, e o rosto mora no corpo

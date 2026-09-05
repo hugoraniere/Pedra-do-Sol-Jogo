@@ -4,8 +4,10 @@
  * MESMA conta que desenha o braco. E por isso que a arma nunca sai do lugar
  * quando alguem mexe na anatomia: nao existe uma segunda copia da conta aqui.
  *
- * Indice do quadro = linha da direcao vezes 6, mais a coluna, igual ao numero
- * do quadro na folha de sprite. */
+ * Indice do quadro = linha da direcao vezes COLUNAS_FOLHA, mais a coluna,
+ * igual ao numero do quadro na folha de sprite. */
+
+import { COLUNAS_FOLHA } from "../dados/config";
 
 export type Ponto = [number, number];
 
@@ -45,7 +47,7 @@ export function encaixes(): Encaixes | undefined {
 }
 
 /** O quadro da folha de roupa que corresponde a um quadro do corpo. */
-export function quadroDaRoupa(quadroDoCorpo: number, colunas = 6): number {
+export function quadroDaRoupa(quadroDoCorpo: number, colunas = COLUNAS_FOLHA): number {
   const e = tabela;
   if (!e) return 0;
   const linhaDirecao = Math.floor(quadroDoCorpo / colunas);

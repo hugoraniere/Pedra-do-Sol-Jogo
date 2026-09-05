@@ -8,7 +8,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from paleta import *  # noqa
 
 PW, PH = 16, 32
-COLUNAS = ["parado", "passo-a", "passo-b", "respira", "conjura", "tonto"]
+COLUNAS = ["parado", "passo-a", "passo-b", "respira", "conjura", "tonto",
+           "ataque", "machucado"]
 
 # Oito direcoes. As quatro primeiras sao as antigas e ficaram nas mesmas linhas
 # de proposito, para nao invalidar nenhum indice que ja existia. As diagonais
