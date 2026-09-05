@@ -599,8 +599,38 @@ export const FLORESTA: Mapa = {
   ],
 };
 
+/** Trilha de Chegada, 30 x 13 tiles — onde toda partida nova comeca agora
+ *  (ver `VAZIO.cena` em sistemas/estado.ts). Um caminho so, guiado, bordado
+ *  de mata como a Floresta: nasce, passa por uma placa (ensina interacao),
+ *  passa por um goblin (ensina combate), sai na Vila. Pequeno de proposito
+ *  — anda-se de ponta a ponta em poucos segundos, sem contar as paradas. */
+export const TRILHA_DE_CHEGADA: Mapa = {
+  chao: [
+    "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+    "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+    "TT..........................TT",
+    "TT..........................TT",
+    "TT..........................TT",
+    "TT..........................TT",
+    "TTttttttttttttttttttttttttttTT",
+    "TT..........................TT",
+    "TT..........................TT",
+    "TT..........................TT",
+    "TT..........................TT",
+    "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+    "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  ],
+  objetos: [{ nome: "placa", x: 9, y: 6 }],
+  pessoas: [],
+  criaturas: [{ id: "goblin", x: 17, y: 6 }],
+  entrada: { x: 3, y: 6 },
+  lugar: "Trilha de Chegada",
+  saidas: [{ x: 27, y: 6, w: 1, h: 1, para: "vila", entrada: { x: 15, y: 13 } }],
+};
+
 /** Todo mapa do jogo, pela chave que fica em `estado().cena`. */
 export const MAPAS: Record<string, Mapa> = {
+  chegada: TRILHA_DE_CHEGADA,
   vila: VILA,
   floresta: FLORESTA,
   "casa-cura": CASA_CURA,

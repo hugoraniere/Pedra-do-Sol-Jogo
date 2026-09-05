@@ -116,8 +116,10 @@ export const VAZIO: Estado = {
   mochilaAtual: "mochila-pequena",
   visitados: [],
   derrotados: [],
-  cena: "vila",
-  lugar: "Vila Semente",
+  // uma partida nova comeca na Trilha de Chegada, o tutorial guiado — a
+  // Vila (e o sino) so aparecem depois de atravessa-la (ver dados/mapas.ts)
+  cena: "chegada",
+  lugar: "Trilha de Chegada",
   minutos: 0,
   // 480 = 8h, o heroi chega de manha
   relogio: 480,

@@ -444,6 +444,15 @@ export class Mundo extends Phaser.Scene {
     // sair do mundo solta os loops. A musica sobrevive: menu e titulo sao o
     // mesmo lugar do ponto de vista de quem joga, e recomecar a faixa se ouve.
     this.events.once("shutdown", () => calarAmbiente());
+
+    // dica de movimento da Trilha de Chegada: so na primeira vez que este
+    // heroi nasce ali, antes de qualquer outra coisa acontecer.
+    if (st0.cena === "chegada" && marcarVisitado("dica-movimento-chegada")) {
+      this.abrirFala("Dica", [
+        "Arraste o direcional (ou use as setas) para andar.",
+        "Siga o caminho.",
+      ]);
+    }
   }
 
   /**
@@ -761,6 +770,15 @@ export class Mundo extends Phaser.Scene {
       return Math.hypot(cx - hx, cy - hy) <= DISTANCIA_DE_ENCONTRO;
     });
     if (perto.length === 0) return;
+    // dica de combate da Trilha de Chegada: so na primeira aproximacao do
+    // goblin de tutorial, antes da luta abrir de vez.
+    if (estado().cena === "chegada" && marcarVisitado("dica-goblin-chegada")) {
+      this.abrirFala("Dica", [
+        "Escolha um golpe na barra, mire no goblin e confirme.",
+        "O dado decide o que acontece.",
+      ]);
+      return;
+    }
     this.iniciarCombate(perto);
   }
 
@@ -813,6 +831,10 @@ export class Mundo extends Phaser.Scene {
     c.sprite.destroy();
     c.corpo.destroy();
     this.criaturas = this.criaturas.filter((x) => x !== c);
+    // o goblin de tutorial so existe na Trilha de Chegada, entao a chave
+    // "chegada:0" (unica criatura daquele mapa) identifica ele sozinha —
+    // conclui aqui, na derrota, nunca no sorteio de item (so 70% de chance).
+    if (chave === "chegada:0") concluirEtapa("primeiros-passos", "derrotar-o-goblin");
   }
 
   /** O tamanho do mundo em pixel, pra Combate.ts limitar a propria camera
@@ -1158,6 +1180,9 @@ export class Mundo extends Phaser.Scene {
     // nem escolha — a mesma trilha que o guarda ja indica no dialogo dele
     if (st.cena === "vila" && saida.para === "floresta") {
       concluirEtapa("sino-da-vila", "seguir-para-floresta");
+    }
+    if (st.cena === "chegada" && saida.para === "vila") {
+      concluirEtapa("primeiros-passos", "chegar-na-vila");
     }
     st.cena = saida.para;
     st.lugar = destino.lugar;

@@ -7,7 +7,7 @@
  *  (Fase 1.2) ja previa: "a primeira condicao que bate e a que toca". */
 import { noPeriodo, etapaFeita } from "../sistemas/condicoes-de-fala";
 import { concluirEtapa } from "../sistemas/missoes";
-import { guardar, mudarAfinidade } from "../sistemas/estado";
+import { estado, guardar, mudarAfinidade } from "../sistemas/estado";
 
 /** Uma resposta que o jogador pode escolher no fim de uma fala. `efeito`
  *  roda na hora (marca missao, muda afinidade, guarda item); `resposta`, se
@@ -227,6 +227,12 @@ export const DIALOGOS: Record<string, Fala> = {
   placa: {
     quem: "Uma placa de madeira",
     variantes: [
+      {
+        id: "chegada",
+        condicao: () => estado().cena === "chegada",
+        linhas: ["Vila Semente, mais adiante ->", "Voce acabou de ler isto apertando o botao de acao.", "E assim que se fala com qualquer coisa no caminho."],
+        efeito: () => concluirEtapa("primeiros-passos", "ler-a-placa"),
+      },
       {
         id: "padrao",
         linhas: ["Floresta dos Sussurros ->", "Cuidado com quem fala sem ter boca."],
