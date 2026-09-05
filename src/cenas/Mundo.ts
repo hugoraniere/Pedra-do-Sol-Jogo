@@ -97,6 +97,12 @@ const FOLGA_PONTEIRO = 6;
  *  mede a partir da frente do heroi) e para o clique (que mede do heroi
  *  ate o alvo, chegando por qualquer lado). */
 const ALCANCE_ACAO = 18;
+/** Raio (em px de mundo) do furo de luz que toda fonte de luz abre no
+ *  `overlayCeu` — ver `atualizarCeu()`. Mesmo raio pra fogueira e, mais pra
+ *  frente, pra tocha: uma so escala de "isso ilumina" no jogo inteiro. */
+const RAIO_LUZ = 70;
+/** Chave da textura de luz gerada em `garantirTexturaDeLuz()`. */
+const TEXTURA_LUZ = "luz-fonte";
 /** um toque/clique fica "indeciso" ate um dos dois limiares estourar: rapido
  *  e sem sair do lugar e toque (anda ate ali por caminho); qualquer um dos
  *  dois passando do limiar vira segurar (anda direto, sem caminho, na
@@ -728,6 +734,11 @@ export class Mundo extends Phaser.Scene {
     if (this.textures.exists(TEXTURA_LUZ)) return;
     const d = RAIO_LUZ * 2;
     const tex = this.textures.createCanvas(TEXTURA_LUZ, d, d);
+    // createCanvas so devolve null se a chave ja existisse com outro tipo de
+    // textura — o guard de exists() logo acima ja impede isso na pratica;
+    // isto e so pro tsc parar de reclamar (TS18047), sem mudar nada do
+    // comportamento real.
+    if (!tex) return;
     const ctx = tex.getContext();
     const gradiente = ctx.createRadialGradient(RAIO_LUZ, RAIO_LUZ, 0, RAIO_LUZ, RAIO_LUZ, RAIO_LUZ);
     gradiente.addColorStop(0, "rgba(255,255,255,1)");

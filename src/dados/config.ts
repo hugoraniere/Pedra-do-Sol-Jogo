@@ -300,6 +300,9 @@ export const OBJETOS = [
   "cama", "prateleira-pocoes", "caldeirao",
   "mesa", "tapete", "armario", "banco", "forja", "bigorna", "suporte-armas",
   "estante-livros", "forno-padaria", "prateleira-pao",
+  // os outros 3 quadros da chama da fogueira tremeluzindo (ver Mundo.ts,
+  // garantirAnimacaoDeFogo) -- nunca plantados sozinhos num mapa
+  "fogueira-2", "fogueira-3", "fogueira-4",
 ] as const;
 
 export const CABELOS = [

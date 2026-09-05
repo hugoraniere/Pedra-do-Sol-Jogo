@@ -1,6 +1,6 @@
 {
   "gerado_por": "npm run arte",
-  "total": 152,
+  "total": 154,
   "arquivos": {
     "aranha-filhote.png": {
       "hash": "ececeb0a0cfcd628",
@@ -404,12 +404,6 @@
       "largura": 176,
       "altura": 256
     },
-    "logo.png": {
-      "hash": "59ab17917bce4452",
-      "bytes": 30766,
-      "largura": 268,
-      "altura": 118
-    },
     "npc-bruxo.png": {
       "hash": "bb4c76a053dbbcb1",
       "bytes": 7947,
@@ -602,6 +596,24 @@
       "largura": 64,
       "altura": 68
     },
+    "objetos/fogueira-2.png": {
+      "hash": "c35341dcf6008d95",
+      "bytes": 270,
+      "largura": 20,
+      "altura": 18
+    },
+    "objetos/fogueira-3.png": {
+      "hash": "09af43fe01034c90",
+      "bytes": 273,
+      "largura": 20,
+      "altura": 18
+    },
+    "objetos/fogueira-4.png": {
+      "hash": "c8b6ce16f539f4d4",
+      "bytes": 268,
+      "largura": 20,
+      "altura": 18
+    },
     "objetos/fogueira.png": {
       "hash": "f15b03bc155ac470",
       "bytes": 276,
@@ -625,6 +637,12 @@
       "bytes": 1272,
       "largura": 84,
       "altura": 112
+    },
+    "objetos/hospital.png": {
+      "hash": "85b1585beaab50b3",
+      "bytes": 771,
+      "largura": 64,
+      "altura": 68
     },
     "objetos/mesa.png": {
       "hash": "c899ab1c755a6057",
@@ -901,12 +919,6 @@
       "bytes": 2903,
       "largura": 128,
       "altura": 96
-    },
-    "titulo.png": {
-      "hash": "70e4d42af7de2702",
-      "bytes": 8597,
-      "largura": 320,
-      "altura": 120
     },
     "ui.png": {
       "hash": "49dc31ceadd1a6c0",
