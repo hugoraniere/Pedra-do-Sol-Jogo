@@ -611,32 +611,59 @@ export const FLORESTA: Mapa = {
   ],
 };
 
-/** Praia de Chegada, 26 x 11 tiles — onde toda partida nova comeca agora
+/** Praia de Chegada, 44 x 20 tiles — onde toda partida nova comeca agora
  *  (ver `VAZIO.cena` em sistemas/estado.ts). O heroi desembarca do navio que
  *  o trouxe de outras terras, fala com o marinheiro (que concede a arma da
  *  propria classe, uma bolsa de moedas e uma pocao — nada disso e equipado
  *  de verdade na criacao de personagem, so mostrado na vitrine), e segue a
- *  pe pra Trilha de Chegada. Uma faixa de areia so, sem nada em cima dela:
- *  o navio e o marinheiro ficam ao lado, nunca sobre o caminho. */
+ *  pe pra Trilha de Chegada.
+ *
+ *  Revisao de 2026-09-05, a pedido do Hugo: o desenho original (26x11) tinha
+ *  a mata contornando o mapa inteiro com uma saida de 1 casa so — lia como
+ *  porta escondida, nao caminho aberto. Agora: bem mais chao de areia pra
+ *  andar, a saida leste e uma abertura de 7 casas de altura (a mata so
+ *  emoldura ACIMA e ABAIXO dela, nunca atravessando), e o navio sai de cima
+ *  da areia pra dentro da agua de verdade — ancorado ao largo, balancando
+ *  sozinho de vez em quando (ver `Mundo.ts`, o `if (peca.nome === "navio")`
+ *  no loop de objetos). A beira do mar deixou de ser um corte reto: varia
+ *  linha a linha (mesmo espirito do lago da Floresta), com `onda` (arte
+ *  animada, `garantirAnimacaoDeOnda`) plantada em alguns pontos da beira. */
 export const PRAIA_DE_CHEGADA: Mapa = {
   chao: [
-    "TTTTTTTTTTTTTTTTTTTTTTTTTT",
-    "TTTTTTTTTTTTTTTTTTTTTTTTTT",
-    "TTaaaaaaaaaaaaaaaaaaaaaaTT",
-    "TTaaaaaaaaaaaaaaaaaaaaaaTT",
-    "TTaaaaaaaaaaaaaaaaaaaaaaTT",
-    "TTttttttttttttttttttttttTT",
-    "TTaaaaaaaaaaaaaaaaaaaaaaTT",
-    "TTaaaaaaaaaaaaaaaaaaaaaaTT",
-    "~~~~~~~~~~~~~~~~~~~~~~~~~~",
-    "~~~~~~~~~~~~~~~~~~~~~~~~~~",
-    "~~~~~~~~~~~~~~~~~~~~~~~~~~",
+    "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+    "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+    "TTaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaTT",
+    "TTaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaTT",
+    "TTaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaTT",
+    "TTaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "TTaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "TTaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "TTttttttttttttttttttttttttttttttttttttttttaa",
+    "TTaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "TTaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "TTaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "TTaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaTT",
+    "TTaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaTT",
+    "saaaaaaaaaaaaaaaaaaaaaasss~~~~~~~~~ssssaaaaa",
+    "~sssaaaaaaaaaaaaaaaasss~~~~~~~~~~~~~~~~sssaa",
+    "~~~~ssssaaaaaaaassss~~~~~~~~~~~~~~~~~~~~~~ss",
+    "~~~~~~~~ssssssss~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+    "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+    "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
   ],
-  objetos: [{ nome: "navio", x: 6, y: 7 }],
-  pessoas: [{ quem: "marinheiro", sprite: "marinheiro", x: 9, y: 5 }],
-  entrada: { x: 3, y: 5 },
+  objetos: [
+    { nome: "navio", x: 2, y: 17 },
+    { nome: "onda", x: 24, y: 14 },
+    { nome: "onda", x: 36, y: 14 },
+    { nome: "onda", x: 21, y: 15 },
+    { nome: "pedra-solta", x: 14, y: 5 },
+    { nome: "arbusto", x: 32, y: 6 },
+    { nome: "pedra-solta", x: 18, y: 11 },
+  ],
+  pessoas: [{ quem: "marinheiro", sprite: "marinheiro", x: 6, y: 13 }],
+  entrada: { x: 4, y: 8 },
   lugar: "Praia de Chegada",
-  saidas: [{ x: 23, y: 5, w: 1, h: 1, para: "chegada", entrada: { x: 3, y: 6 } }],
+  saidas: [{ x: 43, y: 5, w: 1, h: 7, para: "chegada", entrada: { x: 3, y: 6 } }],
 };
 
 /** Trilha de Chegada, 30 x 13 tiles. Um caminho so, guiado, bordado de mata

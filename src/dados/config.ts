@@ -294,7 +294,7 @@ export const OBJETOS = [
   "casa-pequena", "casa-grande", "ferraria", "casa-vovo", "hospital",
   "arvore", "arvore-escura", "arbusto",
   "poste-sino", "poste-com-sino", "poco", "pedra-solta", "barraca", "cerca",
-  "fogueira", "bau", "placa", "varal", "navio",
+  "fogueira", "bau", "placa", "varal", "navio", "onda",
   "pinheiro", "pinheiro-baixo", "grande-ouvinte", "arvore-raio", "tronco-caido",
   "toco", "samambaia", "cogumelo", "cogumelo-azul", "pedra-musgo", "teia", "raizes",
   "cama", "prateleira-pocoes", "caldeirao",
@@ -303,6 +303,9 @@ export const OBJETOS = [
   // os outros 3 quadros da chama da fogueira tremeluzindo (ver Mundo.ts,
   // garantirAnimacaoDeFogo) -- nunca plantados sozinhos num mapa
   "fogueira-2", "fogueira-3", "fogueira-4",
+  // os outros 2 quadros da onda avancando/recuando na beira (ver Mundo.ts,
+  // garantirAnimacaoDeOnda) -- nunca plantados sozinhos num mapa
+  "onda-2", "onda-3",
 ] as const;
 
 export const CABELOS = [

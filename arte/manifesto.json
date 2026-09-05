@@ -1,6 +1,6 @@
 {
   "gerado_por": "npm run arte",
-  "total": 156,
+  "total": 159,
   "arquivos": {
     "aranha-filhote.png": {
       "hash": "ececeb0a0cfcd628",
@@ -661,6 +661,24 @@
       "bytes": 672,
       "largura": 70,
       "altura": 70
+    },
+    "objetos/onda-2.png": {
+      "hash": "d45d77fc706bd617",
+      "bytes": 187,
+      "largura": 32,
+      "altura": 10
+    },
+    "objetos/onda-3.png": {
+      "hash": "fb0562724126536e",
+      "bytes": 189,
+      "largura": 32,
+      "altura": 10
+    },
+    "objetos/onda.png": {
+      "hash": "bdbc65915684304d",
+      "bytes": 194,
+      "largura": 32,
+      "altura": 10
     },
     "objetos/pedra-musgo.png": {
       "hash": "a47425bf17053a6c",

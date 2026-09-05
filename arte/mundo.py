@@ -5,6 +5,7 @@ Foi essa a mudanca que tirou o jogo da cara de "quadradinho repetido": uma casa 
 UMA imagem de 48x64 com telhado, porta, janela e chamine, nao seis tiles colados.
 Arvore, poste do sino, barraca, cerca e poco seguem a mesma ideia.
 """
+import math
 import os
 import sys
 from PIL import Image
@@ -510,6 +511,22 @@ def navio():
     return im
 
 
+def onda(variante=0):
+    """Espuma na beira do mar, 3 quadros que a Mundo.ts anima em loop (mesmo
+    molde de `fogueira()`) -- a crista sobe e desce em onda de verdade, cada
+    quadro deslocando a fase. So a beira ganha isto; a agua aberta continua
+    tile parado, sem sistema de tileset animado (fora de escopo por ora)."""
+    im = nova(32, 10)
+    fase = variante * (2 * math.pi / 3)
+    for x in range(32):
+        h = 2 + round(1.5 + 1.5 * math.sin(x * 0.5 + fase))
+        h = max(1, min(6, h))
+        ret(im, x, 10 - h, 1, h, AGUA_C)
+        px(im, x, 10 - h, PAPEL)
+    contorno_alfa(im)
+    return im
+
+
 # --------------------------------------------------- a Casa de Cura, por dentro
 # O comodo da Vovo Aurora. Ver docs/14-casa-de-cura.md: um comodo so, pequeno de
 # proposito, sem cama pro heroi deitar (a fogueira continua o unico lugar que
@@ -725,6 +742,12 @@ OBJETOS = [
     ("placa", placa, (0.30, 0.25)),
     ("varal", varal, (0.50, 0.30)),
     ("navio", navio, (0.75, 0.30)),
+    ("onda", lambda: onda(0), (0, 0)),
+    # os outros 2 quadros da onda avancando/recuando na beira -- nunca
+    # plantados sozinhos num mapa, so junto com "onda" numa animacao
+    # (ver Mundo.ts, garantirAnimacaoDeOnda)
+    ("onda-2", lambda: onda(1), (0, 0)),
+    ("onda-3", lambda: onda(2), (0, 0)),
     # a Floresta dos Sussurros. O desenho mora em arte/floresta.py; os nomes
     # ficam aqui em literal porque e desta lista que o verificar.mjs confere o
     # espelho com OBJETOS de src/dados/config.ts.

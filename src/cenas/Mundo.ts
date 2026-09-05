@@ -255,6 +255,7 @@ export class Mundo extends Phaser.Scene {
     this.trocandoDeMapa = false;
     const fichas = this.cache.json.get("objetos") as Record<string, FichaObjeto>;
     this.garantirAnimacaoDeFogo();
+    this.garantirAnimacaoDeOnda();
 
     // ---------------------------------------------------------- chao
     const chao = montarChao(mapa.chao);
@@ -287,16 +288,31 @@ export class Mundo extends Phaser.Scene {
       // ancorado pelo pe: a base do objeto encosta no tile indicado
       const x = peca.x * TILE + TILE / 2;
       const y = peca.y * TILE + TILE;
-      // a fogueira tremeluz de verdade (4 quadros, ver arte/mundo.py) e e
-      // uma fonte de luz que ilumina sempre — todo o resto continua imagem
-      // parada, sem custo de animacao a mais
+      // a fogueira tremeluz e a onda quebra de verdade (arte/mundo.py) —
+      // todo o resto continua imagem parada, sem custo de animacao a mais
       const s: Phaser.GameObjects.Image | Phaser.GameObjects.Sprite =
         peca.nome === "fogueira"
           ? this.add.sprite(x, y, "obj-fogueira").play("fogo-tremeluz")
+          : peca.nome === "onda"
+          ? this.add.sprite(x, y, "obj-onda").play("onda-quebra")
           : this.add.image(x, y, `obj-${peca.nome}`);
       s.setOrigin(0.5, 1);
       s.setDepth(y);
       if (peca.nome === "fogueira") this.fontesDeLuz.push({ x, y: y - ficha.h * 0.6 });
+      // o navio balanca sozinho, de vez em quando — nunca o tempo todo, pra
+      // nao ler como agitado demais numa agua parada. Cada ciclo se
+      // reagenda com um intervalo aleatorio, em vez de repeat() continuo.
+      if (peca.nome === "navio") {
+        const balancar = () => {
+          this.tweens.add({
+            targets: s, angle: { from: -2, to: 2 }, duration: 1400,
+            yoyo: true, repeat: 1, ease: "Sine.easeInOut",
+            onComplete: () => { s.setAngle(0); agendar(); },
+          });
+        };
+        const agendar = () => this.time.delayedCall(Phaser.Math.Between(4000, 8000), balancar);
+        agendar();
+      }
       if (peca.solido !== false && ficha.cw > 0) {
         const corpo = this.add.rectangle(x, y - ficha.ch / 2, ficha.cw, ficha.ch);
         this.solidos.add(corpo);
@@ -766,6 +782,19 @@ export class Mundo extends Phaser.Scene {
       key: "fogo-tremeluz",
       frames: ["obj-fogueira", "obj-fogueira-2", "obj-fogueira-3", "obj-fogueira-4"].map((key) => ({ key })),
       frameRate: 6,
+      repeat: -1,
+    });
+  }
+
+  /** A onda avancando e recuando na beira: 3 quadros (arte/mundo.py), mesmo
+   *  molde de `garantirAnimacaoDeFogo`. Mais lenta que o fogo — e mare, nao
+   *  chama. */
+  private garantirAnimacaoDeOnda() {
+    if (this.anims.exists("onda-quebra")) return;
+    this.anims.create({
+      key: "onda-quebra",
+      frames: ["obj-onda", "obj-onda-2", "obj-onda-3"].map((key) => ({ key })),
+      frameRate: 2,
       repeat: -1,
     });
   }
