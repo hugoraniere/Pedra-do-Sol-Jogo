@@ -616,6 +616,7 @@ export class Mundo extends Phaser.Scene {
     const periodo = periodoAtual();
     const mudouPeriodo = periodo !== this.ultimoPeriodo;
     this.ultimoPeriodo = periodo;
+    if (mudouPeriodo) this.scene.get("Interface").events.emit("periodo-mudou", periodo);
     this.npcs.forEach((npc) => {
       if (mudouPeriodo) this.tracarRotaDoNpc(npc, npc.pessoa.rotina![periodo]);
       if (!npc.caminho || npc.caminho.length === 0) return;

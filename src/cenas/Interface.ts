@@ -8,11 +8,13 @@ import { texto } from "../sistemas/texto";
 import { estado } from "../sistemas/estado";
 import { Controles } from "../sistemas/controles";
 import { refazerAoRedimensionar } from "../sistemas/visao";
-import { ICONE } from "../sistemas/icones";
+import { ICONE, ICONE_DO_PERIODO } from "../sistemas/icones";
 import { ESPACO, TAMANHO } from "../sistemas/design";
 import { botao, type Botao } from "../sistemas/botao";
 import { interativo } from "../sistemas/interativo";
 import type { Escolha } from "../dados/dialogos";
+import { periodoAtual } from "../sistemas/tempo";
+import type { Periodo } from "../dados/tempo";
 
 /** `quem` e o nome que aparece na chapinha; `chave` e a entrada de DIALOGOS,
  *  que e o que a tabela VOZ usa para achar a altura da voz. Sem chave a fala
@@ -36,6 +38,7 @@ export class Interface extends Phaser.Scene {
   private coracoes: Phaser.GameObjects.Image[] = [];
   private textoMoedas!: Phaser.GameObjects.BitmapText;
   private textoSelos!: Phaser.GameObjects.BitmapText;
+  private iconePeriodo!: Phaser.GameObjects.Image;
   /** true logo depois que uma fala abre com o botao de acao ainda segurado:
    *  bloqueia avancar a linha ate o botao ser solto uma vez. */
   private esperandoSoltarAcao = false;
@@ -69,6 +72,7 @@ export class Interface extends Phaser.Scene {
     this.montarDirecional();
     this.montarCaixa();
     this.events.on("falar", (p: PedidoFala) => this.falar(p));
+    this.events.on("periodo-mudou", (p: Periodo) => this.iconePeriodo.setFrame(ICONE_DO_PERIODO[p]));
     // a resolucao muda quando o jogador troca a visao no menu de pausa
     refazerAoRedimensionar(this, () => this.scene.restart());
   }
@@ -85,7 +89,12 @@ export class Interface extends Phaser.Scene {
     this.textoMoedas = texto(this, xMoeda + 9, 5, "0", { cor: 0xfff8ea });
     this.add.image(xMoeda + 32, 9, "ui", ICONE.selo);
     this.textoSelos = texto(this, xMoeda + 41, 5, "0", { cor: 0xfff8ea });
-    this.montarBotaoFicha(xMoeda + 49);
+    const xPeriodo = xMoeda + 49;
+    // o icone so troca de frame no evento "periodo-mudou" (Mundo.ts emite ao
+    // detectar troca, mesmo padrao de "falar") — sem sondar periodoAtual() a
+    // cada frame aqui, so nasce certo uma vez, direto do relogio de agora.
+    this.iconePeriodo = this.add.image(xPeriodo, 9, "ui", ICONE_DO_PERIODO[periodoAtual()]);
+    this.montarBotaoFicha(xPeriodo + 20);
     this.montarBotaoPausa();
     this.atualizarTopo();
   }
