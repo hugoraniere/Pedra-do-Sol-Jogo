@@ -49,6 +49,18 @@ export function poderesDoHeroi(heroi: Heroi): Poderes {
   return poderes;
 }
 
+/** Corações máximos: a base da raça (3, ou 4 no Anão - "Casco Duro") mais 1
+ *  a cada 2 pontos de Vitalidade. Revisão de 2026-09-05: antes disto
+ *  `coracoesMax` era sempre 3, ignorando raça E atributo - o dom do Anão
+ *  nunca funcionava de verdade, e Vitalidade não mudava nada na vida do
+ *  herói, só no nome. Chamado uma vez em `novoJogo()` (sistemas/estado.ts) -
+ *  não recalculado toda hora feito `poderesDoHeroi`, porque não existe ainda
+ *  como Vitalidade mudar DEPOIS da criação (isso é o Selo de Herói, que
+ *  ainda não foi implementado). */
+export function coracoesMaxDoHeroi(heroi: Heroi): number {
+  return acharRaca(heroi.raca).coracoes + Math.floor(poderesDoHeroi(heroi).vitalidade / 2);
+}
+
 /** Quantos selos faltam para a proxima escolha.
  *
  *  No papel: a cada 3 selos pintados o jogador escolhe mais 1 coracao, mais 1

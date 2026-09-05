@@ -226,7 +226,7 @@ export class Combate extends Phaser.Scene {
       // (spriteDoGoblin) sai da MESMA casa que o Mundo usou pra desenhar a
       // versao decorativa, entao os dois sempre concordam.
       const spriteChave = e.id === "goblin" ? spriteDoGoblin(casa.tx, casa.ty) : b.sprite;
-      this.porCriatura(`${e.id}-${i}`, e.id, e.chave, spriteChave, nome, 0, casa.tx, casa.ty, b.coracoes);
+      this.porCriatura(`${e.id}-${i}`, e.id, e.chave, spriteChave, nome, b.bonus, casa.tx, casa.ty, b.coracoes);
     });
 
     // a camera de Combate so desenha o que ELE acrescenta (barra, mira, os
@@ -646,7 +646,7 @@ export class Combate extends Phaser.Scene {
             this.poeira(this.heroi.x, this.heroi.y - 8);
             tocarFicha(IMPACTOS.errou);
           } else {
-            this.heroiApanha(resultado.desfecho === "critico-fracasso");
+            this.heroiApanha(acharCriatura(b.bicharioId)?.dano ?? 1, resultado.desfecho === "critico-fracasso");
           }
           b.jaAtacouDeSurpresa = true;
           // volta para a posicao de origem -- "avanca, ataca, volta"
@@ -662,7 +662,10 @@ export class Combate extends Phaser.Scene {
     });
   }
 
-  private heroiApanha(cheio = true) {
+  /** `dano` vem do bestiario (`Criatura.dano`, 1 na maioria, 2 nos guardioes
+   *  de historia) - antes disto todo golpe custava 1 coracao sempre, o
+   *  Grulo batendo igual a um goblin. */
+  private heroiApanha(dano: number, cheio = true) {
     // Escudo de Bolha "absorve o proximo golpe" (conteudo.ts) - literal: o
     // golpe que ia acontecer some inteiro, mesmo um critico-fracasso de
     // defesa, e a protecao se gasta na hora (nunca mais que um golpe).
@@ -675,7 +678,7 @@ export class Combate extends Phaser.Scene {
     }
     tocarFicha(IMPACTOS.bicho);
     this.cameras.main.shake(cheio ? 140 : 90, cheio ? 0.005 : 0.003);
-    this.coracoes = Math.max(0, this.coracoes - 1);
+    this.coracoes = Math.max(0, this.coracoes - dano);
     this.atualizarCoracoes();
     estado().coracoes = this.coracoes;
     salvar();
@@ -1116,7 +1119,10 @@ export class Combate extends Phaser.Scene {
       b.corpo.setVelocity(fuga.x, fuga.y);
       this.time.delayedCall(140, () => b.corpo?.setVelocity(0, 0));
     }
-    b.coracoes -= 1;
+    // critico de sucesso "sempre funciona + efeito extra" (docs/modelo-de-
+    // combate.md secao 3) - o extra e 1 coracao a mais de dano, nao so o
+    // mesmo golpe com fogos de artificio.
+    b.coracoes -= cheio ? 2 : 1;
     this.mostrarPips(b);
     if (b.coracoes <= 0) this.desistir(b);
   }

@@ -2,6 +2,7 @@
  *  Quem grava e le no disco e sistemas/armazenamento.ts. */
 import { gravarEspaco, lerEspaco } from "./armazenamento.ts";
 import { acharMaterial } from "../dados/conteudo";
+import { coracoesMaxDoHeroi } from "./poderes";
 
 export type Heroi = {
   nome: string;
@@ -129,6 +130,11 @@ export function novoJogo(espaco: number, heroi: Heroi) {
   atual = copia(VAZIO);
   atual.espaco = espaco;
   atual.heroi = heroi;
+  // antes disto todo heroi comecava com 3 corações, ponto - o "Casco Duro"
+  // do Anao (4) e a Vitalidade escolhida na criacao nunca faziam diferenca
+  // nenhuma na vida de verdade (ver coracoesMaxDoHeroi, sistemas/poderes.ts).
+  atual.coracoesMax = coracoesMaxDoHeroi(heroi);
+  atual.coracoes = atual.coracoesMax;
   atual.criadoEm = Date.now();
   inicioDaSessao = Date.now();
   salvar();
