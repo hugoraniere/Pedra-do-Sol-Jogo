@@ -26,12 +26,16 @@ function ambiente() {
   }
 }
 
+// DEV ANTES DE AMBIENTE, e nao depois. `const` nao sobe: usar DEV na linha de
+// cima quebrava o aplicativo inteiro com "Cannot access 'DEV' before
+// initialization", antes de qualquer janela aparecer. Nao dava erro no jogo
+// porque o jogo nem chegava a carregar.
+const DEV = !app.isPackaged;
 const AMBIENTE = DEV ? ambiente() : 0;
 const PORTA_VITE = 5173 + AMBIENTE * 10;
 
 const PASTA_SAVES = () =>
   path.join(app.getPath("userData"), AMBIENTE ? `saves-ambiente-${AMBIENTE}` : "saves");
-const DEV = !app.isPackaged;
 
 async function garantirPasta() {
   await fs.mkdir(PASTA_SAVES(), { recursive: true });
@@ -75,13 +79,20 @@ async function apagarSave(chave) {
 
 function criarJanela() {
   const area = screen.getPrimaryDisplay().workAreaSize;
-  // o jogo renderiza em 320x192, entao a janela e um multiplo inteiro disso
-  const escala = Math.max(2, Math.min(5, Math.floor(Math.min(area.width / 320, area.height / 192)) - 1));
+  // O JOGO SE ADAPTA A QUALQUER JANELA. Ele enche o espaco que recebe e escolhe
+  // sozinho a escala inteira, ver src/sistemas/visao.ts. Entao aqui nao existe
+  // mais conta de multiplo de 320x192: e so uma janela confortavel. A conta
+  // antiga ainda tirava um degrau de escala "por seguranca", e o resultado era
+  // o aplicativo abrindo numa janelinha no meio de um monitor grande.
+  const largura = Math.min(area.width, Math.max(960, Math.round(area.width * 0.8)));
+  const altura = Math.min(area.height, Math.max(600, Math.round(area.height * 0.8)));
   const janela = new BrowserWindow({
-    width: 320 * escala,
-    height: 192 * escala,
+    width: largura,
+    height: altura,
+    // o piso da interface e 256x160 em escala 1, ver visao.ts. 640x400 deixa
+    // folga de sobra e ainda cabe em qualquer notebook.
     minWidth: 640,
-    minHeight: 384,
+    minHeight: 400,
     backgroundColor: "#2C2440",
     title: "Reino de Aurora",
     autoHideMenuBar: true,
