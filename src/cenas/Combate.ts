@@ -39,6 +39,7 @@ import { rolarDado, dobrar } from "../sistemas/dado";
 import { tem } from "../sistemas/condicoes";
 import { condicoesDados } from "../dados/condicoes-dados";
 import { definirPreferencia, preferencias } from "../sistemas/preferencias";
+import { refazerAoRedimensionar } from "../sistemas/visao";
 import type { Mundo } from "./Mundo";
 
 
@@ -277,6 +278,11 @@ export class Combate extends Phaser.Scene {
     // onde o corpo nasceu.
 
     this.montarInterface();
+    // reposiciona em vez de remontar: remontar perderia estado de luta em
+    // andamento (slot "gastou" de porLuta, visibilidade do PASSAR, o rotulo
+    // de quem esta na vez) que so vive nestes objetos, sem copia em
+    // sistemas/estado.ts.
+    refazerAoRedimensionar(this, () => this.reposicionarInterface());
     this.ligarEntrada();
     this.time.delayedCall(200, () => this.comecarCombate());
   }
@@ -423,6 +429,35 @@ export class Combate extends Phaser.Scene {
     this.chapaAviso.setVisible(false).setDepth(1200);
     this.aviso = fixo(texto(this, LARGURA / 2, 32, "", { cor: 0x2c2440, ancora: 0.5 }));
     this.aviso.setDepth(1201);
+  }
+
+  /** Chamado quando a resolucao muda (girar o tablet, redimensionar a
+   *  janela). So MOVE o HUD pro lugar novo, nunca remonta: remontar perderia
+   *  o "gastou" de acao porLuta ja usada nesta luta, o rotulo de quem esta
+   *  na vez e a visibilidade do PASSAR, que so existem como estado destes
+   *  proprios objetos - nao ha copia deles em sistemas/estado.ts pra
+   *  restaurar depois. */
+  private reposicionarInterface() {
+    const area = { x: 6, y: ALTURA - 24, largura: LARGURA - 6 - 76, altura: 22 };
+    this.hud.mover(area.x - this.hud.area.x, area.y - this.hud.area.y);
+    this.hud.area.largura = area.largura;
+    this.hud.area.altura = area.altura;
+    this.topoDaBarra = this.hud.area.y - 14;
+
+    const px = this.hud.area.x + this.hud.area.largura + 26;
+    const py = ALTURA - 16;
+    this.botaoPassar.setPosition(px, py);
+    const paX = px - 32, paY = py;
+    this.fundoAutoPassar.setPosition(paX, paY);
+    this.alvoAutoPassar.setPosition(paX, paY);
+    this.desenharAutoPassar(paX, paY);
+
+    this.chapaRotulo.setPosition(LARGURA / 2, this.topoDaBarra);
+    this.rotulo.setPosition(LARGURA / 2, this.topoDaBarra + 2);
+    this.chapaAviso.setPosition(LARGURA / 2, 28);
+    this.aviso.setPosition(LARGURA / 2, 32);
+    // dicaCaixa nao precisa: mostrarDicaLinhas() ja recalcula a posicao com
+    // LARGURA/topoDaBarra atuais toda vez que a dica reaparece.
   }
 
   private mostrarDica(a: AcaoDeHeroi, xSlot: number) {
