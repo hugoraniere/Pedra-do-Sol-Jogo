@@ -207,6 +207,59 @@ if (npcFrame) {
   }
 }
 
+/* ------------------------- 5.6 NPC em mais de um mapa, rotinas espelhadas */
+// Um NPC pode "visitar" outro mapa (ver Mundo.ts::create()/tracarRotaDoNpc):
+// o mesmo `quem` aparece no `pessoas` de dois mapas, cada um "escondido" no
+// periodo em que o outro mostra. Sem esta checagem, esquecer de esconder de
+// um dos lados faz o NPC existir em dois lugares ao mesmo tempo — ou sumir
+// dos dois — e nenhum erro aparece, o jogo so fica errado calado.
+
+{
+  const PERIODOS = ["madrugada", "aurora", "manha", "tarde", '"por-do-sol"', "noite"];
+  const presencaPorNpc = new Map(); // quem -> [{ mapa, periodos: {periodo: true|false|null} }]
+
+  for (const m of mapas.matchAll(/export const (\w+): Mapa = \{/g)) {
+    const nomeDoMapa = m[1];
+    const corpo = mapas.slice(m.index);
+    const fim = corpo.indexOf("\n};");
+    const corpoDoMapa = corpo.slice(0, fim);
+    const blocoPessoas = bloco(corpoDoMapa, "pessoas: [", "],\n");
+    if (blocoPessoas === null) continue;
+    const inicios = [...blocoPessoas.matchAll(/quem:\s*"([a-z0-9-]+)"/g)];
+    for (let i = 0; i < inicios.length; i++) {
+      const quem = inicios[i][1];
+      const trecho = blocoPessoas.slice(inicios[i].index, inicios[i + 1]?.index ?? blocoPessoas.length);
+      if (!trecho.includes("rotina:")) continue; // sem rotina, so existe neste mapa mesmo
+      const periodos = {};
+      for (const p of PERIODOS) {
+        // { }, sem chave aninhada — todo PontoDeRotina e {x,y} ou {x,y,entra}
+        const achado = trecho.match(new RegExp(`${p}:\\s*("escondido"|\\{[^}]*\\})`));
+        if (!achado) periodos[p] = null; // nao deu pra ler
+        // "entra" e so de passagem — o NPC anda ate ali e some sozinho na
+        // chegada (ver Mundo.ts::finalizarRotaDoNpc), nunca fica de verdade
+        // presente nesse mapa durante o periodo — nao conta como visivel.
+        else periodos[p] = achado[1] !== '"escondido"' && !achado[1].includes("entra");
+      }
+      if (!presencaPorNpc.has(quem)) presencaPorNpc.set(quem, []);
+      presencaPorNpc.get(quem).push({ mapa: nomeDoMapa, periodos });
+    }
+  }
+
+  for (const [quem, entradas] of presencaPorNpc) {
+    if (entradas.length < 2) continue;
+    for (const p of PERIODOS) {
+      const visivelEm = entradas.filter((e) => e.periodos[p] === true).map((e) => e.mapa);
+      if (visivelEm.length > 1)
+        erro("mapas", `"${quem}" fica visivel em mais de um mapa no periodo ${p}: ${visivelEm.join(", ")}`,
+          "cada mapa devia esconder ele enquanto ele esta no outro — ver Mundo.ts::tracarRotaDoNpc");
+      const todasLidas = entradas.every((e) => e.periodos[p] !== null);
+      if (todasLidas && visivelEm.length === 0)
+        aviso("mapas", `"${quem}" fica escondido em TODOS os mapas no periodo ${p}`,
+          "sumiu do jogo inteiro nesse periodo — de proposito, ou esqueceram de mostrar em algum lado?");
+    }
+  }
+}
+
 /* ---------------------------------------------------------- 6. a paleta */
 // CLAUDE.md: as duas listas sao a mesma paleta do material impresso.
 // Nada no codigo garante isso. A cor foge devagar e ninguem percebe.

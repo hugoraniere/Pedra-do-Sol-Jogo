@@ -280,17 +280,24 @@ export const VILA: Mapa = {
     },
     {
       quem: "guarda", sprite: "guarda", x: 29, y: 11,
+      // de noite ele estende a ronda ate a Trilha da Floresta (anda ate a
+      // beira da Vila e some -- reaparece na propria Vila na madrugada,
+      // ver TRILHA_DA_FLORESTA.pessoas abaixo pro outro lado da mesma
+      // pessoa). Bate com a bio: "faz a ronda de noite tambem".
       rotina: {
         madrugada: { x: 30, y: 11 }, aurora: { x: 29, y: 11 }, manha: { x: 29, y: 11 },
-        tarde: { x: 29, y: 11 }, "por-do-sol": { x: 29, y: 11 }, noite: { x: 29, y: 11 },
+        tarde: { x: 29, y: 11 }, "por-do-sol": { x: 29, y: 11 }, noite: { x: 34, y: 11, entra: true },
       },
     },
   ],
   entrada: { x: 15, y: 13 },
   lugar: "Vila Semente",
   // "A trilha do leste vai pra Floresta dos Sussurros", diz a placa da vila
+  // -- e agora e literal: a saida leva primeiro pra Trilha da Floresta (o
+  // corredor curto que o guarda ronda de noite), que so depois desagua na
+  // Floresta de verdade.
   saidas: [
-    { x: 35, y: 11, w: 1, h: 2, para: "floresta", entrada: { x: 3, y: 42 } },
+    { x: 35, y: 11, w: 1, h: 2, para: "trilha-floresta", entrada: { x: 3, y: 6 } },
     // a porta da Casa de Cura, bem em frente a casa-vovo (x:2,y:4 em objetos).
     // `porta` liga a saida ao objeto: entrar vira acao de verdade (botao ou
     // clique, com destaque na casa), sair continua so andar ate aqui.
@@ -494,6 +501,49 @@ export const CASA_GUARDA_INTERIOR: Mapa = {
   saidas: [
     { x: 4, y: 8, w: 2, h: 1, para: "vila", entrada: { x: 28, y: 9 } },
   ],
+};
+
+/** Trilha da Floresta, 30 x 13 tiles. O corredor entre a Vila e a Floresta
+ *  dos Sussurros de verdade -- ate aqui a saida da Vila desaguava direto na
+ *  Floresta, sem nenhum lugar pro guarda estender a ronda de noite (a bio
+ *  dele fala da "trilha que leva a Floresta dos Sussurros", nao da Trilha
+ *  de Chegada, que e um corredor sem volta pra Praia). Pequeno de
+ *  proposito, mesmo molde de `TRILHA_DE_CHEGADA`: anda-se de ponta a ponta
+ *  em poucos segundos. Sem criatura -- e corredor de vigia, nao encontro. */
+export const TRILHA_DA_FLORESTA: Mapa = {
+  chao: [
+    "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+    "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+    "TTgggggggggggggggggggggggggTT",
+    "TTgggggggggggggggggggggggggTT",
+    "TTgggggggggggggggggggggggggTT",
+    "TTgggggggggggggggggggggggggTT",
+    "TTttttttttttttttttttttttttttTT",
+    "TTgggggggggggggggggggggggggTT",
+    "TTgggggggggggggggggggggggggTT",
+    "TTgggggggggggggggggggggggggTT",
+    "TTgggggggggggggggggggggggggTT",
+    "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+    "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  ],
+  objetos: [
+    { nome: "arbusto", x: 8, y: 8 },
+    { nome: "arbusto", x: 20, y: 9 },
+  ],
+  pessoas: [
+    {
+      quem: "guarda", sprite: "guarda", x: 5, y: 6,
+      // so aparece de noite -- o resto do tempo ele esta na Vila (ver
+      // VILA.pessoas), no proprio posto.
+      rotina: {
+        madrugada: "escondido", aurora: "escondido", manha: "escondido",
+        tarde: "escondido", "por-do-sol": "escondido", noite: { x: 5, y: 6 },
+      },
+    },
+  ],
+  entrada: { x: 3, y: 6 },
+  lugar: "Trilha da Floresta",
+  saidas: [{ x: 27, y: 6, w: 1, h: 1, para: "floresta", entrada: { x: 3, y: 42 } }],
 };
 
 /** A Floresta dos Sussurros, 120 x 84 tiles.
@@ -768,6 +818,7 @@ export const MAPAS: Record<string, Mapa> = {
   praia: PRAIA_DE_CHEGADA,
   chegada: TRILHA_DE_CHEGADA,
   vila: VILA,
+  "trilha-floresta": TRILHA_DA_FLORESTA,
   floresta: FLORESTA,
   "casa-cura": CASA_CURA,
   "ferraria-interior": FERRARIA_INTERIOR,
