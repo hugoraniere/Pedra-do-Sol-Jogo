@@ -41,6 +41,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from base import *  # noqa
 import pessoa
 import roupa as roupa_arte
+import armadura as armadura_arte
 import cabelo as cabelo_arte
 import equipamento
 import goblin as goblin_arte
@@ -55,6 +56,7 @@ import dragao as dragao_arte
 
 from pessoa import ORDEM_RACAS
 from roupa import ESTILOS_ROUPA, ROUPA_DA_CLASSE
+from armadura import ARMADURAS
 from cabelo import ESTILOS as ESTILOS_CABELO, TIPOS_CHAPEU
 from equipamento import TIPOS_ARMA, ARMA_DA_CLASSE
 
@@ -205,6 +207,13 @@ def gerar(saida, a_mao=None):
         for estilo in ESTILOS_ROUPA:
             guardar(f"roupa-{tipo}-{estilo}", roupa_arte.folha_de_roupa(estilo, tipo))
 
+    # ------ armadura: segunda peca encaixada, por cima da roupa (revisao de
+    # 2026-09-05) — mesma grade de roupa, mesmo motivo de uma folha por
+    # largura de tronco, so que sem tint: cor fixa por armadura.
+    for tipo in TIPOS_CORPO:
+        for id_armadura in ARMADURAS:
+            guardar(f"armadura-{tipo}-{id_armadura}", armadura_arte.folha_de_armadura(id_armadura, tipo))
+
     # ------ cabelo e chapeu: uma folha para todas as racas
     for estilo in ESTILOS_CABELO:
         if estilo == "careca":
@@ -261,6 +270,16 @@ def gerar(saida, a_mao=None):
         "pontos": pontos,
         "armas": ficha_armas,
         "roupa": {
+            "largura": roupa_arte.LARGURA_PECA,
+            "altura": roupa_arte.ALTURA_PECA,
+            "vistas": roupa_arte.VISTAS,
+            "vistaDaDirecao": VISTA_DA_DIRECAO,
+            "linhaDoQuadro": [LINHA_DA_ROUPA[c] for c in COLUNAS],
+        },
+        # mesma grade de roupa (armadura.py importa os mesmos numeros de
+        # roupa.py de proposito, pra nunca divergir) — irma da secao acima,
+        # nao uma estrutura nova.
+        "armadura": {
             "largura": roupa_arte.LARGURA_PECA,
             "altura": roupa_arte.ALTURA_PECA,
             "vistas": roupa_arte.VISTAS,

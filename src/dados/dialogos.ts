@@ -5,7 +5,7 @@
  *  primeiro, e a sem condicao nenhuma, se existir, tem que ser a ultima —
  *  ela e o padrao que sempre bate). E a estrutura que docs/05-roadmap.md
  *  (Fase 1.2) ja previa: "a primeira condicao que bate e a que toca". */
-import { noPeriodo, etapaFeita } from "../sistemas/condicoes-de-fala";
+import { noPeriodo, etapaFeita, semRoupa } from "../sistemas/condicoes-de-fala";
 import { concluirEtapa } from "../sistemas/missoes";
 import { estado, equipar, guardar, mudarAfinidade, salvar } from "../sistemas/estado";
 import { tocar } from "../sistemas/som";
@@ -182,6 +182,16 @@ export const DIALOGOS: Record<string, Fala> = {
   guarda: {
     quem: "Guarda Bolota",
     variantes: [
+      {
+        // prova de conceito da revisao de 2026-09-05 (roupa virou item, da
+        // pra tirar de verdade): reacao social a andar sem roupa pela vila.
+        id: "sem-roupa",
+        condicao: semRoupa,
+        linhas: [
+          "Sem roupa na frente da guarda? Nem no verao mais quente.",
+          "Vista alguma coisa antes de eu fingir que nao vi isso.",
+        ],
+      },
       {
         id: "padrao",
         linhas: [

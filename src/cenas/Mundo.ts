@@ -1252,6 +1252,16 @@ export class Mundo extends Phaser.Scene {
     if (chave === "chegada:0") concluirEtapa("primeiros-passos", "derrotar-o-goblin");
   }
 
+  /** Refaz as camadas do heroi no mundo a partir do estado atual — chamado
+   *  pela Ficha ao fechar, depois de qualquer troca de roupa/armadura/
+   *  acessorio/arma (revisao de 2026-09-05). Sem isto o boneco do MUNDO
+   *  continuava com a aparencia antiga ate trocar de mapa (o unico outro
+   *  lugar que recria `this.heroi` do zero) — `heroi` e privado de
+   *  proposito, so este metodo publico mexe nele de fora. */
+  atualizarAparenciaDoHeroi() {
+    this.heroi.trocarAparencia(estado().heroi);
+  }
+
   /** Larga um item no chao, na posicao atual do heroi — chamado pela Ficha
    *  quando o jogador joga fora da mochila (docs/plano-de-itens-e-
    *  equipamento.md, secao 17.5). Reusa o MESMO icone que a mochila ja usa

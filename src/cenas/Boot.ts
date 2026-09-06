@@ -3,7 +3,7 @@ import Phaser from "phaser";
 import {
   LARGURA, ALTURA, COR, ALTURA_PERSONAGEM, OBJETOS,
   RACAS_SPRITE, TIPOS_CORPO, CABELOS_ESTILO, ROUPAS_ESTILO, CHAPEUS, ARMAS_SPRITE,
-  NPCS_SPRITE, GOBLINS_SPRITE, ARANHAS_SPRITE, PECA_ROUPA,
+  NPCS_SPRITE, GOBLINS_SPRITE, ARANHAS_SPRITE, PECA_ROUPA, ARMADURAS_COM_SPRITE,
 } from "../dados/config";
 import { BESTIARIO, PORTES } from "../dados/conteudo";
 import { prepararArmazenamento } from "../sistemas/armazenamento";
@@ -45,6 +45,14 @@ export class Boot extends Phaser.Scene {
     TIPOS_CORPO.forEach((t) =>
       ROUPAS_ESTILO.forEach((r) =>
         this.load.spritesheet(`roupa-${t}-${r.id}`, `assets/roupa-${t}-${r.id}.png`, R)
+      )
+    );
+    // Armadura e uma SEGUNDA peca encaixada, por cima da roupa (revisao de
+    // 2026-09-05) — mesma grade de roupa, mesmo motivo de uma folha por
+    // largura de tronco.
+    TIPOS_CORPO.forEach((t) =>
+      ARMADURAS_COM_SPRITE.forEach((id) =>
+        this.load.spritesheet(`armadura-${t}-${id}`, `assets/armadura-${t}-${id}.png`, R)
       )
     );
     // A arma e um desenho unico, do tamanho dela, encostado na mao pelo ponto

@@ -12,6 +12,7 @@ import type { AlvoDeAcao } from "../sistemas/alvo";
 import type { IdCondicao } from "../sistemas/condicoes";
 import type { Dado } from "../sistemas/dado";
 import type { Periodo } from "./tempo";
+import { ROUPAS_ESTILO } from "./config";
 
 /** Revisao de 2026-09-04 (CLAUDE.md): os tres da mesa (FORCA, ESPERTEZA,
  *  CORACAO) viraram cinco. "Esperteza" fazia tres trabalhos escondidos - agora
@@ -265,20 +266,27 @@ export type Magia = { id: string; nome: string; texto: string; cor: number };
  *  referenciando o id antigo) - so o que o jogador LE mudou. As que ja
  *  soavam adultas (Voz de Trovao, Bafo Gelado, Bola de Fogo) ou ja eram so
  *  funcionais (Cresce-Grama, Remendo) ficaram como estavam. */
+/** Revisao de 2026-09-05: cor deixou de ser escolha solta por magia e virou
+ *  cor de ELEMENTO (fogo/gelo/eletricidade/natureza/ar/sombra/luz/neutra) -
+ *  decisao tomada junto do piloto de icones vetoriais (ver
+ *  docs/inventario-de-icones.md). Necromancia existe como categoria
+ *  reservada, sem nenhuma magia hoje. Cinco das treze caem em "neutra"
+ *  (utilitaria, sem dano elemental) e dependem do icone, nao da cor, pra se
+ *  diferenciar entre si. */
 export const MAGIAS: Magia[] = [
-  { id: "luzinha", nome: "Fogo-Fatuo", texto: "Uma luz fraca que ilumina o escuro e revela quem estava escondido.", cor: 0xf5b62b },
-  { id: "bafo-gelado", nome: "Bafo Gelado", texto: "Um sopro que congela agua, fogo e ate goblin.", cor: 0x7ec4f2 },
-  { id: "cresce-grama", nome: "Cresce-Grama", texto: "A vegetacao cresce na hora: vira escada, corda ou esconderijo.", cor: 0x3e9b62 },
-  { id: "voz-de-trovao", nome: "Voz de Trovao", texto: "Um grito que ecoa longe o bastante pra fazer qualquer um parar.", cor: 0x4a3e64 },
-  { id: "pulo-de-sapo", nome: "Salto Longo", texto: "Um impulso que atravessa rio, muro ou inimigo de um salto so.", cor: 0x3e9b62 },
-  { id: "dedo-colante", nome: "Aderencia", texto: "As maos grudam em qualquer superficie por um instante - sobe parede, atravessa teto.", cor: 0xee7ba6 },
-  { id: "remendo", nome: "Remendo", texto: "Conserta na hora o que quebrou.", cor: 0xb08658 },
-  { id: "escudo-de-bolha", nome: "Barreira", texto: "Uma camada invisivel absorve o proximo golpe.", cor: 0x7ec4f2 },
-  { id: "cheiro-de-bolo", nome: "Cheiro de Fogueira", texto: "Um cheiro de fumaca que atrai qualquer bicho de longe.", cor: 0xf5b62b },
-  { id: "fala-bicho", nome: "Lingua Selvagem", texto: "Por um tempo, voce entende e e entendido por qualquer bicho.", cor: 0x3e9b62 },
-  { id: "sumir-sumindo", nome: "Veu de Sombra", texto: "As sombras escondem voce, enquanto ficar parado.", cor: 0x4a3e64 },
-  { id: "chama-vento", nome: "Rajada", texto: "Um vento forte empurra tudo pela frente - e alimenta o fogo que ja estava queimando.", cor: 0xcde9f8 },
-  { id: "bola-de-fogo", nome: "Bola de Fogo", texto: "Uma bola de fogo que voa numa direcao. Goblin aguenta, gelo nao.", cor: 0xf2802b },
+  { id: "luzinha", nome: "Fogo-Fatuo", texto: "Uma luz fraca que ilumina o escuro e revela quem estava escondido.", cor: 0xf7e7b8 }, // luz
+  { id: "bafo-gelado", nome: "Bafo Gelado", texto: "Um sopro que congela agua, fogo e ate goblin.", cor: 0x7ec4f2 }, // gelo/agua
+  { id: "cresce-grama", nome: "Cresce-Grama", texto: "A vegetacao cresce na hora: vira escada, corda ou esconderijo.", cor: 0x3e9b62 }, // natureza
+  { id: "voz-de-trovao", nome: "Voz de Trovao", texto: "Um grito que ecoa longe o bastante pra fazer qualquer um parar.", cor: 0xf5b62b }, // eletricidade
+  { id: "pulo-de-sapo", nome: "Salto Longo", texto: "Um impulso que atravessa rio, muro ou inimigo de um salto so.", cor: 0xb08658 }, // neutra
+  { id: "dedo-colante", nome: "Aderencia", texto: "As maos grudam em qualquer superficie por um instante - sobe parede, atravessa teto.", cor: 0xb08658 }, // neutra
+  { id: "remendo", nome: "Remendo", texto: "Conserta na hora o que quebrou.", cor: 0xb08658 }, // neutra
+  { id: "escudo-de-bolha", nome: "Barreira", texto: "Uma camada invisivel absorve o proximo golpe.", cor: 0xb08658 }, // neutra
+  { id: "cheiro-de-bolo", nome: "Atrair", texto: "Atrai qualquer bicho para o lugar onde foi lancado, e ele ignora voce enquanto for atras.", cor: 0xb08658 }, // neutra
+  { id: "fala-bicho", nome: "Lingua Selvagem", texto: "Por um tempo, voce entende e e entendido por qualquer bicho.", cor: 0x3e9b62 }, // natureza
+  { id: "sumir-sumindo", nome: "Veu de Sombra", texto: "As sombras escondem voce, enquanto ficar parado.", cor: 0x4a3e64 }, // sombra
+  { id: "chama-vento", nome: "Rajada", texto: "Um vento forte empurra tudo pela frente - e alimenta o fogo que ja estava queimando.", cor: 0xcde9f8 }, // ar/vento
+  { id: "bola-de-fogo", nome: "Bola de Fogo", texto: "Uma bola de fogo que voa numa direcao. Goblin aguenta, gelo nao.", cor: 0xf2802b }, // fogo
 ];
 
 // ----------------------------------------------------------------- armas
@@ -421,6 +429,23 @@ export const MATERIAIS: Material[] = [
   { id: "presa-de-nevoa", nome: "Presa de Nevoa", preco: 4, raridade: "incomum", origem: "lobo-nevoa", texto: "Ainda fria ao toque, mesmo longe da neblina." },
   { id: "cinza", nome: "Cinza de Armadura", preco: 6, raridade: "raro", origem: "cavaleiro-cinzas", texto: "Cinza que nunca esfria de verdade." },
 ];
+
+// ------------------------------------------------------------- roupas
+// Revisao de 2026-09-05: roupa deixou de ser aparencia de graca (escrita
+// direto em heroi.estiloRoupa na criacao, sem item nenhum por tras) e virou
+// posse de verdade, no mesmo espirito de armadura/acessorio — o pedido foi
+// "tudo que veste e item". Os 7 estilos ja existiam em ROUPAS_ESTILO
+// (config.ts, usado no seletor da Criacao) — aqui so os trata tambem como
+// item, sem duplicar a lista. Preco 0 / raridade comum pros 7 (kit inicial
+// de cada classe, nao conteudo novo) sao constantes no ponto de uso, nao
+// campos guardados — nao existe folego pra uma segunda lista derivada.
+// Nome NAO e `Roupa`/`ROUPAS`: config.ts ja usa `ROUPAS` pras cores de
+// tingimento (paleta de `corRoupa` na criacao) — mesma palavra, coisa
+// diferente, e reaproveitar o nome so confundiria os dois.
+export type EstiloDeRoupa = { id: string; nome: string };
+
+export const acharRoupa = (id: string): EstiloDeRoupa | undefined =>
+  ROUPAS_ESTILO.find((r) => r.id === id);
 
 // --------------------------------------------------------- armaduras
 export type Armadura = {
@@ -771,6 +796,7 @@ export function nomeDoItem(id: string): string {
 export type ItemPossuido =
   | { categoria: "consumivel"; nome: string; texto: string; preco: number }
   | { categoria: "material"; nome: string; texto: string; preco: number; raridade: Raridade }
+  | { categoria: "roupa"; nome: string; raridade: Raridade }
   | { categoria: "armadura"; nome: string; bonus: string; raridade: Raridade; origem?: string }
   | { categoria: "acessorio"; nome: string; bonus: string; raridade: Raridade; origem?: string }
   | { categoria: "arma"; nome: string; bonus: string; raridade?: Raridade; origem?: string }
@@ -790,6 +816,8 @@ export function acharQualquerItem(id: string): ItemPossuido {
   if (material) {
     return { categoria: "material", nome: material.nome, texto: material.texto, preco: material.preco, raridade: material.raridade };
   }
+  const roupa = acharRoupa(id);
+  if (roupa) return { categoria: "roupa", nome: roupa.nome, raridade: "comum" };
   const armadura = acharArmadura(id);
   if (armadura) {
     return { categoria: "armadura", nome: armadura.nome, bonus: armadura.bonus, raridade: armadura.raridade, origem: armadura.origem };

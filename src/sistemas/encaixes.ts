@@ -21,19 +21,27 @@ export type FichaArma = {
   atras: boolean;
 };
 
+/** A grade de uma peca encaixada (roupa ou armadura): 4 vistas x 3 balancos
+ *  de passo. As duas secoes do JSON tem exatamente esta forma de proposito
+ *  — armadura.py importa os numeros de roupa.py, nao inventa os proprios. */
+export type FichaPecaEncaixada = {
+  largura: number;
+  altura: number;
+  vistas: string[];
+  vistaDaDirecao: Record<string, number>;
+  /** coluna do quadro do corpo -> linha da folha da peca */
+  linhaDoQuadro: number[];
+};
+
 export type Encaixes = {
   colunas: string[];
   linhas: string[];
   pontos: Record<string, { mao: Ponto[]; maoFraca: (Ponto | null)[]; tronco: Ponto[]; cabeca: Ponto[] }>;
   armas: Record<string, FichaArma>;
-  roupa: {
-    largura: number;
-    altura: number;
-    vistas: string[];
-    vistaDaDirecao: Record<string, number>;
-    /** coluna do quadro do corpo -> linha da folha de roupa */
-    linhaDoQuadro: number[];
-  };
+  roupa: FichaPecaEncaixada;
+  /** mesma grade de `roupa` — irma da secao acima, nao uma segunda forma.
+   *  `quadroDaRoupa` serve pras duas: os dois lados da conta sao identicos. */
+  armadura: FichaPecaEncaixada;
 };
 
 let tabela: Encaixes | undefined;

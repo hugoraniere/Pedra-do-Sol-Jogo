@@ -19,7 +19,7 @@
  * colunas dividem. Ver docs/07-design-system.md.
  */
 import Phaser from "phaser";
-import { ALTURA, ALTURA_PERSONAGEM, COR, LARGURA, SPRITE_DA_ARMA } from "../dados/config";
+import { ALTURA, ALTURA_PERSONAGEM, ARMA_DO_SPRITE, COR, LARGURA, LARGURA_PERSONAGEM, SPRITE_DA_ARMA } from "../dados/config";
 import {
   ATRIBUTOS,
   ORDEM_PODERES,
@@ -79,12 +79,32 @@ const INDICE_MOCHILA = 3;
 const SLOT = 26;
 const GAP_SLOT = 4;
 
+/** Peso da coluna do boneco+slots contra a coluna da grade — mesma tecnica
+ *  de `identidade()` (colunas([1,3])), so que a grade precisa de mais
+ *  espaco que um retrato porque mostra varios icones, nao um texto so. */
+const PESOS_COLUNA_MOCHILA = [2, 5];
+
+type SlotDeEquipamento = "roupa" | "armadura" | "acessorio" | "arma";
+
+/** Os 4 slots visiveis na coluna de equipamento, nesta ordem — de dentro
+ *  (o que veste primeiro) pra fora, exceto arma, que fica por ultimo por
+ *  ser o mais "acao" dos quatro. Revisao de 2026-09-05: equipamento entrou
+ *  na propria aba MOCHILA (Baldur's Gate 3 nao esconde isso numa aba
+ *  separada), boneco e grade lado a lado. */
+const SLOTS_DE_EQUIPAMENTO: { tipo: SlotDeEquipamento; rotulo: string }[] = [
+  { tipo: "roupa", rotulo: "ROUPA" },
+  { tipo: "armadura", rotulo: "ARMADURA" },
+  { tipo: "acessorio", rotulo: "ACESSORIO" },
+  { tipo: "arma", rotulo: "ARMA" },
+];
+
 /** Rotulo de categoria pra dica da mochila (secao 17.2 do plano). Historia
  *  fica de fora do dicionario de proposito: nunca tem raridade nem preco, e
  *  a propria funcao que le isto ja sai cedo pra ela. */
 const ROTULO_CATEGORIA: Record<Exclude<ItemPossuido["categoria"], "historia">, string> = {
   consumivel: "CONSUMIVEL",
   material: "MATERIAL",
+  roupa: "ROUPA",
   armadura: "ARMADURA",
   acessorio: "ACESSORIO",
   arma: "ARMA",
@@ -142,6 +162,12 @@ export class Ficha extends Phaser.Scene {
   private botoesMenu: Phaser.GameObjects.GameObject[] = [];
   private areasBotoesMenu: Retangulo[] = [];
   private indiceComMenu?: number;
+  /** true enquanto o menu de escolha de um SLOT DE EQUIPAMENTO (roupa,
+   *  armadura, acessorio, arma — nao um slot da mochila) esta aberto.
+   *  Reaproveita `botoesMenu`/`areasBotoesMenu`/`fecharMenuDeAcoes()` — so
+   *  precisa da propria guarda porque `indiceComMenu` e um indice de
+   *  mochila, e este menu nao tem um. */
+  private menuDeEquipamentoAberto = false;
   /** true so entre "botao direito acabou de abrir o menu" e "o mesmo
    *  pointerdown chegou no handler global da cena" — ver aoPressionarSlot/
    *  aoPressionarNaCena. Sincrono, dura menos que um evento. */
@@ -187,6 +213,10 @@ export class Ficha extends Phaser.Scene {
 
   private fechar() {
     tocar("pausa-fecha");
+    // troca de roupa/armadura/acessorio/arma so mexe no boneco DESTA janela
+    // (Heroi e uma instancia por cena) — sem isto o heroi no mundo ficava
+    // com a aparencia antiga ate trocar de mapa.
+    (this.scene.get("Mundo") as Mundo).atualizarAparenciaDoHeroi();
     this.scene.resume("Mundo");
     this.scene.stop();
   }
@@ -347,6 +377,7 @@ export class Ficha extends Phaser.Scene {
     this.botoesMenu = [];
     this.areasBotoesMenu = [];
     this.indiceComMenu = undefined;
+    this.menuDeEquipamentoAberto = false;
 
     if (this.pagina === INDICE_MOCHILA) {
       this.desenharMochila();
@@ -503,12 +534,26 @@ export class Ficha extends Phaser.Scene {
   private desenharMochila() {
     const st = estado();
     const capacidade = capacidadeDaMochila();
-    const largura = larguraUtilDaJanela();
-    const colunasGrade = Math.max(1, Math.floor((largura + GAP_SLOT) / (SLOT + GAP_SLOT)));
+    const larguraTotal = larguraUtilDaJanela();
+
+    // as larguras das duas colunas, calculadas ANTES de saber a altura da
+    // janela (colunas() so usa x/largura da area que recebe, entao um
+    // retangulo fantasma de altura 0 basta pra descobrir as larguras —
+    // a MESMA chamada roda de novo depois, com a area de verdade, pra
+    // posicionar).
+    const [colEquipFantasma, colGradeFantasma] = colunas(
+      { x: 0, y: 0, largura: larguraTotal, altura: 0 },
+      PESOS_COLUNA_MOCHILA
+    );
+    const colunasGrade = Math.max(1, Math.floor((colGradeFantasma.largura + GAP_SLOT) / (SLOT + GAP_SLOT)));
     const linhasGrade = Math.ceil(capacidade / colunasGrade);
     const alturaGrade = linhasGrade * (SLOT + GAP_SLOT) - GAP_SLOT;
     const alturaZona = Math.max(TAMANHO.linhaTexto, LADO_ICONE) + ESPACO.sm;
-    const alturaConteudo = alturaGrade + ESPACO.md + alturaZona;
+    const alturaColunaGrade = alturaGrade + ESPACO.md + alturaZona;
+
+    const alturaColunaEquipamento = this.alturaEquipamento(colEquipFantasma.largura);
+
+    const alturaConteudo = Math.max(alturaColunaGrade, alturaColunaEquipamento);
 
     const area = janela(this, {
       alturaConteudo,
@@ -516,8 +561,11 @@ export class Ficha extends Phaser.Scene {
       abas: { itens: ABAS, ativa: this.pagina, aoEscolher: (i) => this.irPara(i) },
     });
 
+    const [colEquip, colGrade] = colunas(area, PESOS_COLUNA_MOCHILA);
+    this.desenharEquipamento(colEquip);
+
     this.slotsMochila = [];
-    const p = pilha(area, ESPACO.md);
+    const p = pilha(colGrade, ESPACO.md);
     const rGrade = p.reservar(alturaGrade, 0);
     for (let i = 0; i < capacidade; i++) {
       const col = i % colunasGrade;
@@ -546,6 +594,162 @@ export class Ficha extends Phaser.Scene {
     textoNaArea(this, rTextoLixeira, "ARRASTE ATE AQUI PRA JOGAR FORA", { tamanho: 8, cor: COR.tintaSuave });
 
     this.criarDicaMochila();
+  }
+
+  // ----------------------------------------------------- coluna de equipamento
+  /** Altura da coluna de equipamento (boneco + 4 slots empilhados), pra
+   *  decidir o tamanho da janela ANTES de desenhar — mesma conta que
+   *  `desenharEquipamento` faz de verdade, so que sem desenhar nada. */
+  private alturaEquipamento(larguraColuna: number): number {
+    const escala = Math.max(1, Math.min(3, Math.floor(larguraColuna / LARGURA_PERSONAGEM)));
+    const alturaBoneco = escala * ALTURA_PERSONAGEM;
+    const alturaSlots = SLOTS_DE_EQUIPAMENTO.length * (SLOT + ESPACO.xs) - ESPACO.xs;
+    return alturaBoneco + ESPACO.sm + alturaSlots;
+  }
+
+  /** O boneco (mesma classe `Heroi` de `identidade()`, so que maior) e os 4
+   *  slots de equipamento embaixo dele. Revisao de 2026-09-05: e aqui,
+   *  dentro da MOCHILA, que da pra ver e trocar roupa/armadura/acessorio/
+   *  arma — nao numa aba escondida. */
+  private desenharEquipamento(col: Retangulo) {
+    const st = estado();
+    const escala = Math.max(1, Math.min(3, Math.floor(col.largura / LARGURA_PERSONAGEM)));
+    const alturaBoneco = escala * ALTURA_PERSONAGEM;
+
+    // chapa escura atras do boneco, igual identidade() — sem ela o sprite
+    // claro some no papel claro
+    marcar(
+      this.add
+        .nineslice(col.x, col.y, "painel-escuro", undefined, col.largura, alturaBoneco, 8, 8, 8, 8)
+        .setOrigin(0),
+      "fundo"
+    );
+    criarAnimacoes(this, camadasDoHeroi(st.heroi).map((c) => c.chave));
+    this.boneco = new Heroi(this, col.x + col.largura / 2, col.y + alturaBoneco, st.heroi);
+    this.boneco.body.moves = false;
+    this.boneco.setScale(escala);
+
+    const p = pilha({ x: col.x, y: col.y + alturaBoneco, largura: col.largura, altura: col.altura - alturaBoneco }, ESPACO.xs);
+    SLOTS_DE_EQUIPAMENTO.forEach(({ tipo, rotulo }) => {
+      const r = p.reservar(SLOT);
+      this.desenharSlotDeEquipamento(tipo, rotulo, r);
+    });
+  }
+
+  /** O id do item equipado agora nesse slot, ou null se vazio. Arma precisa
+   *  de ida-e-volta: `armaSprite` guarda a CHAVE do sprite, nao o id do
+   *  item (`ARMA_DO_SPRITE` desfaz isso). */
+  private itemEquipadoEm(tipo: SlotDeEquipamento): string | null {
+    const st = estado();
+    if (tipo === "roupa") return st.heroi.estiloRoupa;
+    if (tipo === "arma") return st.heroi.armaSprite ? (ARMA_DO_SPRITE[st.heroi.armaSprite] ?? null) : null;
+    return st.heroi.equipamento[tipo];
+  }
+
+  /** Os itens da mochila que servem pra esse slot — um por id (nunca lista
+   *  a mesma roupa/armadura duas vezes so porque a mochila tem 2 pilhas
+   *  dela). Arma so entra se tiver sprite de verdade (mesmo limite de
+   *  sempre, Fase C do plano). */
+  private itensParaSlot(tipo: SlotDeEquipamento): { id: string; nome: string }[] {
+    const vistos = new Set<string>();
+    const itens: { id: string; nome: string }[] = [];
+    estado().mochila.forEach((s) => {
+      if (!s || vistos.has(s.item)) return;
+      const info = acharQualquerItem(s.item);
+      if (info.categoria !== tipo) return;
+      if (tipo === "arma" && !SPRITE_DA_ARMA[s.item]) return;
+      vistos.add(s.item);
+      itens.push({ id: s.item, nome: info.nome });
+    });
+    return itens;
+  }
+
+  /** Um slot de equipamento: fundo, icone do que esta equipado (se algo
+   *  estiver) e o rotulo do slot (ROUPA/ARMADURA/ACESSORIO/ARMA) — o
+   *  rotulo fica sempre visivel, diferente do slot da mochila, porque aqui
+   *  o jogador precisa saber o que cada quadradinho E antes de tocar. */
+  private desenharSlotDeEquipamento(tipo: SlotDeEquipamento, rotulo: string, area: Retangulo) {
+    marcar(
+      this.add
+        .nineslice(area.x, area.y, "painel-creme", undefined, area.largura, area.altura, 6, 6, 6, 6)
+        .setOrigin(0),
+      "fundo"
+    );
+
+    const itemId = this.itemEquipadoEm(tipo);
+    const xIcone = area.x + ESPACO.xs + LADO_ICONE / 2;
+    if (itemId) {
+      const temIconeProprio = ICONE_ITEM[itemId] !== undefined;
+      const folha = temIconeProprio ? "itens" : "ui";
+      const quadro = temIconeProprio ? ICONE_ITEM[itemId] : ICONE.mochila;
+      marcar(this.add.image(xIcone, meio(area), folha, quadro), "icone");
+    }
+
+    marcar(
+      texto(this, xIcone + LADO_ICONE / 2 + ESPACO.xs, meio(area), rotulo, {
+        tamanho: 8,
+        cor: COR.tintaSuave,
+        ancoraY: 0.5,
+      }),
+      "texto",
+      rotulo
+    );
+
+    const zona = this.add
+      .rectangle(area.x + area.largura / 2, area.y + area.altura / 2, area.largura, area.altura, 0, 0)
+      .setInteractive();
+    marcar(zona, "botao");
+    zona.on("pointerdown", () => {
+      this.ignorarProximoFechamentoDeMenu = true;
+      this.abrirMenuDeEquipar(tipo, area);
+    });
+  }
+
+  /** Lista os itens da mochila que servem pra este slot (mais TIRAR, se
+   *  algo ja estiver equipado) — mesmo visual empilhado de
+   *  `abrirMenuDeAcoes`, so que escolhendo o QUE equipar em vez de o que
+   *  FAZER com um item ja selecionado. */
+  private abrirMenuDeEquipar(tipo: SlotDeEquipamento, area: Retangulo) {
+    this.esconderDicaMochila();
+    this.fecharMenuDeAcoes();
+    const equipadoAgora = this.itemEquipadoEm(tipo);
+    const itens = this.itensParaSlot(tipo);
+
+    const opcoes: { rotulo: string; aoTocar: () => void }[] = [];
+    if (equipadoAgora) {
+      opcoes.push({ rotulo: "TIRAR", aoTocar: () => { equipar(tipo, null); this.desenhar(); } });
+    }
+    itens.forEach(({ id, nome }) => {
+      if (id === equipadoAgora) return;
+      opcoes.push({ rotulo: nome.toUpperCase(), aoTocar: () => { equipar(tipo, id); this.desenhar(); } });
+    });
+    if (opcoes.length === 0) return;
+
+    this.menuDeEquipamentoAberto = true;
+
+    // largura pelo maior rotulo de verdade, nao um numero fixo — nome de
+    // item ("Colete de Couro da Vila") e bem mais comprido que rotulo de
+    // acao ("EQUIPAR"), e um botao fixo vazava tela em coluna estreita.
+    const maiorRotulo = Math.max(...opcoes.map((o) => medirTexto(this, o.rotulo)));
+    const LARGURA_BOTAO = Math.min(Math.max(100, maiorRotulo + ESPACO.md * 2), LARGURA - ESPACO.lg);
+    const ALTURA_BOTAO = TAMANHO.botao;
+    const GAP = ESPACO.xs;
+    const alturaTotal = opcoes.length * (ALTURA_BOTAO + GAP) - GAP;
+    const x = Phaser.Math.Clamp(area.x + area.largura / 2, LARGURA_BOTAO / 2 + 4, LARGURA - LARGURA_BOTAO / 2 - 4);
+    let y = area.y + area.altura + ALTURA_BOTAO / 2 + 4;
+    if (y + alturaTotal - ALTURA_BOTAO / 2 > ALTURA - 4) y = area.y - alturaTotal + ALTURA_BOTAO / 2 - 4;
+
+    opcoes.forEach((opcao, i) => {
+      const by = y + i * (ALTURA_BOTAO + GAP);
+      const b = botao(
+        this, x, by, LARGURA_BOTAO, ALTURA_BOTAO, opcao.rotulo,
+        () => { this.fecharMenuDeAcoes(); opcao.aoTocar(); },
+        "painel-ouro"
+      );
+      b.setDepth(1600);
+      this.botoesMenu.push(b);
+      this.areasBotoesMenu.push({ x: x - LARGURA_BOTAO / 2, y: by - ALTURA_BOTAO / 2, largura: LARGURA_BOTAO, altura: ALTURA_BOTAO });
+    });
   }
 
   /** Um slot: fundo encaixado, icone (se tiver item), numero (se empilhado),
@@ -717,6 +921,12 @@ export class Ficha extends Phaser.Scene {
         rotulo: `VENDER 1 (+${info.preco})`,
         aoTocar: () => { venderMaterial(slot.item, 1); this.desenhar(); },
       });
+    } else if (info.categoria === "roupa") {
+      const equipado = st.heroi.estiloRoupa === slot.item;
+      acoes.push({
+        rotulo: equipado ? "DESEQUIPAR" : "EQUIPAR",
+        aoTocar: () => { equipar("roupa", equipado ? null : slot.item); this.desenhar(); },
+      });
     } else if (info.categoria === "armadura" || info.categoria === "acessorio") {
       const equipado = st.heroi.equipamento[info.categoria] === slot.item;
       acoes.push({
@@ -791,6 +1001,7 @@ export class Ficha extends Phaser.Scene {
     this.botoesMenu = [];
     this.areasBotoesMenu = [];
     this.indiceComMenu = undefined;
+    this.menuDeEquipamentoAberto = false;
   }
 
   /** So fecha se o toque foi FORA de qualquer botao do menu — um botao ja
@@ -802,7 +1013,7 @@ export class Ficha extends Phaser.Scene {
       this.ignorarProximoFechamentoDeMenu = false;
       return;
     }
-    if (this.indiceComMenu === undefined) return;
+    if (this.indiceComMenu === undefined && !this.menuDeEquipamentoAberto) return;
     const dentroDeAlgumBotao = this.areasBotoesMenu.some((r) => this.dentroDaArea(r, pointer.x, pointer.y));
     if (!dentroDeAlgumBotao) this.fecharMenuDeAcoes();
   }
@@ -847,9 +1058,11 @@ export class Ficha extends Phaser.Scene {
         ? info.texto
         : info.categoria === "historia"
           ? "Item de historia. Guarde para quando fizer sentido usar."
-          : info.origem
-            ? `${info.bonus} (${info.origem})`
-            : info.bonus;
+          : info.categoria === "roupa"
+            ? "So aparencia — sem bonus de combate."
+            : info.origem
+              ? `${info.bonus} (${info.origem})`
+              : info.bonus;
     const linhas = [info.nome.toUpperCase(), ...this.linhasDeMetadado(info), ...quebrar(descricao, 140)];
     const ENTRE = 2;
     const alturaTexto = linhas.length * (10 + ENTRE) - ENTRE;

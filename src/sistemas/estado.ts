@@ -3,6 +3,7 @@
 import { gravarEspaco, lerEspaco } from "./armazenamento.ts";
 import { acharMaterial, acharMochila, type Atributo } from "../dados/conteudo.ts";
 import { coracoesMaxDoHeroi } from "./poderes";
+import { ARMA_DO_SPRITE } from "../dados/config.ts";
 
 /** Um slot da mochila: um item (com quantidade) ou vazio. Slot tem POSICAO
  *  fixa — e o que deixa arrastar um item de lugar (`moverItem`) fazer
@@ -19,7 +20,11 @@ export type Heroi = {
   tomPele: number;
   estiloCabelo: string;
   corCabelo: number;
-  estiloRoupa: string;
+  /** `null` = sem roupa nenhuma. Revisao de 2026-09-05: roupa virou item de
+   *  verdade (ver `conteudo.ts::ROUPAS`) em vez de aparencia de graca —
+   *  agora dá pra tirar. `corRoupa` continua livre mesmo sem roupa
+   *  equipada (fica parado, sem efeito, ate vestir de novo). */
+  estiloRoupa: string | null;
   corRoupa: number;
   chapeu: string;
   corChapeu: number;
@@ -165,6 +170,7 @@ export function novoJogo(espaco: number, heroi: Heroi) {
   atual.coracoes = atual.coracoesMax;
   atual.criadoEm = Date.now();
   inicioDaSessao = Date.now();
+  backfillarEquipamentoInicial();
   salvar();
 }
 
@@ -179,7 +185,22 @@ export function abrirEspaco(espaco: number): boolean {
   atual.heroi = { ...copia(VAZIO.heroi), ...(lido.heroi ?? {}) };
   atual.mochila = migrarMochila(lido.mochila, atual.mochilaAtual);
   inicioDaSessao = Date.now();
+  backfillarEquipamentoInicial();
   return true;
+}
+
+/** Roupa e arma iniciais eram aparencia de graca ate 2026-09-05: escritas
+ *  direto em `heroi.estiloRoupa`/`heroi.armaSprite` na criacao, sem nunca
+ *  colocar o item correspondente na mochila (nao dava pra "tirar" o que
+ *  nunca foi posse de verdade). Chamado em `novoJogo()` (kit inicial vira
+ *  item real desde o primeiro save) e em `abrirEspaco()` (mesmo espirito de
+ *  `migrarMochila`: quem ja tem save nao perde a roupa/arma que ja "veste"
+ *  so porque o dado mudou de forma — uma vez, na leitura, idempotente). */
+function backfillarEquipamentoInicial() {
+  const { estiloRoupa, armaSprite } = atual.heroi;
+  if (estiloRoupa && !atual.mochila.some((s) => s?.item === estiloRoupa)) guardar(estiloRoupa);
+  const idDaArma = armaSprite ? ARMA_DO_SPRITE[armaSprite] : undefined;
+  if (idDaArma && !atual.mochila.some((s) => s?.item === idDaArma)) guardar(idDaArma);
 }
 
 /** A mochila ja teve tres formatos: lista de posse crua (`string[]`),
@@ -345,10 +366,15 @@ export function venderMaterial(item: string, quantidade = 1): boolean {
 }
 
 /** Poe ou tira algo de um slot de equipamento. `itemId: null` esvazia o
- *  slot. A arma continua morando em `heroi.armaSprite` (ja existia); isto
- *  so unifica os tres numa mesma porta de entrada. */
-export function equipar(slot: "arma" | "armadura" | "acessorio", itemId: string | null) {
+ *  slot — inclusive `"roupa"`, que e o que deixa o heroi sem roupa de
+ *  proposito (revisao de 2026-09-05). A arma continua morando em
+ *  `heroi.armaSprite` e a roupa em `heroi.estiloRoupa` (os dois ja
+ *  existiam); isto so unifica os quatro numa mesma porta de entrada. Nao
+ *  mexe na mochila — equipar so troca o ponteiro, o item continua ocupando
+ *  o proprio slot (mesmo comportamento de sempre pra arma/armadura). */
+export function equipar(slot: "arma" | "roupa" | "armadura" | "acessorio", itemId: string | null) {
   if (slot === "arma") atual.heroi.armaSprite = itemId ?? "nenhuma";
+  else if (slot === "roupa") atual.heroi.estiloRoupa = itemId;
   else atual.heroi.equipamento[slot] = itemId;
   salvar();
 }

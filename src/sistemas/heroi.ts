@@ -26,6 +26,7 @@
 import Phaser from "phaser";
 import {
   ALTURA_PERSONAGEM,
+  ARMADURAS_COM_SPRITE,
   DIRECOES,
   RACAS_SPRITE,
   direcaoDe,
@@ -68,15 +69,23 @@ export function camadasDoHeroi(ficha: FichaHeroi): Camada[] {
   return lista;
 }
 
-/** As pecas que vao por ponto de encaixe, nao por animacao. */
+/** As pecas que vao por ponto de encaixe, nao por animacao. `roupa` vem
+ *  `undefined` quando `estiloRoupa` e `null` — o heroi fica sem roupa de
+ *  proposito (revisao de 2026-09-05: roupa virou item, dá pra tirar), e o
+ *  corpo por baixo ja e apresentavel sozinho (ver `arte/pessoa.py::corpo()`,
+ *  tronco e so um bloco chapado de cor de pele). `armadura` e uma SEGUNDA
+ *  peca encaixada, por cima da roupa — sem tint (cor propria, fixa, ver
+ *  `arte/armadura.py`). */
 export function pecasDoHeroi(ficha: FichaHeroi) {
   const raca = racaValida(ficha);
   const r = RACAS_SPRITE[raca];
-  const estilo = ficha.estiloRoupa ?? "tunica";
   const arma = ficha.armaSprite && ficha.armaSprite !== "nenhuma" ? ficha.armaSprite : undefined;
+  const idArmadura = ficha.equipamento.armadura;
+  const armaduraComSprite = idArmadura && ARMADURAS_COM_SPRITE.includes(idArmadura) ? idArmadura : undefined;
   return {
     raca,
-    roupa: { chave: `roupa-${r.corpo}-${estilo}`, tint: ficha.corRoupa },
+    roupa: ficha.estiloRoupa ? { chave: `roupa-${r.corpo}-${ficha.estiloRoupa}`, tint: ficha.corRoupa } : undefined,
+    armadura: armaduraComSprite ? { chave: `armadura-${r.corpo}-${armaduraComSprite}` } : undefined,
     arma: arma ? { chave: `arma-${arma}`, nome: arma } : undefined,
   };
 }
@@ -151,6 +160,7 @@ export class Heroi extends Phaser.GameObjects.Container {
   declare body: Phaser.Physics.Arcade.Body;
   private camadas: { sprite: Phaser.GameObjects.Sprite; chave: string }[] = [];
   private roupa?: Phaser.GameObjects.Sprite;
+  private armadura?: Phaser.GameObjects.Sprite;
   private arma?: Phaser.GameObjects.Image;
   private fichaArma?: FichaArma;
   private raca = "vale";
@@ -175,9 +185,11 @@ export class Heroi extends Phaser.GameObjects.Container {
     const cena = this.scene ?? (this as unknown as { scene: Phaser.Scene }).scene;
     this.camadas.forEach((c) => c.sprite.destroy());
     this.roupa?.destroy();
+    this.armadura?.destroy();
     this.arma?.destroy();
     this.camadas = [];
     this.roupa = undefined;
+    this.armadura = undefined;
     this.arma = undefined;
     this.removeAll();
 
@@ -191,13 +203,19 @@ export class Heroi extends Phaser.GameObjects.Container {
     this.camadas.push({ sprite: spriteCorpo, chave: corpo.chave });
     this.add(spriteCorpo);
 
-    if (cena.textures.exists(pecas.roupa.chave)) {
+    if (pecas.roupa && cena.textures.exists(pecas.roupa.chave)) {
       this.roupa = cena.add.sprite(0, 0, pecas.roupa.chave, 0).setOrigin(0, 0);
       if (pecas.roupa.tint !== undefined) this.roupa.setTint(pecas.roupa.tint);
       this.add(this.roupa);
     }
 
-    // cabelo, chapeu e bracos por cima da roupa
+    if (pecas.armadura && cena.textures.exists(pecas.armadura.chave)) {
+      // sem tint: armadura tem cor propria (achado do mundo, nao guarda-roupa)
+      this.armadura = cena.add.sprite(0, 0, pecas.armadura.chave, 0).setOrigin(0, 0);
+      this.add(this.armadura);
+    }
+
+    // cabelo, chapeu e bracos por cima da roupa e da armadura
     animadas.slice(1).forEach((c) => {
       const sp = cena.add.sprite(0, c.desce ?? 0, c.chave, 0).setOrigin(0.5, 1);
       if (c.tint !== undefined) sp.setTint(c.tint);
@@ -248,6 +266,16 @@ export class Heroi extends Phaser.GameObjects.Container {
         // linha de cima do tronco. o sprite do corpo tem origem no pe, entao o
         // canto de cima e a esquerda do quadro fica em (-8, -32)
         this.roupa.setPosition(-8, tronco[1] - ALTURA_PERSONAGEM);
+      }
+    }
+
+    if (this.armadura) {
+      // mesmo ponto e mesmo quadro da roupa — e a MESMA grade (armadura.py
+      // importa os numeros de roupa.py de proposito), so a textura muda
+      const tronco = pontos.tronco[q];
+      if (tronco) {
+        this.armadura.setFrame(quadroDaRoupa(q));
+        this.armadura.setPosition(-8, tronco[1] - ALTURA_PERSONAGEM);
       }
     }
 

@@ -1,6 +1,6 @@
 {
   "gerado_por": "npm run arte",
-  "total": 160,
+  "total": 162,
   "arquivos": {
     "aranha-filhote.png": {
       "hash": "ececeb0a0cfcd628",
@@ -62,6 +62,24 @@
       "largura": 5,
       "altura": 16
     },
+    "armadura-gordinho-colete-vila.png": {
+      "hash": "72f4b4dc2cc90ea7",
+      "bytes": 337,
+      "largura": 64,
+      "altura": 60
+    },
+    "armadura-magro-colete-vila.png": {
+      "hash": "ca37222adb80ca8a",
+      "bytes": 332,
+      "largura": 64,
+      "altura": 60
+    },
+    "armadura-normal-colete-vila.png": {
+      "hash": "94e014598adfcfa6",
+      "bytes": 325,
+      "largura": 64,
+      "altura": 60
+    },
     "brasanegra.png": {
       "hash": "ca70368c70e7268a",
       "bytes": 24439,
@@ -97,12 +115,6 @@
       "bytes": 1221,
       "largura": 128,
       "altura": 40
-    },
-    "goblin-chefe.png": {
-      "hash": "3da57c652711854d",
-      "bytes": 32507,
-      "largura": 528,
-      "altura": 768
     },
     "goblin-gorducho.png": {
       "hash": "f00055460ee42951",

@@ -249,6 +249,22 @@ export const SPRITE_DA_ARMA: Record<string, string> = {
   martelo: "martelo",
 };
 
+/** O inverso de `SPRITE_DA_ARMA` — de qual `Arma.id` veio o sprite equipado
+ *  agora (`heroi.armaSprite`). Usado pra achar o item de verdade a partir do
+ *  ponteiro visual, ex. na tela de equipamento e na migracao de save. */
+export const ARMA_DO_SPRITE: Record<string, string> = Object.fromEntries(
+  Object.entries(SPRITE_DA_ARMA).map(([id, sprite]) => [sprite, id])
+);
+
+/** So estas `Armadura.id` (de `dados/conteudo.ts`) tem sprite de verdade
+ *  (`arte/armadura.py`, ARMADURAS) — as outras 4 ainda so tem dado (bonus,
+ *  raridade), sem desenho. Mesmo espirito de `SPRITE_DA_ARMA` acima:
+ *  primeiro prova o cano inteiro com uma so, depois desenha o resto (ver
+ *  docs/plano-de-itens-e-equipamento.md e o plano do Hugo de 2026-09-05).
+ *  Equipar uma armadura fora desta lista so nao muda a aparencia — o dado
+ *  e o bonus continuam funcionando normalmente. */
+export const ARMADURAS_COM_SPRITE = ["colete-vila"];
+
 export const CHAPEUS = [
   { id: "nenhum", nome: "Sem chapeu" },
   { id: "pontudo", nome: "Pontudo" },

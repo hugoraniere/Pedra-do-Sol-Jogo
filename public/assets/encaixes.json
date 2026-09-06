@@ -6808,5 +6808,38 @@
    1,
    0
   ]
+ },
+ "armadura": {
+  "largura": 16,
+  "altura": 20,
+  "vistas": [
+   "frente",
+   "esquerda",
+   "direita",
+   "costas"
+  ],
+  "vistaDaDirecao": {
+   "baixo": 0,
+   "esquerda": 1,
+   "direita": 2,
+   "cima": 3,
+   "baixo-esquerda": 0,
+   "baixo-direita": 0,
+   "cima-esquerda": 3,
+   "cima-direita": 3
+  },
+  "linhaDoQuadro": [
+   0,
+   1,
+   2,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   1,
+   0
+  ]
  }
 }

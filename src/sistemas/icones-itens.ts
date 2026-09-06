@@ -29,6 +29,25 @@ export const ICONE_ITEM: Record<string, number> = {
   "presa-lapidada": 23,
   "pingente-sino": 24,
   "broche-troll": 25,
+  // armas: geradas depois dos 26 itens acima, na ordem de ARMAS_ICONE
+  // (arte/itens.py) — que bate 1:1 com o id de Arma em conteudo.ts.
+  "espada-curta": 26,
+  escudo: 27,
+  arco: 28,
+  cajado: 29,
+  martelo: 30,
+  machado: 31,
+  adaga: 32,
+  funda: 33,
+  "lamina-aurora": 34,
+  "escudo-espelho": 35,
+  "arco-lua": 36,
+  "lamina-guarda-vila": 37,
+  "arco-trancado-teia": 38,
+  "funda-de-presa": 39,
+  "martelo-de-cinza": 40,
+  "adaga-da-serpente": 41,
+  "cajado-bruxa-espinho": 42,
 };
 
 /** Lado de um icone da folha, em pixels do jogo. Igual a U em arte/itens.py. */
