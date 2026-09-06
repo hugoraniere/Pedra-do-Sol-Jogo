@@ -1,11 +1,30 @@
 # Mapeamento de bugs e oportunidades de otimizacao
 
 Documento de analise, gerado no ambiente `auditoria` (galho `ambiente/auditoria`).
-Nao muda codigo do jogo - so cataloga o que foi encontrado, com arquivo e linha,
-para quem for consertar depois escolher por onde comecar.
+Cataloga o que foi encontrado, com arquivo e linha.
 
 Feito em 2026-09-06, numa unica rodada de analise cobrindo o repositorio
 inteiro (ver "Status" no fim pra lista completa do que foi lido).
+
+**Atualizacao de 2026-09-06 (ambiente `correcoes`, galho `ambiente/correcoes`):
+~27 dos achados abaixo ja foram corrigidos**, em 9 lotes, cada um validado
+com `npm run build` (que ja roda verificar + os 4 scripts de logica pura +
+tsc + vite build), `npm run auditar` e `npm run conferir` limpos. Cobre:
+todos os bugs triviais de uma linha, o multi-touch (`main.ts`), o vazamento
+de listener que duplicava item/dinheiro, redimensionamento em Combate/
+Criacao/EscolhaDeSelo, a harness quebrada (`derrota`/`criatura`/`condicoes`/
+`teste` + os 4 no `npm run build`), mochila/equipamento (perda de derrota
+anulada, item fantasma, loot perdido, pista duplicavel), condicoes de
+controle (preso/assustado) e ND de area no combate, 10 docs desatualizados +
+`CLAUDE.md`, e o save fire-and-forget no app desktop. **Nao corrigidos, por
+exigirem redesenho ou arquitetura nova, nao um ajuste pontual**: os alvos de
+toque menores que 44px (pede redesenho de layout, nao so um numero), o
+code-splitting de Provador/Depurador/Combate/Ficha/Pausa no bundle (risco de
+regressao em ferramenta de dev viva), e a sobrescrita entre abas do mesmo
+save (so detectada com `console.warn`, resolver de verdade pede um mecanismo
+novo tipo `BroadcastChannel`). O restante (a maioria baixo/otimizacao) segue
+como estava. Ver o historico de commits de `ambiente/correcoes` pro detalhe
+de cada correcao.
 
 ## Como ler
 
