@@ -631,6 +631,24 @@ urgentes a sua maneira:
 
 *(verificado e limpo: rotinas de NPC sao exaustivas por tipo, sem horario inexistente; dialogos.ts so e indexado por chave estatica, sem template string escapando de verificar.mjs; criaturas de presenca por periodo so alternam visibilidade no mesmo lugar, sem duplicar ou nascer em parede; todo estado persistente passa por sistemas/estado.ts.)*
 
+### Outros sistemas (src/sistemas, restante)
+
+#### `dadoAntigo.ts` (o 1d6 pre-revisao) so sobrevive no bundle de producao por causa do Provador
+- **arquivo:** src/main.ts:17,64 (import estatico de `Provador`); src/cenas/Provador.ts:30 (unico lugar que ainda importa `dadoAntigo`)
+- **severidade:** baixo
+- **categoria:** otimizacao
+- **descricao:** `dadoAntigo.ts` (o sistema de 1d6/3-faixas de antes da revisao pro d20) so e usado por `Provador.ts`, a bancada de teste "descartavel" (comentario proprio em Boot.ts:122-124) so acessivel via `?provador` na URL. Mas `main.ts` importa `Provador`/`Depurador` estaticamente e os registra na lista de cenas do `Phaser.Game`, entao Vite/Rollup nao consegue remover esse codigo do bundle (mesmo achado ja registrado na secao de build/bundle sobre Provador/Depurador, aqui com o detalhe extra de que carrega junto um sistema de dado ja superado).
+- **cenario:** todo jogador baixa a bancada de teste do combate por turno inteira, incluindo o dado pre-1d20, mesmo nunca usando `?provador`. Nao quebra nada, e peso morto no download.
+
+#### `grade()` e `cabemNaLargura()` de `fileira.ts` nunca sao chamados
+- **arquivo:** src/sistemas/fileira.ts:45-75
+- **severidade:** baixo
+- **categoria:** otimizacao
+- **descricao:** o arquivo exporta `fileira()`, `cabemNaLargura()` e `grade()`; so `fileira()` e importado em algum lugar (hudDeAcao.ts, Provador.ts). O comentario de topo ("o catalogo do ARSENAL e uma GRADE") descreve uma intencao nunca conectada - quando o Arsenal foi construido, ninguem usou essa primitiva (ha um metodo homonimo independente em `Criacao.ts:500` que resolve outro layout).
+- **cenario:** quem for mexer em layout de grade no futuro pode nao perceber que essa primitiva ja existe pronta e reinventa a conta na mao; sem uso nem teste exercitando `grade()`, um bug ali so apareceria no dia em que alguem finalmente a chamasse.
+
+*(verificado e limpo: missoes.ts, pesca.ts, consumiveis.ts, janela.ts, interativo.ts, fx.ts, cursor.ts, alvo.ts, encaixes.ts, condicoes-de-fala.ts, bancada.ts, auditoria.ts, orientacao.ts, preferencias.ts, icones.ts/icones-itens.ts/icones-svg.ts, depurador-acesso.ts - lidos por completo, sem achado novo. `visao.ts` foi reconferido especificamente atras de um segundo bug de escala, sem achar nenhum alem do ja conhecido de alvo de toque pequeno.)*
+
 ## Verificado e limpo (nao vira achado, mas evita reverificar)
 
 - **Seguranca de entrada do jogador**: passe dedicado (innerHTML/eval/JSON.parse de localStorage/Electron/rede externa) nao achou vulnerabilidade explaravel. O unico `innerHTML` do projeto (`src/sistemas/doutor.ts:169`) escapa tudo que interpola e so mostra dado de diagnostico interno, nunca nome do heroi nem dialogo. `contextIsolation`/`nodeIntegration` do Electron corretos. Sem `fetch`/`XMLHttpRequest` no projeto.
