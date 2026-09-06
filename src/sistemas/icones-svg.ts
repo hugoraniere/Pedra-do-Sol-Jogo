@@ -3,7 +3,6 @@
  *  Criado 2026-09-06: sistema de ícones novo em family game-icons.net. */
 
 import type { Atributo } from "../dados/conteudo";
-import type { MagiaId } from "../dados/conteudo";
 
 /** Ícones de atributo em SVG — correspondência com atributos.ts */
 export const ICONE_ATRIBUTO_SVG: Record<Atributo, string> = {
@@ -14,8 +13,14 @@ export const ICONE_ATRIBUTO_SVG: Record<Atributo, string> = {
   vitalidade: "atributo-vitalidade",
 } as const;
 
-/** Ícones de magia em SVG — correspondência com magias em conteudo.ts */
-export const ICONE_MAGIA_SVG: Record<MagiaId, string | null> = {
+/** Ícones de magia em SVG — correspondência com magias em conteudo.ts.
+ *  Tipos: ids de magias de conteudo.ts */
+export const ICONE_MAGIA_SVG: Record<
+  "bola-de-fogo" | "bafo-gelado" | "voz-de-trovao" | "luzinha" | "cresce-grama" |
+  "pulo-de-sapo" | "dedo-colante" | "remendo" | "escudo-de-bolha" | "cheiro-de-bolo" |
+  "fala-bicho" | "sumir-sumindo" | "chama-vento",
+  string | null
+> = {
   "bola-de-fogo": "bola-de-fogo",
   "bafo-gelado": "bafo-gelado",
   "voz-de-trovao": "voz-de-trovao",
