@@ -30,6 +30,17 @@ import { avancarRelogio, corDoCeu, periodoAtual } from "../sistemas/tempo";
 import { avancarMoodles } from "../sistemas/moodles";
 import { MINUTOS_POR_DIA, type Periodo } from "../dados/tempo";
 
+/** Todo evento que `Depurador.ts` emite em si mesmo e `Mundo.ts` escuta.
+ *  Lista central pra `ligarEventosDoDepurador()` saber exatamente quais
+ *  nomes tirar antes de religar, sem mexer em nenhum outro evento que
+ *  more no mesmo emissor (inclusive os do proprio Phaser). */
+const EVENTOS_DEPURADOR = [
+  "depurar-teletransportar", "depurar-trocar-raca", "depurar-trocar-classe",
+  "depurar-ajustar-coracoes", "depurar-ajustar-moedas", "depurar-ganhar-selo",
+  "depurar-equipar-arma", "depurar-dar-item", "depurar-ajustar-relogio",
+  "depurar-ajustar-fome", "depurar-ajustar-sono",
+] as const;
+
 type FichaObjeto = { w: number; h: number; cw: number; ch: number };
 /** x,y e o CENTRO da caixa de verdade do alvo (nao um ponto arbitrario perto
  *  dele), largura/altura vem da ficha de verdade do objeto ou do tamanho do
@@ -641,13 +652,21 @@ export class Mundo extends Phaser.Scene {
 
   /** O modo DEPURADOR (Pausa -> "DEPURADOR") fala com Mundo do mesmo jeito
    *  que Interface fala: eventos na propria cena, nunca uma chamada direta.
-   *  `removeAllListeners()` primeiro porque `create()` roda de novo a cada
-   *  `trocarDeMapa()` (`scene.restart()`) — sem isto, cada teleporte
-   *  empilharia mais uma copia de cada listener, e um unico toque em "+10
-   *  moedas" viraria +10, +20, +30... depois de N teleportes. */
+   *  Tira so os listeners "depurar-*" de uma rodada anterior primeiro,
+   *  porque `create()` roda de novo a cada `trocarDeMapa()`
+   *  (`scene.restart()`) — sem isto, cada teleporte empilharia mais uma
+   *  copia de cada listener, e um unico toque em "+10 moedas" viraria +10,
+   *  +20, +30... depois de N teleportes.
+   *
+   *  NUNCA `depurador.removeAllListeners()` (sem nome de evento): o mesmo
+   *  emissor (`Depurador.events`, que e `Depurador.sys.events` por baixo)
+   *  e onde o proprio InputPlugin do Phaser assina "preupdate" pra saber
+   *  processar toque — apagar TUDO apaga essa assinatura junto, e a cena
+   *  inteira para de reagir a clique (achado ao vivo: o Hugo testou e a
+   *  tela simplesmente nao respondia a nada, nem trocar de aba). */
   private ligarEventosDoDepurador() {
     const depurador = this.scene.get("Depurador").events;
-    depurador.removeAllListeners();
+    EVENTOS_DEPURADOR.forEach((nome) => depurador.off(nome));
 
     depurador.on("depurar-teletransportar", ({ mapaId }: { mapaId: string }) => {
       const destino = MAPAS[mapaId];
