@@ -267,15 +267,26 @@ outros autores), licenca CC BY 3.0 - recolorido pra paleta do jogo, nunca
 pixel art gerado por `arte/*.py`. **O que NAO muda com isto**: heroi, NPC,
 criatura de corpo inteiro, tile, objeto de cenario e a tipografia (a fonte de
 bitmap de `arte/fonte.py`) continuam 100% pixel art, sem excecao - a excecao e
-so pro icone. Pendencias reais, ainda nao fechadas:
-- a licenca exige credito ("Icones por Lorc e Delapouite - game-icons.net")
-  em algum lugar do jogo (tela de creditos, por exemplo) antes de qualquer
-  icone desta familia entrar em producao de verdade;
-- a cor de cada icone segue "Nada de cor solta" em espirito (vem da mesma
-  paleta do jogo), mas duas cores novas do sistema de elemento (cinza neutro
-  `#96A0B8` de atributo/acao basica, e o tom de luz `#F7E7B8`) ainda nao
-  foram cadastradas em `arte/paleta.py`/`COR` - fazer isso antes de usar
-  qualquer uma das duas fora do piloto.
+so pro icone.
+
+**Decisao de 2026-09-06: as duas pendencias acima foram fechadas**, a
+pedido do Hugo ("resolve agora"), depois do bug do loader travado (ver
+`docs/inventario-de-icones.md`) expor que os icones nunca tinham chegado
+em producao de verdade:
+- a cor cadastrada: `#96A0B8` (cinza neutro) e `#F7E7B8` (tom de luz) ja
+  estavam em `arte/paleta.py`/`COR` antes desta rodada - alguem fechou isso
+  antes, sem atualizar esta nota;
+- o credito da licenca ("Icones por Lorc e Delapouite - game-icons.net")
+  esta na aba CONFIGURACOES da Pausa (`src/cenas/Pausa.ts`,
+  `CREDITO_ICONES`) - some numa janela muito baixa (mesmo criterio do
+  paragrafo explicativo do zoom, "mostre o que couber"), mas aparece em
+  qualquer tamanho razoavel;
+- os 18 icones que o jogo ja usa (5 de atributo + 13 de magia) sairam de
+  `ferramentas/piloto-icones/` (nunca chega no build) e foram pra
+  `public/assets/icones/` (`DIRETORIO_ICONES_SVG` em `icones-svg.ts`) -
+  so o que esta em `public/assets/` entra em `npm run build` de verdade.
+  Os 4 SVGs que ainda sao aposta nao confirmada (nenhum mapeamento os usa)
+  continuam em `ferramentas/piloto-icones/` ate serem aprovados.
 
 Ver `docs/inventario-de-icones.md` pro levantamento completo, o sistema de
 cor por categoria (atributo/acao basica = cinza neutro, magia = cor de

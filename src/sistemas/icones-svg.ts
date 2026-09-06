@@ -36,10 +36,15 @@ export const ICONE_MAGIA_SVG: Record<
   "chama-vento": "rajada",
 } as const;
 
-/** Diretório onde os SVGs de ícones estão armazenados (durante piloto). */
-export const DIRETORIO_ICONES_PILOTO = "ferramentas/piloto-icones/";
+/** Diretório onde os SVGs de ícones estão armazenados. Dentro de
+ *  `public/assets/` (não mais `ferramentas/piloto-icones/`) porque só o que
+ *  está ali entra no build de produção — `ferramentas/` nunca é copiado pra
+ *  `dist/`. Os 4 SVGs ainda não usados por nenhum mapeamento acima (aposta
+ *  ainda não confirmada, ver `docs/inventario-de-icones.md`) continuam em
+ *  `ferramentas/piloto-icones/` até entrarem em produção de verdade. */
+export const DIRETORIO_ICONES_SVG = "assets/icones/";
 
-/** Carrega um ícone SVG como textura no Phaser durante o piloto.
+/** Carrega um ícone SVG como textura no Phaser.
  *  @param cena — a cena que carrega (precisa estar no Boot ou preload)
  *  @param nomeIcone — o nome do arquivo SVG sem extensão (ex: "atributo-forca")
  *  @param chaveTexturaPhaser — a chave sob a qual o Phaser registra a textura (padrão: mesmo nome) */
@@ -49,10 +54,8 @@ export function carregarIconeSVG(
   chaveTexturaPhaser?: string
 ) {
   const chave = chaveTexturaPhaser || nomeIcone;
-  const caminho = `${DIRETORIO_ICONES_PILOTO}${nomeIcone}.svg`;
+  const caminho = `${DIRETORIO_ICONES_SVG}${nomeIcone}.svg`;
 
-  // Durante desenvolvimento, o SVG está no sistema de arquivos.
-  // Em produção, precisará ser copiado para public/assets/icones/ e carregado via image loader.
   if (cena.textures.exists(chave)) return; // já carregado
 
   // load.image() nao processa SVG sem width/height no elemento raiz (so viewBox,

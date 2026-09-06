@@ -32,6 +32,11 @@ import { abafarMusica, definirSom, tocar } from "../sistemas/som";
 /** funcao, nao constante: LARGURA muda com a visao escolhida */
 const larguraCaixa = () => Math.min(208, LARGURA - ESPACO.xl * 2);
 const EXPLICACAO = "LONGE mostra mais do mapa. PERTO deixa tudo maior e mais facil de ver.";
+/** Credito exigido pela licenca CC BY 3.0 dos icones de atributo/magia
+ *  (game-icons.net, autores Lorc e Delapouite) -- ver CLAUDE.md, secao dos
+ *  icones. Igual a EXPLICACAO: texto opcional, some primeiro numa janela
+ *  baixa (ver cabeExplicacao/cabeCredito em desenharConfig). */
+const CREDITO_ICONES = "Icones por Lorc e Delapouite - game-icons.net (CC BY 3.0)";
 
 export class Pausa extends Phaser.Scene {
   private painel!: Phaser.GameObjects.Container;
@@ -172,6 +177,7 @@ export class Pausa extends Phaser.Scene {
   private desenharConfig() {
     const larguraUtil = larguraCaixa() - TAMANHO.paddingPainel * 2;
     const linhas = quebrar(EXPLICACAO, larguraUtil);
+    const linhasCredito = quebrar(CREDITO_ICONES, larguraUtil);
     // o Safari do iPad nao deixa nada alem de video entrar em tela cheia. La o
     // botao nao existe, em vez de existir e nao funcionar: botao que nao faz
     // nada e o pior caso para quem tem 7 anos.
@@ -194,13 +200,24 @@ export class Pausa extends Phaser.Scene {
       (temTelaCheia ? ESPACO.lg + TAMANHO.botao : 0) +
       ESPACO.lg +
       TAMANHO.botao;
-    const alturaComExplicacao = alturaControles + ESPACO.lg + alturaDoTexto(linhas.length);
+    const alturaExplicacaoBloco = ESPACO.lg + alturaDoTexto(linhas.length);
+    // credito da licenca CC BY 3.0 dos icones (ver CREDITO_ICONES acima) --
+    // entre os dois textos opcionais, este vem primeiro: uma obrigacao de
+    // licenca pesa mais que uma dica amigavel.
+    const alturaCreditoBloco = ESPACO.lg + alturaDoTexto(linhasCredito.length);
     // o mesmo teto que caixa() respeita por dentro: alem disto ela pinca no
     // topo e vaza por baixo, porque nunca encolhe o proprio conteudo.
     const tetoDisponivel =
       ALTURA - TAMANHO.paddingTela * 2 - TAMANHO.paddingPainel * 2 - TAMANHO.chapa - ESPACO.sm;
-    const cabeExplicacao = alturaComExplicacao <= tetoDisponivel;
-    const alturaConteudo = cabeExplicacao ? alturaComExplicacao : alturaControles;
+    const cabeTudo = alturaControles + alturaExplicacaoBloco + alturaCreditoBloco <= tetoDisponivel;
+    const cabeSoCredito = !cabeTudo && alturaControles + alturaCreditoBloco <= tetoDisponivel;
+    const cabeExplicacao = cabeTudo;
+    const cabeCredito = cabeTudo || cabeSoCredito;
+    const alturaConteudo = cabeTudo
+      ? alturaControles + alturaExplicacaoBloco + alturaCreditoBloco
+      : cabeSoCredito
+        ? alturaControles + alturaCreditoBloco
+        : alturaControles;
 
     const area = caixa(this, { largura: larguraCaixa(), alturaConteudo, titulo: "CONFIGURACOES" });
     const p = pilha(area, ESPACO.md);
@@ -245,6 +262,22 @@ export class Pausa extends Phaser.Scene {
               cor: 0x4a3e64,
               ancora: 0.5,
             }),
+            "texto",
+            linha
+          )
+        );
+      });
+    }
+
+    if (cabeCredito) {
+      const areaCredito = p.reservar(alturaDoTexto(linhasCredito.length), ESPACO.lg);
+      linhasCredito.forEach((linha, i) => {
+        this.painel.add(
+          marcar(
+            texto(this, LARGURA / 2, areaCredito.y + i * TAMANHO.linhaTexto, linha, {
+              cor: 0x4a3e64,
+              ancora: 0.5,
+            }).setAlpha(0.7),
             "texto",
             linha
           )

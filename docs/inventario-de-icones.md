@@ -19,13 +19,18 @@ verdade (artefato publicado durante a conversa, ícones em
 
 - **Fonte dos ícones**: [game-icons.net](https://game-icons.net/) (Lorc,
   Delapouite e outros), CC BY 3.0 — vetor pronto, recolorido pra paleta do
-  jogo, nunca redesenhado do zero. **Pendência real**: isso diverge da regra
-  "Nada de arte solta" do `CLAUDE.md` (toda arte hoje nasce de `arte/*.py`,
-  pixel a pixel) — a licença exige uma linha de crédito ("Ícones por Lorc e
-  Delapouite — game-icons.net") em algum lugar do jogo, e o `CLAUDE.md` ainda
-  não foi atualizado pra refletir essa mudança de pipeline. Fechar isso é
-  pré-requisito antes de qualquer ícone entrar no jogo de verdade (não só no
-  piloto).
+  jogo, nunca redesenhado do zero. Isso diverge da regra "Nada de arte
+  solta" do `CLAUDE.md` (toda arte hoje nasce de `arte/*.py`, pixel a
+  pixel) de propósito — exceção aberta só pra ícone, já registrada lá.
+  **RESOLVIDO em 2026-09-06**: a linha de crédito exigida pela licença
+  ("Ícones por Lorc e Delapouite - game-icons.net") está na aba
+  CONFIGURACOES da Pausa (`src/cenas/Pausa.ts`, `CREDITO_ICONES`) — some
+  numa janela muito baixa, igual o parágrafo explicativo do zoom, mas
+  aparece em qualquer tamanho razoável. Os 18 ícones já usados pelo jogo
+  (5 de atributo + 13 de magia) saíram de `ferramentas/piloto-icones/` e
+  foram pra `public/assets/icones/`, porque só o que está em
+  `public/assets/` entra no build de produção — antes disso, o ícone
+  carregava em dev mas dava 404 silencioso em `npm run build`.
 - **Tratamento visual**: silhueta preenchida + 1 cor de destaque + contorno
   `#2C2440` (a mesma TINTA do jogo hoje), sempre em cima do traçado original
   do ícone, viewBox 512×512.
@@ -77,7 +82,7 @@ verdade (artefato publicado durante a conversa, ícones em
 - Voz de Trovão (Lightning Bolt, Lorc) — ✅ criado, Eletricidade #F5B62B
 - Bola de Fogo (Flame, Lorc) — ✅ criado, Fogo #F2802B
 
-Todos os 13 ícones de magia agora têm uma versão na família nova em `ferramentas/piloto-icones/`.
+Todos os 13 ícones de magia agora têm uma versão na família nova em `public/assets/icones/` (produção de verdade desde 2026-09-06, ver "Decisão de 2026-09-05" acima).
 
 **Ainda fora do piloto**: a mecânica de "ações básicas" (golpe/andar/atirar)
 em si, que só existe como placeholder visual — não tem regra de jogo ainda.

@@ -40,6 +40,21 @@ Registradas aqui porque mudam o desenho de tudo abaixo:
    os quatro.
 8. **Sobre a interface, os quatro problemas ao mesmo tempo:** parece genérica,
    é poluída, é difícil no toque, e é inconsistente entre telas.
+9. **Moodles: 4 a 6, os que a pesquisa aprova** — fome e sono (já existem) +
+   peso/sobrecarregado + ferido + bem alimentado (o positivo). Sede, frio,
+   sanidade e tédio ficam de fora.
+10. **Os moodles ganham ícone na tela**, com mais informação ao tocar/hover, e
+    aparecem **também na Ficha**. É o modelo Zomboid (ícone no HUD, nome do
+    estágio sob demanda, nunca número cru) — e mantém a separação que o jogo
+    já tem: HUD é o lugar do alerta, a aba EU da Ficha é o lugar do detalhe.
+11. **Fecha a aventura 1 antes dos lugares novos.** Floresta → Ponte →
+    Caverna → Cristal do Amanhecer, e só depois Portomares/Fornalha/
+    Altacoruja. Isto confirma o `CLAUDE.md` em vez de divergir dele — nenhuma
+    decisão escrita nova é necessária.
+12. **A virada pra 48 entra depois do barato e antes dos mapas novos.**
+    Primeiro tile de transição + rampa de 5 tons + sombra (ganho rápido, vale
+    em qualquer resolução); depois a virada; só então os mapas novos, que já
+    nascem grandes e nunca precisam ser refeitos.
 
 ---
 
@@ -282,10 +297,15 @@ entrarem:
    status não é só má notícia.
 3. **Cada moodle tem uma cura nomeada e concreta.** Nunca é "espere passar".
 
-### A tensão, registrada e não resolvida
+### A tensão, RESOLVIDA em 2026-09-06: ficam 4 a 6
 
-**O Hugo pediu "vários moodles, estilo Project Zomboid". A pesquisa recomenda
-teto de 4 a 6.** Os dois lados do argumento, honestamente:
+O Hugo tinha pedido "vários moodles, estilo Project Zomboid"; depois de ver o
+argumento da pesquisa, **decidiu pelos 4 a 6 aprovados** — fome e sono (já
+existem) + peso + ferido + bem alimentado. Sede, frio, sanidade e tédio ficam
+de fora. O registro do debate fica abaixo porque o raciocínio continua útil
+se alguém quiser reabrir.
+
+Os dois lados do argumento, honestamente:
 
 - **A favor de vários:** é o tom declarado do jogo ("RPG de sobrevivência...
   no tom seco de Project Zomboid", CLAUDE.md). Mais estados = mais textura de
@@ -353,14 +373,38 @@ protege do pior caso, e vale mantê-la religiosamente.
   vez de punição. **Isto contradiz o tom seco declarado** — fica registrado
   como decisão consciente possível, não como recomendação.
 
-### Cortes propostos (número final depende da decisão do Hugo)
+### Como mostrar: decisão do Hugo, 2026-09-06
+
+**Os moodles ganham ícone na tela**, com mais informação ao tocar, e aparecem
+**também na Ficha**. Isso é o modelo Zomboid quase exato, e mantém a separação
+que o jogo já tem — HUD é o lugar do alerta, aba EU da Ficha é o lugar do
+detalhe. Detalhes que a pesquisa acrescenta:
+
+- **Canto fixo, ícones empilhados, nada escrito na tela.** O nome do estágio e
+  a cura aparecem **ao tocar no ícone** (o equivalente de toque pro hover do
+  Zomboid), numa tarja curta: "Faminto — coma alguma coisa".
+- **O nível 1 aparece, mas apagado.** Cor forte só no nível que penaliza. O
+  jogador aprende a diferença sem ninguém explicar.
+- **Escada de 3 degraus, não 4** (mais legível em pixel art): *(nada)* →
+  **Fominha** → **Faminto** (este penaliza). Sono: *(nada)* → **Sonolento** →
+  **Exausto**.
+- **Animar a transição de estágio uma vez** — um pulso quando piora, e nada
+  depois. Ícone piscando eternamente é o que faz gente odiar HUD de
+  sobrevivência.
+- Os ícones entram pela família nova de vetor recolorido (game-icons.net), que
+  o `CLAUDE.md` já abriu como exceção só pra ícone.
+
+### Cortes propostos
 
 - **`1.8.0` — Peso / Sobrecarregado.** O que mais amarra sistemas existentes.
 - **`1.8.1` — Ferido**, ligado ao Hospital.
 - **`1.8.2` — Bem alimentado / Descansado** (o moodle positivo).
-- **`1.8.3` — penalidade estrutural visível** no lugar do −1 em atributo.
-- **`1.8.4` — a fogueira cura os dois de uma vez**, e o primeiro estágio de
-  todo moodle nunca pune.
+- **`1.8.3` — ícones de moodle no HUD**, com detalhe ao toque, e a mesma
+  informação na aba EU da Ficha. Decisão do Hugo.
+- **`1.8.4` — a fogueira cura fome e sono de uma vez**, e o primeiro estágio
+  de todo moodle nunca pune.
+- **`1.8.5` — a forma de penalizar.** Ver a decisão pendente na seção 7 — hoje
+  o jogo faz −1 em atributo, que a pesquisa desaconselha por ser invisível.
 
 ---
 
@@ -468,21 +512,29 @@ roadmap vai querer reusar para loja, ferraria e torre depois".
 Nenhuma destas foi tomada. Estão aqui pra virar pergunta, não pra eu resolver
 sozinho.
 
-1. **Quantos moodles, afinal?** A tensão da seção 4. O Hugo pediu "vários,
-   estilo Zomboid"; a pesquisa recomenda teto de 4–6 e reprova sede, frio,
-   sanidade e tédio com argumento específico. Decisão dele.
+Resolvidas em 2026-09-06 (ver seção 0): quantos moodles, ordem dos lugares,
+quando entra a virada pra 48, e como mostrar os moodles. O que sobra:
+
+1. **Como a penalidade de moodle chega no jogador.** Hoje o jogo faz −1 em
+   atributo, que a pesquisa desaconselha por dois motivos: um −1 no d20 é −5%
+   em toda rolagem, e **é invisível** — o jogador rola 11 contra ND 12 e não
+   tem como saber se a fome foi a culpada. Três caminhos, todos compatíveis
+   com os ícones de HUD já decididos:
+   - **penalidade estrutural visível** (fome crítica tranca 1 slot da mochila;
+     sono crítico faz o herói agir depois na iniciativa) — nenhuma toca na
+     chance de acertar, e o jogador vê acontecer;
+   - **tirar a rede de segurança** (com moodle crítico, "falha perto" deixa de
+     existir e vira falha limpa) — não perde chance, perde o amortecedor;
+   - **manter o −1 e anunciar no log** ("Faminto: −1" na hora da rolagem) —
+     menor mudança de código, converte castigo invisível em regra aprendida.
 2. **Punição ou recompensa?** O modelo Valheim (bônus em vez de castigo) custa
    zero linhas a mais e é, na literatura, o que separa sistemas de
    sobrevivência elogiados dos odiados — mas contradiz o tom seco declarado.
-3. **Os lugares novos vêm antes ou depois de fechar a aventura 1?** O
-   `CLAUDE.md` diz uma coisa ("uma aventura excelente vale mais que três
-   esboçadas"); o pedido do Hugo aponta pra outra. Se a resposta for "antes", o
-   `CLAUDE.md` precisa de uma decisão escrita registrando a mudança, como toda
-   divergência deliberada deste projeto.
-4. **Quando entra a virada pra 48?** Antes das áreas novas (a arte nova já
-   nasce grande, mas atrasa tudo) ou depois (as áreas novas nascem em 16 e
-   precisam ser refeitas)?
-5. **Fase nova ou renumeração?** Este documento propõe `1.7.x` (armas),
+3. **Fase nova ou renumeração?** Este documento propõe `1.7.x` (armas),
    `1.8.x` (moodles), `1.9.x` (visual) e `1.10.x` (interiores) — quatro faixas
    novas dentro da "Fase 1". Pode ser que mereçam ser uma Fase 1.7 "o jogo
    ganha corpo" única, em vez de quatro faixas paralelas.
+4. **Por onde começar de verdade.** A prioridade nº 1 declarada é o toast de
+   missão (`1.2.4`), e a ordem pedida é "misturada" — um item pendente da
+   Fase 1 por vez, junto com o novo. Falta escolher qual item da Fase 1 vai
+   junto: o modo de alvo (`1.0.1`) ou comer/dormir encher vida (`1.0.2`).

@@ -105,9 +105,8 @@ export class Boot extends Phaser.Scene {
     ["painel", "painel-creme", "painel-ouro", "painel-escuro"].forEach((n) =>
       this.load.image(n, `assets/${n}.png`)
     );
-    // Ícones da família nova (game-icons.net, 2026-09-05)
-    // Durante o piloto, os SVGs ficam em ferramentas/piloto-icones/.
-    // Em produção, serão movidos para public/assets/icones/ e carregados aqui.
+    // Ícones da família nova (game-icons.net), em public/assets/icones/ —
+    // ver icones-svg.ts. Crédito da licença CC BY 3.0: Pausa.ts (CONFIGURACOES).
     carregarIconesAtributos(this);
     carregarIconesMagia(this);
   }

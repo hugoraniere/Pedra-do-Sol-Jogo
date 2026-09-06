@@ -22,7 +22,7 @@ Problemas encontrados: 0
 | 11-janela-diario | Interface:56 Ficha:33 Som:0 Ponteiro:1 | 0 |
 | 11-janela-menu | Interface:56 Ficha:37 Som:0 Ponteiro:1 | 0 |
 | 12-pausa | Interface:56 Pausa:22 Som:0 Ponteiro:1 | 0 |
-| 13-configuracoes | Interface:56 Pausa:46 Som:0 Ponteiro:1 | 0 |
+| 13-configuracoes | Interface:56 Pausa:48 Som:0 Ponteiro:1 | 0 |
 | 14-titulo-com-save | Titulo:28 Som:0 Ponteiro:1 | 0 |
 | 15-carregar | Carregar:29 Som:0 Ponteiro:1 | 0 |
 | perto-02-criacao-raca | Criacao:32 Som:0 Ponteiro:1 | 0 |
