@@ -705,6 +705,7 @@ urgentes a sua maneira:
 
 ## Verificado e limpo (nao vira achado, mas evita reverificar)
 
+- **Dependencias (`npm audit`)**: 0 vulnerabilidades conhecidas, com e sem dev-dependencies, na data desta analise.
 - **Seguranca de entrada do jogador**: passe dedicado (innerHTML/eval/JSON.parse de localStorage/Electron/rede externa) nao achou vulnerabilidade explaravel. O unico `innerHTML` do projeto (`src/sistemas/doutor.ts:169`) escapa tudo que interpola e so mostra dado de diagnostico interno, nunca nome do heroi nem dialogo. `contextIsolation`/`nodeIntegration` do Electron corretos. Sem `fetch`/`XMLHttpRequest` no projeto.
 
 ## Status
