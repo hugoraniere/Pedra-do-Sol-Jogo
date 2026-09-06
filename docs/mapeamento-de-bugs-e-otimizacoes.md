@@ -328,6 +328,36 @@ NAO entram aqui - aquilo e decisao tomada, nao bug.
 - **descricao:** `GOBLINS_SPRITE` tem 4 variantes (inclui "chefe") e por isso Boot.ts carrega `goblin-chefe.png` toda partida, mas `spriteDoGoblin()` - a unica funcao que decide qual corpo de goblin nasce no mundo/combate - so sorteia entre as 3 primeiras (`VARIANTES_GOBLIN`, sem "chefe"). O unico uso real e o Provador (ferramenta de teste, nunca chega no jogo publicado).
 - **cenario:** todo carregamento do jogo baixa e decodifica um sprite de goblin que nenhum encontro de verdade jamais mostra - bytes e tempo de loading gastos por um bicho que so existe numa bancada de teste interna.
 
+### Aplicativo de desktop (app/, Electron)
+
+#### Titulo da janela ainda usa o nome antigo do produto
+- **arquivo:** app/principal.cjs:97
+- **severidade:** baixo
+- **categoria:** bug
+- **descricao:** `criarJanela()` fixa `title: "Reino de Aurora"` na `BrowserWindow`, mas o projeto foi renomeado pra "A Pedra do Sol" (CLAUDE.md, decisao de 2026-09-04). O resto do empacotamento ja foi atualizado: `package.json.name` e `a-pedra-do-sol`, `build.productName` e "A Pedra do Sol" - so este arquivo ficou pra tras.
+- **cenario:** o jogador abre `npm run app` (ou o app instalado) e ve "Reino de Aurora" na barra de titulo/taskbar do SO, enquanto instalador, icone e nome do processo dizem "A Pedra do Sol" - exatamente o "resto do nome antigo esperando limpeza" que o CLAUDE.md pede pra corrigir.
+
+#### Renderer roda sem sandbox do Electron
+- **arquivo:** app/principal.cjs:104
+- **severidade:** medio
+- **categoria:** otimizacao
+- **descricao:** `webPreferences` tem `contextIsolation: true` e `nodeIntegration: false` (corretos), mas `sandbox: false` desliga o isolamento de processo em nivel de SO que o Electron liga por padrao desde a v20.
+- **cenario:** hoje o jogo so carrega `dist/index.html` local/`localhost` em dev, risco pratico baixo; mas se o app crescer pra carregar recurso remoto (link de patch notes, iframe de loja), um renderer sem sandbox e um anteparo a menos entre pagina comprometida e o SO do jogador.
+
+#### Nenhuma Content-Security-Policy declarada
+- **arquivo:** index.html (nenhuma linha define CSP)
+- **severidade:** medio
+- **categoria:** bug
+- **descricao:** `index.html` nao tem `<meta http-equiv="Content-Security-Policy">`, nem no HTML servido pelo navegador nem no que o Electron carrega via `loadFile`/`loadURL` (app/principal.cjs:109-110). E item padrao da propria checklist de seguranca do Electron, ausente por completo.
+- **cenario:** se qualquer dependencia futura (plugin Phaser, fonte externa, chamada de rede) for comprometida ou mal configurada, nao ha barreira declarativa impedindo carga de recurso de origem arbitraria dentro da janela do Electron.
+
+#### Nenhum mecanismo de auto-update, nem exibicao da propria versao
+- **arquivo:** package.json:50-68 (bloco `"build"`); app/principal.cjs (arquivo inteiro); src/cenas/Pausa.ts (nao referencia versao)
+- **severidade:** medio
+- **categoria:** otimizacao
+- **descricao:** o `build` do electron-builder nao declara `publish`, `electron-updater` nao esta em `dependencies`/`devDependencies`, `app/principal.cjs` nao chama `autoUpdater`, e nenhuma tela mostra a versao instalada.
+- **cenario:** um jogador que instalou o `.dmg`/`.exe`/AppImage fica preso na versao `0.1.0` pra sempre - uma correcao de bug ou balanceamento publicada depois nunca chega a quem ja instalou, sem nenhum sinal na interface de que existe versao mais nova.
+
 ## Status
 
 - [x] sistemas do jogo (src/sistemas)
