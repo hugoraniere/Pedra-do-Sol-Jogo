@@ -19,7 +19,6 @@ import {
 } from "../sistemas/design";
 import { salvar } from "../sistemas/estado";
 import { noAplicativo, sairDoJogo } from "../sistemas/armazenamento";
-import { depuradorDesbloqueado } from "../sistemas/depurador-acesso";
 import { ORDEM_ZOOM, ZOOM, definirPreferencia, preferencias } from "../sistemas/preferencias";
 import {
   alternarTelaCheia,
@@ -107,17 +106,6 @@ export class Pausa extends Phaser.Scene {
           this.desenhar();
         },
       },
-      ...(depuradorDesbloqueado()
-        ? [
-            {
-              rotulo: "DEPURADOR",
-              acao: () => {
-                this.scene.stop();
-                this.scene.launch("Depurador");
-              },
-            },
-          ]
-        : []),
       {
         rotulo: "SAIR PARA O MENU",
         acao: () => {
@@ -125,6 +113,9 @@ export class Pausa extends Phaser.Scene {
           salvar();
           this.scene.stop("Interface");
           this.scene.stop("Mundo");
+          // Depurador (se destravado) fica vivo o jogo inteiro por baixo do
+          // Mundo -- sem isto o selo continuaria na tela por cima do Titulo.
+          if (this.scene.isActive("Depurador")) this.scene.stop("Depurador");
           this.scene.stop();
           this.scene.start("Titulo");
         },

@@ -29,6 +29,8 @@ import { definirEstado } from "../sistemas/cursor";
 import { avancarRelogio, corDoCeu, periodoAtual } from "../sistemas/tempo";
 import { avancarMoodles } from "../sistemas/moodles";
 import { MINUTOS_POR_DIA, type Periodo } from "../dados/tempo";
+import { depuradorDesbloqueado } from "../sistemas/depurador-acesso";
+import type { Depurador } from "./Depurador";
 
 /** Todo evento que `Depurador.ts` emite em si mesmo e `Mundo.ts` escuta.
  *  Lista central pra `ligarEventosDoDepurador()` saber exatamente quais
@@ -587,6 +589,14 @@ export class Mundo extends Phaser.Scene {
     this.scene.get("Interface").events.on("acao", () => this.tentarInteragir());
     this.scene.get("Interface").events.on("pausar", () => this.pausar());
     this.ligarEventosDoDepurador();
+    // sobe sozinho, minimizado, junto com o Mundo -- nunca so quando alguem
+    // pede. So existe pra quem ja destravou o gesto (ver depurador-acesso.ts).
+    // A guarda evita relancar (e perder o "expandido"/estado das abas) toda
+    // vez que `trocarDeMapa()` reinicia esta cena (Mundo), ja que Depurador
+    // e uma cena separada que sobrevive a esse restart sozinha.
+    if (depuradorDesbloqueado() && !this.scene.isActive("Depurador")) {
+      this.scene.launch("Depurador");
+    }
     if (this.derrotaPendente) this.avisarDerrota(this.derrotaPendente);
     this.input.on("pointerdown", (p: Phaser.Input.Pointer) => this.aoPressionarNoMundo(p));
     this.input.on("pointerup", () => this.aoSoltarNoMundo());
@@ -711,7 +721,10 @@ export class Mundo extends Phaser.Scene {
       ganharSelo();
       const agora = Math.floor(estado().selos / 3);
       if (agora > antes) {
-        this.scene.stop("Depurador");
+        // minimiza, nunca para: Depurador fica vivo o jogo inteiro (ver
+        // Mundo.create()), so o painel cheio precisa sumir da tela por cima
+        // da escolha de selo.
+        (this.scene.get("Depurador") as Depurador).minimizar();
         this.scene.pause("Mundo");
         this.scene.pause("Interface");
         this.scene.launch("EscolhaDeSelo");

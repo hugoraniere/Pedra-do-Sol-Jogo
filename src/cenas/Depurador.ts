@@ -2,11 +2,20 @@
  *  ajustar moedas/coracao/selo, pular relogio e fome/sono -- pra testar
  *  qualquer parte do jogo sem jogar a campanha inteira de novo.
  *
- * So existe pra quem destravou o gesto escondido (7 toques no texto de
- * versao da Titulo, ver `sistemas/depurador-acesso.ts`) e abriu pelo botao
- * condicional em Pausa. Fala com Mundo do mesmo jeito que Interface fala:
- * eventos na propria cena (`this.events.emit`), nunca uma chamada direta —
- * ver os listeners `depurador.on(...)` em `Mundo.ts::ligarEventosDoDepurador`.
+ * So existe pra quem destravou o gesto escondido (3 toques no cristal da
+ * Titulo, ver `sistemas/depurador-acesso.ts`). Uma vez destravado, a cena
+ * sobe sozinha junto com o Mundo (`Mundo.ts::create()`) e fica viva o jogo
+ * inteiro — nunca pausa o Mundo, porque o ponto e ver o efeito de cada
+ * botao ACONTECER na hora, sem fechar nada pra olhar. Comeca minimizada
+ * (so um selo pequeno, sempre visivel, num canto que a Interface nao usa) e
+ * so cresce pra o painel cheio quando alguem toca nele — pedido do Hugo
+ * depois de testar a primeira versao (uma janela que so abria via Pausa e
+ * pausava o mundo) e sentir que queria ver as mudancas acontecerem ao
+ * vivo, com o jogo andando por tras.
+ *
+ * Fala com Mundo do mesmo jeito que Interface fala: eventos na propria
+ * cena (`this.events.emit`), nunca uma chamada direta — ver os listeners
+ * `depurador.on(...)` em `Mundo.ts::ligarEventosDoDepurador`.
  *
  * Cada aba usa steppers compactos (`< valor >` + um botao de acao) em vez de
  * uma lista de botao por item: a visao mais distante do jogo so tem ~240px
@@ -15,7 +24,7 @@
  * `Criacao.ts` ja usa, so que aqui dispara um evento em vez de mudar um
  * estado local de preview. */
 import Phaser from "phaser";
-import { SPRITE_DA_ARMA } from "../dados/config";
+import { LARGURA, SPRITE_DA_ARMA } from "../dados/config";
 import { RACAS, CLASSES, LOJA, acharArma } from "../dados/conteudo";
 import { MAPAS } from "../dados/mapas";
 import { PERIODOS } from "../dados/tempo";
@@ -27,6 +36,21 @@ import { texto } from "../sistemas/texto";
 import { ESPACO, TAMANHO, meio, pilha, Retangulo } from "../sistemas/design";
 import { refazerAoRedimensionar } from "../sistemas/visao";
 import { tocar } from "../sistemas/som";
+
+/** o selo minimizado: um quadrado pequeno, canto superior direito, logo
+ *  abaixo da engrenagem de pausa que Interface ja desenha ali (2..18 de
+ *  altura) -- y=24 fica livre em qualquer resolucao suportada (a menor,
+ *  160 de altura, ainda sobra mais de 100px ate o rodape). LARGURA e `let`
+ *  (muda com a visao/resize), entao a posicao so pode ser calculada na
+ *  hora de desenhar, nunca guardada num const de modulo (isso capturaria
+ *  o valor de quando o arquivo carregou, nunca mais atualizado). */
+const SELO = 16;
+// 36, nao 24: a engrenagem de pausa que Interface.ts desenha ali do lado
+// (montarBotaoPausa) tem zona de toque de 26x20 centrada em y=8 -- ou
+// seja, ate y=18. Um selo em y=24 (zona ate y=32) ainda encostava nessa
+// borda (achado ao vivo: o clique caia numa terra de ninguem entre os
+// dois, sem acertar nenhum). y=36 deixa uma folga de verdade.
+const SELO_Y = 36;
 
 const SETA = TAMANHO.botaoPequeno;
 
@@ -41,6 +65,10 @@ const MAPA_IDS = Object.keys(MAPAS);
 
 export class Depurador extends Phaser.Scene {
   private aba = 0;
+  /** comeca minimizado sempre: `Mundo.ts` sobe esta cena junto com o jogo
+   *  inteiro (nao so quando alguem pede), entao o padrao tem que ser
+   *  discreto. Only cresce quando o proprio jogador toca no selo. */
+  private minimizado = true;
   private indiceMapa = 0;
   private indiceRaca = 0;
   private indiceClasse = 0;
@@ -54,25 +82,37 @@ export class Depurador extends Phaser.Scene {
 
   create() {
     this.aba = 0;
+    this.minimizado = true;
     this.desenhar();
     this.input.keyboard?.removeAllListeners("keydown");
     this.input.keyboard?.on("keydown", (e: KeyboardEvent) => {
-      if (e.key === "Escape") this.fechar();
+      if (this.minimizado) return;
+      if (e.key === "Escape") this.minimizar();
       if (e.key === "ArrowLeft") this.irPara(this.aba - 1);
       if (e.key === "ArrowRight") this.irPara(this.aba + 1);
     });
     refazerAoRedimensionar(this, () => this.desenhar());
   }
 
-  private irPara(indice: number) {
-    this.aba = (indice + ABAS.length) % ABAS.length;
+  /** Chamado de fora (`Mundo.ts`, antes de abrir `EscolhaDeSelo`) quando o
+   *  painel cheio precisa sumir da tela sem perder o estado: nunca
+   *  `scene.stop()` -- esta cena e pra ficar viva o jogo inteiro. */
+  minimizar() {
+    if (this.minimizado) return;
+    tocar("pausa-fecha");
+    this.minimizado = true;
     this.desenhar();
   }
 
-  private fechar() {
-    tocar("pausa-fecha");
-    this.scene.resume("Mundo");
-    this.scene.stop();
+  private expandir() {
+    tocar("pausa-abre");
+    this.minimizado = false;
+    this.desenhar();
+  }
+
+  private irPara(indice: number) {
+    this.aba = (indice + ABAS.length) % ABAS.length;
+    this.desenhar();
   }
 
   private emitir(evento: string, dados?: Record<string, unknown>) {
@@ -87,12 +127,16 @@ export class Depurador extends Phaser.Scene {
 
   private desenhar() {
     this.children.removeAll(true);
+    if (this.minimizado) {
+      this.desenharSelo();
+      return;
+    }
     // 5 linhas de altura TAMANHO.botao (stepper + acao, por par) + espacos:
     // cada aba pede o mesmo teto generoso e deixa pilha() cortar se faltar
     const alturaConteudo = 5 * TAMANHO.botao + 4 * ESPACO.md;
     const area = janela(this, {
       alturaConteudo,
-      aoFechar: () => this.fechar(),
+      aoFechar: () => this.minimizar(),
       abas: { itens: ABAS, ativa: this.aba, aoEscolher: (i) => this.irPara(i) },
     });
     const p = pilha(area, ESPACO.md);
@@ -100,6 +144,14 @@ export class Depurador extends Phaser.Scene {
     else if (this.aba === 1) this.desenharPersonagem(p);
     else if (this.aba === 2) this.desenharItens(p);
     else this.desenharMundo(p);
+  }
+
+  /** O selo: sempre visivel, nunca escondido atras de Pausa -- e assim que
+   *  "sempre ligado, cresce quando eu quiser" funciona de verdade. Canto
+   *  livre da HUD (ver a constante SELO no topo do arquivo). */
+  private desenharSelo() {
+    const x = LARGURA - 10;
+    botao(this, x, SELO_Y, SELO, SELO, "D", () => this.expandir(), "painel-ouro");
   }
 
   // -------------------------------------------------------------- stepper
