@@ -26,6 +26,7 @@ import { ICONE as ICONE_RETRATOS } from "../dados/provador";
 import { ICONE as ICONE_UI } from "./icones";
 import { ICONE_ITEM } from "./icones-itens";
 import type { AcaoDeHeroi } from "./acao";
+import { obterTexturaMagia } from "./icones-svg";
 
 const SLOT = 22;
 const GAP = 2;
@@ -157,7 +158,11 @@ export function montarHudDeAcao(cena: Phaser.Scene, opcoes: OpcoesHudDeAcao): Hu
     const fundo = fixo(
       cena.add.nineslice(r.x, r.y, "painel-creme", undefined, SLOT, SLOT, 8, 8, 8, 8).setOrigin(0)
     );
-    const icone = fixo(cena.add.image(r.x + SLOT / 2, r.y + SLOT / 2 + 1, "icones", acao.icone));
+    // Usa ícone SVG para magias, fallback para folha de sprites antigas
+    const { textura, frame } = acao.tipo === "magia"
+      ? obterTexturaMagia(acao.id, acao.icone)
+      : { textura: "icones", frame: acao.icone };
+    const icone = fixo(cena.add.image(r.x + SLOT / 2, r.y + SLOT / 2 + 1, textura, frame));
     const borda = fixo(cena.add.graphics());
     borda.lineStyle(2, acao.cor, 1).strokeRect(r.x + 1, r.y + 1, SLOT - 2, SLOT - 2);
     const marca = fixo(cena.add.graphics());

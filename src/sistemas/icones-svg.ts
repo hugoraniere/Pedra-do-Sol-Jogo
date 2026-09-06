@@ -75,3 +75,27 @@ export function carregarIconesMagia(cena: Phaser.Scene) {
       carregarIconeSVG(cena, nome);
     });
 }
+
+/** Retorna o identificador de textura para renderizar um ícone de magia.
+ *  @param magiaId — o id da magia (chave em conteudo.ts)
+ *  @param indiceAntigo — fallback: índice da folha icones.png se SVG não existir
+ *  @returns { textura, frame } — para usar em cena.add.image(x, y, textura, frame)
+ *           textura = nome do SVG ou "icones" (folha); frame = nome ou índice */
+export function obterTexturaMagia(magiaId: string, indiceAntigo: number) {
+  const nomeIcone = ICONE_MAGIA_SVG[magiaId as keyof typeof ICONE_MAGIA_SVG];
+
+  if (nomeIcone) {
+    // Retorna o SVG (sem frame, pois é uma imagem única)
+    return { textura: nomeIcone, frame: undefined as any };
+  }
+
+  // Fallback: folha de sprites antiga
+  return { textura: "icones", frame: indiceAntigo };
+}
+
+/** Retorna o identificador de textura para renderizar um ícone de atributo.
+ *  @param atributoId — o id do atributo (chave em ATRIBUTO)
+ *  @returns { textura, frame } — o SVG do atributo */
+export function obterTexturaAtributo(atributoId: Atributo) {
+  return { textura: ICONE_ATRIBUTO_SVG[atributoId], frame: undefined as any };
+}

@@ -36,6 +36,7 @@ import { VAZIO } from "../sistemas/estado";
 import { tocar, tocarFicha } from "../sistemas/som";
 import { texto } from "../sistemas/texto";
 import { Ordem } from "../sistemas/turnos";
+import { obterTexturaMagia } from "../sistemas/icones-svg";
 
 const SLOT = 22;
 const GAP = 2;
@@ -340,7 +341,11 @@ export class Provador extends Phaser.Scene {
       const acao = ACOES_DE_PROVA[i];
       const r = linha.reservar();
       const fundo = fixo(this.add.nineslice(r.x, r.y, "painel-creme", undefined, SLOT, SLOT, 8, 8, 8, 8).setOrigin(0));
-      const icone = fixo(this.add.image(r.x + SLOT / 2, r.y + SLOT / 2 + 1, "icones", acao.icone));
+      // Usa ícone SVG para magias, fallback para folha de sprites antigas
+      const { textura, frame } = acao.tipo === "magia"
+        ? obterTexturaMagia(acao.id, acao.icone)
+        : { textura: "icones", frame: acao.icone };
+      const icone = fixo(this.add.image(r.x + SLOT / 2, r.y + SLOT / 2 + 1, textura, frame));
       // borda de 2px: em 1px a cor do tipo some na tela do iPad
       const borda = fixo(this.add.graphics());
       borda.lineStyle(2, acao.cor, 1).strokeRect(r.x + 1, r.y + 1, SLOT - 2, SLOT - 2);
