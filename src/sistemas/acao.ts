@@ -118,7 +118,15 @@ export function acaoDaMagia(id: string): AcaoDeHeroi | undefined {
 export function acoesDoHeroi(heroi: Heroi): AcaoDeHeroi[] {
   const classe = acharClasse(heroi.classe);
   const raca = acharRaca(heroi.raca);
-  const acoes: AcaoDeHeroi[] = [golpeDaArma(heroi.armaSprite || classe.arma), ACAO_SOCO];
+  // "nenhuma" e a sentinela de "o jogador desequipou de proposito"
+  // (heroi.ts::pecasDoHeroi usa a mesma checagem) - sem isto o `||` nunca
+  // caia no fallback pra classe.arma, porque a string "nenhuma" e truthy, e
+  // o heroi desarmado ganhava um golpe de espada-curta fantasma alem do
+  // SEM ARMA. `armaSprite` vazio/indefinido (heroi recem-criado) ainda cai
+  // na arma da classe; so "nenhuma" explicito fica sem golpe de arma.
+  const arma = heroi.armaSprite === "nenhuma" ? undefined : heroi.armaSprite || classe.arma;
+  const acoes: AcaoDeHeroi[] = [ACAO_SOCO];
+  if (arma) acoes.unshift(golpeDaArma(arma));
   for (const id of heroi.magias) {
     const acao = acaoDaMagia(id);
     if (acao) acoes.push(acao);
