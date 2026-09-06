@@ -11,7 +11,7 @@
  * gravado: um save do Lele feito hoje continua certo se amanha uma raca trocar
  * de bonus em conteudo.ts.
  */
-import { Atributo, acharClasse, acharRaca } from "../dados/conteudo";
+import { acharClasse, acharRaca, type Atributo } from "../dados/conteudo";
 import type { Heroi } from "./estado";
 
 export type Poderes = Record<Atributo, number>;
