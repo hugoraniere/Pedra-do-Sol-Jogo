@@ -36,7 +36,7 @@ export function decidirAcaoDaCriatura(
    *  guarda isto por criatura (nao existe estado aqui dentro). */
   jaAtacouDeSurpresa = false
 ): Intencao {
-  const fraco = coracoesMax > 0 && coracoes / coracoesMax <= FRACAO_FRACA;
+  const fraco = coracoesMax > 0 && coracoes / coracoesMax < FRACAO_FRACA;
   const adjacente = distancia <= ADJACENTE;
 
   if (comportamento === "medroso") {
