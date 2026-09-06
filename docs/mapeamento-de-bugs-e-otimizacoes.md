@@ -4,7 +4,8 @@ Documento de analise, gerado no ambiente `auditoria` (galho `ambiente/auditoria`
 Nao muda codigo do jogo - so cataloga o que foi encontrado, com arquivo e linha,
 para quem for consertar depois escolher por onde comecar.
 
-Comecado em 2026-09-06. Trabalho em andamento - ver "Status" no fim.
+Feito em 2026-09-06, numa unica rodada de analise cobrindo o repositorio
+inteiro (ver "Status" no fim pra lista completa do que foi lido).
 
 ## Como ler
 
@@ -649,6 +650,52 @@ urgentes a sua maneira:
 
 *(verificado e limpo: missoes.ts, pesca.ts, consumiveis.ts, janela.ts, interativo.ts, fx.ts, cursor.ts, alvo.ts, encaixes.ts, condicoes-de-fala.ts, bancada.ts, auditoria.ts, orientacao.ts, preferencias.ts, icones.ts/icones-itens.ts/icones-svg.ts, depurador-acesso.ts - lidos por completo, sem achado novo. `visao.ts` foi reconferido especificamente atras de um segundo bug de escala, sem achar nenhum alem do ja conhecido de alvo de toque pequeno.)*
 
+### Consistencia entre docs e codigo, parte 2
+
+#### `docs/plano-de-implementacao.md` (Fase 9) descreve um problema ja resolvido de outro jeito
+- **arquivo:** docs/plano-de-implementacao.md:595-597,631-633 vs src/cenas/Combate.ts:93 e src/sistemas/acao.ts:11,64,118
+- **severidade:** medio
+- **categoria:** harness
+- **descricao:** o doc diz que `Combate.ts` "ainda usa ACOES_DE_PROVA" e que `Bicho` "ainda nao tem `condicoes: Condicao[]`", propondo criar `src/dados/habilidades.ts`. O codigo real ja resolveu os dois por outro caminho: `Bicho` ja tem `condicoes`, e a barra usa `acoesDoHeroi()` lendo `MAGIAS`/`ARMAS` de `conteudo.ts` direto - `dados/habilidades.ts` nunca chegou a existir.
+- **cenario:** quem ler a Fase 9 pra decidir o proximo passo do combate tenta criar um arquivo e uma migracao que ja nao fazem sentido, porque a integracao das 13 magias ja aconteceu por um caminho diferente do planejado.
+
+#### `docs/mundo-que-reage.md` se declara "nada construido" com metade do sistema ja pronto
+- **arquivo:** docs/mundo-que-reage.md:3 vs src/sistemas/condicoes.ts:11-16 e src/sistemas/marcas.ts:34-105
+- **severidade:** medio
+- **categoria:** harness
+- **descricao:** a abertura do doc diz "Plano. Nada aqui foi construido ainda." Mas as 13 `IdCondicao` da tabela ja existem em `condicoes.ts`, e `marcas.ts` ja resolve 9 das 13 marcas descritas, com `Combate.ts` ja aplicando tudo isso em jogo real.
+- **cenario:** quem usar este doc pra estimar "quanto falta" superestima o trabalho pendente (hoje e so superficie de chao e objeto com estado, nao o motor de condicao inteiro).
+
+#### `docs/plano-de-icones-e-diagramacao.md` conta icone com o modelo de 3 atributos, ja superado
+- **arquivo:** docs/plano-de-icones-e-diagramacao.md:47,51 vs src/sistemas/icones-svg.ts:9-13,20-38
+- **severidade:** baixo
+- **categoria:** harness
+- **descricao:** o doc diz que o campo de icone de atributo "nao existe" (fala em Forca/Esperteza/Coracao) e que faltam "pelo menos 8 das 13 magias". Hoje `icones-svg.ts` tem os 5 icones de atributo e as 13 magias mapeadas pra SVG, todos em `public/assets/icones/`.
+- **cenario:** o doc propoe desenhar "23 icones novos" em pixel art quando a decisao de projeto (icones de terceiro em SVG) ja resolveu e encerrou esse buraco por outro caminho.
+
+#### `docs/interface-de-combate.md` descreve como "plano" o que ja esta em producao
+- **arquivo:** docs/interface-de-combate.md:3,19,86 vs src/sistemas/hudDeAcao.ts:106-110,169 e src/cenas/Combate.ts:1636
+- **severidade:** medio
+- **categoria:** harness
+- **descricao:** o doc abre com "Nada aqui foi executado ainda" e lista como pendente o numero de atalho no slot e a bandeja de fundo unindo os slots. `hudDeAcao.ts` ja desenha os dois. O item da elipse em vez de circulo tambem ja foi corrigido em `Combate.ts:1636`.
+- **cenario:** o doc e sobre o `?provador` antigo mas nao avisa isso - quem le hoje pode achar que a barra de combate real ainda tem esses defeitos, quando so existiam na cena de prova descartada.
+
+#### `docs/estudo-de-animacao.md` diz que nao existe quadro de combate, mas ha 5 novos
+- **arquivo:** docs/estudo-de-animacao.md:47 vs arte/base.py:11-12, src/dados/config.ts:108-110, src/sistemas/heroi.ts:127-153
+- **severidade:** medio *(nao "critico": e erro de documentacao, nao quebra o jogo nem trava build, mesmo criterio aplicado ao achado equivalente do CLAUDE.md acima)*
+- **categoria:** harness
+- **descricao:** o doc afirma "E so. Nao existe nenhum quadro de combate. Nem golpe, nem telegrafo, nem levar dano, nem cair." Hoje `ataque`, `machucado`, `esquiva`, `fuga` e `derrota` ja existem desenhados de verdade e ja estao ligados em animacoes Phaser reais.
+- **cenario:** o achado de maior risco de inducao a erro desta rodada - alguem que confiar neste doc pode tentar de novo o trabalho de desenhar quadros que ja existem e ja estao em uso, em vez de notar que so falta o `telegrafo` de verdade (que o doc tambem cita e continua ausente).
+
+#### `docs/plano-de-melhorias-visuais.md` lista como "esperando portar" algo que ja foi portado
+- **arquivo:** docs/plano-de-melhorias-visuais.md:48-62 vs arte/pessoa.py:151-163,504-519 e arte/base.py:142-170
+- **severidade:** medio
+- **categoria:** harness
+- **descricao:** a secao 1.2 lista "as maos", "o perfil de verdade" e "o ciclo de caminhada" como melhorias que existem so em `ambiente/sprites`, "esperando portar". As tres ja estao implementadas na pasta atual.
+- **cenario:** quem seguir este doc como lista de tarefas tenta portar de `ambiente/sprites` um trabalho que outra sessao ja trouxe pra pasta principal, arriscando sobrescrever a versao atual com uma copia desatualizada da outra worktree.
+
+*(verificado e limpo: docs/02-roteiro.md, 03-arquitetura.md, 04-guia-de-arte.md, 08-guia-de-sprites.md, plano-de-lancamentos.md, roadmap-de-expansao.md, interface-do-mouse.md, estudo-de-bichos-e-armas.md, estudo-de-cenario.md, estudo-de-resolucao.md, estudo-de-sprites.md, 06-fluxo-de-sprites.md, plano-de-npc-e-rotina.md, plano-de-ciclo-do-dia.md - sem achado novo forte; ou ja com status atualizado, ou descrevem estudo genuinamente ainda nao implementado.)*
+
 ## Verificado e limpo (nao vira achado, mas evita reverificar)
 
 - **Seguranca de entrada do jogador**: passe dedicado (innerHTML/eval/JSON.parse de localStorage/Electron/rede externa) nao achou vulnerabilidade explaravel. O unico `innerHTML` do projeto (`src/sistemas/doutor.ts:169`) escapa tudo que interpola e so mostra dado de diagnostico interno, nunca nome do heroi nem dialogo. `contextIsolation`/`nodeIntegration` do Electron corretos. Sem `fetch`/`XMLHttpRequest` no projeto.
@@ -667,3 +714,13 @@ urgentes a sua maneira:
 - [x] harness parte 2 (scripts restantes)
 - [x] logica de combate (dado, condicoes, ND de area)
 - [x] aplicativo de desktop (app/, Electron)
+- [x] NPC, dialogo e ciclo do dia
+- [x] mochila, equipamento e economia
+- [x] seguranca de entrada do jogador
+- [x] revisao adversarial dos achados criticos
+- [x] sistemas restantes (dadoAntigo, fileira, missoes, pesca, etc)
+- [x] docs restantes vs codigo
+
+Cobertura completa: todo arquivo de `src/sistemas`, `src/cenas`, `src/dados`,
+`ferramentas/`, `app/` e todo doc de `docs/*.md` foi lido por pelo menos uma
+rodada. Fechado em 2026-09-06.
