@@ -376,6 +376,57 @@ NAO entram aqui - aquilo e decisao tomada, nao bug.
 
 *(observacao, nao e achado: a leitura de save trata JSON invalido/formato antigo com fallback seguro, faz merge raso com o estado vazio pra campos novos como fome/sono, migra os formatos historicos da mochila, e tem fallback defensivo pra ids de atributo/magia/mochila que nao existem mais - a migracao 3->5 atributos nao quebra save antigo.)*
 
+### Consistencia entre docs e codigo
+
+#### CLAUDE.md contradiz a si mesmo: diz que o sistema de dado/atributo/combate nao existe, mas o resto do proprio arquivo (e o codigo) mostra que existe
+- **arquivo:** CLAUDE.md:223-224 vs CLAUDE.md:59-190 (mesmo arquivo, secao "As regras do mundo") e docs/05-roadmap.md:53-106; **confirmado em codigo**: src/sistemas/teste.ts:32 (`testar()`), src/sistemas/poderes.ts:51,72 (`poderesDoHeroi()`, `coracoesMaxDoHeroi()`), src/sistemas/estado.ts:409,453,482 (`acenderFogueira()`, `aplicarDerrota()`, `ganharSelo()`), src/cenas/Combate.ts, src/cenas/EscolhaDeSelo.ts
+- **severidade:** critico
+- **categoria:** harness
+- **descricao:** CLAUDE.md afirma, em negrito: "Nada do sistema da secao anterior existe em codigo ainda. Nao ha dado, atributo, coracao, combate, derrota, fogueira nem selo." **Confirmado por grep que isso e falso**: as 6 funcoes citadas existem e implementam exatamente dado (1d20+ND), atributo, coracao, derrota, fogueira e selo.
+- **cenario:** CLAUDE.md e a fonte de verdade lida primeiro por qualquer sessao/dev nova, com instrucao explicita de valer "mais que qualquer suposicao sua sobre o projeto" - quem le so ate essa frase conclui que o maior buraco do projeto e o sistema inteiro (dado/combate/derrota), quando a Fase 1 esta com o essencial implementado - risco real de redigitar trabalho ja feito ou recomendar a fase errada do roadmap.
+
+#### `docs/plano-do-combate.md` descreve o combate como preso no Provador, mas ele ja esta integrado no jogo de verdade
+- **arquivo:** docs/plano-do-combate.md:88-94,317-318 vs src/cenas/Combate.ts (cena real) e src/cenas/Interface.ts:45-46,219-220 (HUD ja integrado)
+- **severidade:** medio
+- **categoria:** harness
+- **descricao:** o doc diz que a barra de habilidades esta "bloqueado por fronteira" porque `Interface.ts`/`design.ts` pertencem a outro "ambiente" e que "ate a etapa 8 o ambiente combate nao encosta em nenhum deles... tudo vive no provador" - mas `Interface.ts` ja monta o HUD de combate real e `Combate.ts` ja e cena do jogo de verdade, nao do Provador.
+- **cenario:** CLAUDE.md aponta este doc como "o que vale de verdade sobre o formato do combate"; quem le pra saber o que falta pode achar que a integracao com Ficha/Interface ainda nao aconteceu e tentar renegociar uma fronteira ja cruzada.
+
+#### `docs/09-plano-de-resolucao-e-contraste.md` cita um numero de codigo que nunca existiu
+- **arquivo:** docs/09-plano-de-resolucao-e-contraste.md:3-4,89-90 vs arte/paleta.py:158 (`def rampa(base, forca=54)`)
+- **severidade:** baixo
+- **categoria:** harness
+- **descricao:** o doc afirma "Nada aqui foi implementado ainda" e recomenda "hoje a forca padrao e 42; testar 56 e 64" - mas o codigo nunca teve `forca=42`, o valor e 54 desde a introducao da funcao.
+- **cenario:** quem for validar a Fase 0 do plano de contraste procura por "42" no codigo, nao acha, e pode concluir erroneamente que nada foi feito e reabrir um trabalho ja concluido.
+
+#### `docs/inventario-de-icones.md` contradiz a si mesmo sobre os icones de atributo
+- **arquivo:** docs/inventario-de-icones.md:44-58 (tabela "Decisao de 2026-09-05", 5 atributos aprovados) vs docs/inventario-de-icones.md:108-117 (tabela "1. Atributos" mais antiga, diz "4 de 5 nao tem identidade visual propria"); confirmado: src/sistemas/icones-svg.ts:8-14 e os SVGs em public/assets/icones/
+- **severidade:** medio
+- **categoria:** harness
+- **descricao:** a secao do topo do documento (mais recente) ja lista os 5 icones de atributo como desenhados/aprovados, e o codigo confirma os 5 SVGs em producao - mas a secao mais abaixo, nao atualizada, ainda diz que 4 dos 5 usam o icone generico emprestado.
+- **cenario:** quem procura "o que falta desenhar" nesse doc pode achar a tabela errada (mais antiga) e redesenhar icones que ja existem.
+
+#### `docs/plano-de-itens-e-equipamento.md` descreve o sistema de atributos com o modelo antigo (3 atributos)
+- **arquivo:** docs/plano-de-itens-e-equipamento.md:79-82,173 vs src/sistemas/poderes.ts:16-27,51-56 (5 atributos, bonus de raca em ciclo de dois)
+- **severidade:** medio
+- **categoria:** harness
+- **descricao:** o doc (atualizado na "Segunda rodada", 2026-09-05, o MESMO dia da revisao de atributos) ainda descreve `poderesDoHeroi()` somando "tres numeros finais, FORCA/ESPERTEZA/CORACAO" e instrui manter `equipamento.ts` separado porque "poderes continua so sobre FORCA/ESPERTEZA/CORACAO" - o codigo ja tem 5 atributos com bonus duplo de raca.
+- **cenario:** quem implementar equipamento (Fase 6, ainda nao feita) usando este doc como referencia pode escrever `modificadorDeEquipamento()` pensando nos 3 atributos antigos, gerando codigo incompativel com `Poderes`/`Atributo` reais desde o primeiro commit.
+
+#### `Mundo.acordarNaFogueira()` e codigo morto com docstring que descreve a regra ja revogada
+- **arquivo:** src/cenas/Mundo.ts:1351-1364 vs src/cenas/Combate.ts:841 (`aplicarDerrota()`, a funcao de verdade chamada na derrota) e CLAUDE.md ("Divergencia deliberada: a fogueira nao e mais quem resgata")
+- **severidade:** medio
+- **categoria:** bug
+- **descricao:** `acordarNaFogueira()` nao e chamada de lugar nenhum do codigo (so aparece na propria definicao) - sobra da implementacao anterior a decisao de trocar a fogueira pelo Hospital, mas continua no arquivo com docstring que descreve exatamente a regra revogada (zera moedas, mantem item, acorda na fogueira), sem nota de que esta obsoleta.
+- **cenario:** um dev futuro que faz grep por "derrota"/"acorda" pode achar essa funcao em vez de `aplicarDerrota()`, reconecta-la por engano num refactor de `Combate.ts` e reintroduz silenciosamente o comportamento antigo ja decidido como errado.
+
+#### `docs/plano-de-itens-e-equipamento.md` conta 12 itens na LOJA, hoje sao 13
+- **arquivo:** docs/plano-de-itens-e-equipamento.md:63 ("LOJA (12 itens)") vs src/dados/conteudo.ts (`LOJA`, 13 entradas, incluindo "pao" adicionado por docs/plano-de-moodles.md)
+- **severidade:** baixo
+- **categoria:** harness
+- **descricao:** "Pao da Padeira" foi adicionado a LOJA pelo plano de moodles depois que este documento fixou a contagem em 12; o numero nao foi atualizado.
+- **cenario:** baixo risco, mas e o tipo de numero que alguem cita de cabeca em conversa de design e erra por ter lido o doc em vez de contar o array.
+
 ## Status
 
 - [x] sistemas do jogo (src/sistemas)
