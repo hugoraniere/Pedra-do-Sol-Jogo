@@ -95,6 +95,10 @@ type Bicho = {
   /** "medroso" (ver sistemas/criatura.ts): topa um golpe de surpresa, nunca
    *  dois seguidos -- da segunda vez pra frente, foge em vez de atacar. */
   jaAtacouDeSurpresa: boolean;
+  /** onde o Atrair foi lancado (a casa do heroi no momento do "doce") - so
+   *  existe enquanto a criatura estiver ATRAIDO. Ela anda ate aqui e ignora o
+   *  heroi, mesmo que ele se mexa depois - ver docs/mundo-que-reage.md:76. */
+  pontoAtracao?: Casa;
 };
 
 /** So o ESTADO de cada acao - quem desenha o slot e sistemas/hudDeAcao.ts,
@@ -619,10 +623,16 @@ export class Combate extends Phaser.Scene {
     if (!b) { this.ordem.remover(id); return this.entrarNoTurno(); }
     const ficha = acharCriatura(b.bicharioId);
     const aqui = this.casaDoBicho(b);
-    const alvo = this.casaDoHeroi();
+    const atraida = tem(b.condicoes, "atraido") && !!b.pontoAtracao;
+    // ATRAIDO ignora o heroi por completo (docs/mundo-que-reage.md:76): nunca
+    // ataca, nunca foge, so anda ate o cheiro. Chegando la, so espera - o
+    // proprio comportamento normal (foge/curioso/etc.) fica suspenso.
+    const alvo = atraida ? b.pontoAtracao! : this.casaDoHeroi();
     const distancia = distanciaEmCasas(aqui, alvo);
     const comportamento = comportamentoDeCombate(ficha?.comportamento ?? "foge");
-    const intencao = decidirAcaoDaCriatura(comportamento, distancia, b.coracoes, b.coracoesMax, b.jaAtacouDeSurpresa);
+    const intencao = atraida
+      ? (distancia <= 1 ? "esperar" : "avancar")
+      : decidirAcaoDaCriatura(comportamento, distancia, b.coracoes, b.coracoesMax, b.jaAtacouDeSurpresa);
 
     if (intencao === "atacar") {
       b.rota = [];
@@ -1466,6 +1476,11 @@ export class Combate extends Phaser.Scene {
   private aplicarMarcaNoBicho(b: Bicho, marca: Marca) {
     const resultado = aplicarMarca(marca, b.condicoes);
     b.condicoes = resultado.condicoesNovas;
+    // "doce" e a unica marca que aplica ATRAIDO (sistemas/marcas.ts) - o
+    // ponto de atracao e a casa do heroi AGORA, no instante do lancamento,
+    // nao um alvo que persegue: se o heroi andar depois, a criatura continua
+    // indo para onde o cheiro ficou (docs/mundo-que-reage.md:76).
+    if (marca === "doce") b.pontoAtracao = this.casaDoHeroi();
     this.mostrarCondicoes(b);
   }
 
