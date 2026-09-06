@@ -1,0 +1,7 @@
+<!-- Fonte: "Flame" por Lorc, game-icons.net (CC BY 3.0) -->
+<!-- https://game-icons.net/1x1/lorc/flame.html -->
+<!-- Elemento: Fogo -- cor #F2802B -->
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <path d="M256 32c0 0-80.75 101.75-80.75 172.75 0 44.183 36.317 80 81 80 44.738 0 81-35.82 81-80C337.25 133.75 256 32 256 32zm0 240c-73.405 0-133.35 59.94-133.35 133.25 0 73.407 59.945 133.35 133.35 133.35 73.407 0 133.25-59.943 133.25-133.35C389.25 331.94 329.407 272 256 272z"
+        fill="#F2802B" stroke="#2C2440" stroke-width="16" stroke-linejoin="round"/>
+</svg>

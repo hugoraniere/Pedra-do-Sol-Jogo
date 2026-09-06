@@ -67,11 +67,20 @@ verdade (artefato publicado durante a conversa, ícones em
 | Agilidade | Boots (Lorc) — trocado de Focused Lightning | ✅ aprovado |
 | Vitalidade | Bordered Shield (Lorc) | ⚠️ aposta, não confirmado — "coragem, fazer amigo, resistir" não cabe direito num escudo |
 
-**Ainda fora do piloto**: os 8 ícones de magia que faltam (Cresce-Grama, Salto
-Longo, Remendo, Língua Selvagem, Rajada, Bafo Gelado, Voz de Trovão, Bola de
-Fogo já têm ícone antigo mas não passaram pela família nova ainda), e a
-mecânica de "ações básicas" (golpe/andar/atirar) em si, que só existe como
-placeholder visual — não tem regra de jogo ainda.
+**Status dos 8 ícones de magia restantes** (criados em 2026-09-06):
+- Cresce-Grama (Sprout, Lorc) — ✅ criado, Natureza #3E9B62
+- Salto Longo (Boot, Lorc) — ✅ criado, Neutra #B08658
+- Remendo (Wrench, Lorc) — ✅ criado, Neutra #B08658
+- Língua Selvagem (Mouth, Lorc) — ✅ criado, Natureza #3E9B62
+- Rajada (Wind Tornado, Lorc) — ✅ criado, Ar #CDE9F8
+- Bafo Gelado (Snowflake, Lorc) — ✅ criado, Gelo #7EC4F2
+- Voz de Trovão (Lightning Bolt, Lorc) — ✅ criado, Eletricidade #F5B62B
+- Bola de Fogo (Flame, Lorc) — ✅ criado, Fogo #F2802B
+
+Todos os 13 ícones de magia agora têm uma versão na família nova em `ferramentas/piloto-icones/`.
+
+**Ainda fora do piloto**: a mecânica de "ações básicas" (golpe/andar/atirar)
+em si, que só existe como placeholder visual — não tem regra de jogo ainda.
 
 ---
 
