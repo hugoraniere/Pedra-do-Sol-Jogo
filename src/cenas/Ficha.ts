@@ -685,7 +685,7 @@ export class Ficha extends Phaser.Scene {
       marcar(this.add.image(xIcone, meio(area), folha, quadro), "icone");
     }
 
-    marcar(
+    const rotuloTexto = marcar(
       texto(this, xIcone + LADO_ICONE / 2 + ESPACO.xs, meio(area), rotulo, {
         tamanho: 8,
         cor: COR.tintaSuave,
@@ -695,6 +695,12 @@ export class Ficha extends Phaser.Scene {
       rotulo
     );
 
+    // zona de toque do slot inteiro (transparente, alpha 0) — cobre o
+    // rotulo de proposito, pra tocar em cima do texto tambem abrir o menu.
+    // Precisa estar no MESMO container que o rotulo, senao o auditor
+    // (sistemas/auditoria.ts) le como sobreposicao de verdade: a checagem
+    // "rotulo dentro do proprio botao nao conta" so exclui quando os dois
+    // compartilham `parentContainer`.
     const zona = this.add
       .rectangle(area.x + area.largura / 2, area.y + area.altura / 2, area.largura, area.altura, 0, 0)
       .setInteractive();
@@ -703,6 +709,7 @@ export class Ficha extends Phaser.Scene {
       this.ignorarProximoFechamentoDeMenu = true;
       this.abrirMenuDeEquipar(tipo, area);
     });
+    this.add.container(0, 0, [rotuloTexto, zona]);
   }
 
   /** Lista os itens da mochila que servem pra este slot (mais TIRAR, se

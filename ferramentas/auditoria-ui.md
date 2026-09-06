@@ -1,7 +1,7 @@
 # Auditoria de UI
 
 Telas visitadas: 36
-Problemas encontrados: 4
+Problemas encontrados: 0
 
 | Tela | Objetos | Problemas |
 |---|---|---|
@@ -18,7 +18,7 @@ Problemas encontrados: 4
 | 11-janela-eu | Interface:56 Ficha:57 Som:0 Ponteiro:1 | 0 |
 | 11-janela-poderes | Interface:56 Ficha:51 Som:0 Ponteiro:1 | 0 |
 | 11-janela-magias | Interface:56 Ficha:36 Som:0 Ponteiro:1 | 0 |
-| 11-janela-mochila | Interface:56 Ficha:73 Som:0 Ponteiro:1 | 4 |
+| 11-janela-mochila | Interface:56 Ficha:77 Som:0 Ponteiro:1 | 0 |
 | 11-janela-diario | Interface:56 Ficha:33 Som:0 Ponteiro:1 | 0 |
 | 11-janela-menu | Interface:56 Ficha:37 Som:0 Ponteiro:1 | 0 |
 | 12-pausa | Interface:56 Pausa:22 Som:0 Ponteiro:1 | 0 |
@@ -42,9 +42,4 @@ Problemas encontrados: 4
 | longe-08-criacao-heroi-com-nome | Criacao:106 Som:0 Ponteiro:1 | 0 |
 | longe-09-criacao-com-arma | Criacao:108 Som:0 Ponteiro:1 | 0 |
 
-## 11-janela-mochila (4)
-
-- **sobreposicao** texto:"ROUPA" vs botao:Rectangle . 300 px de area em comum
-- **sobreposicao** texto:"ARMADURA" vs botao:Rectangle . 480 px de area em comum
-- **sobreposicao** texto:"ACESSORIO" vs botao:Rectangle . 520 px de area em comum
-- **sobreposicao** texto:"ARMA" vs botao:Rectangle . 240 px de area em comum
+Nenhum problema de sobreposicao ou transbordo encontrado.
