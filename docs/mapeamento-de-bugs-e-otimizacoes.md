@@ -291,11 +291,48 @@ NAO entram aqui - aquilo e decisao tomada, nao bug.
 - **descricao:** `tocarFicha()` chama `lotado()` a cada disparo, que chama `gerente.getAllPlaying()` e filtra a lista inteira de sons ativos so pra contar quantos nao sao loop, em vez de manter um contador incrementado/decrementado nos eventos de start/complete.
 - **cenario:** numa cena de combate com varios efeitos curtos por segundo (passo, golpe, voz de dado, impacto), cada um dispara essa varredura completa - custo pequeno por chamada, redundante no hot path de audio que existe justamente pra nao travar o app no iPad.
 
+### Dados e conteudo (src/dados)
+
+#### `TRILHA_DA_FLORESTA` tem 8 linhas de chao com uma coluna a menos - buraco na borda leste
+- **arquivo:** src/dados/mapas.ts:517-520,522-525 (dentro de `TRILHA_DA_FLORESTA.chao`, 513-547)
+- **severidade:** medio
+- **categoria:** bug
+- **descricao:** **confirmado por medicao direta** - 8 das 13 linhas do desenho tem 29 caracteres (falta um "T" antes da borda leste) enquanto bordas e a linha da trilha (`t`) tem 30. `chao[y][29]` fica `undefined` nessas 8 linhas.
+- **cenario:** o tilemap do Phaser usa a largura da primeira linha (30) pra todas; a coluna x=29 nessas 8 linhas vira tile vazio (sem colisao, sem desenho) na borda leste da mata que devia fechar o corredor.
+
+#### `npm run verificar` so confere largura de linha de mapa que tem `criaturas`
+- **arquivo:** ferramentas/verificar.mjs:188-207 (o `if (!listaCriaturas) continue;`)
+- **severidade:** medio
+- **categoria:** harness
+- **descricao:** a unica checagem que le `desenho[y]?.[x]` linha a linha (e por isso pegaria linha curta) so roda pra mapas com bloco `criaturas: [...]`; `TRILHA_DA_FLORESTA` nao tem criaturas e passou batido, exatamente o caso do achado acima.
+- **cenario:** uma checagem generica e independente de criaturas - por mapa, `new Set(desenho.map(l => l.length)).size === 1` - pegaria esse bug (e qualquer novo) na hora.
+
+#### CLAUDE.md diz "3 pontos" de bonus de atributo, mas a raca sozinha ja da 2
+- **arquivo:** CLAUDE.md (secao "Atributos, revisao de 2026-09-04"); src/dados/conteudo.ts:102-107; src/sistemas/poderes.ts:24-29
+- **severidade:** medio
+- **categoria:** bug
+- **descricao:** **confirmado por leitura direta**: CLAUDE.md afirma que o bonus de origem continua 3 pontos (raca +1, classe +1, jogador +1) "so espalhados por 5 opcoes em vez de 3" - mas `conteudo.ts:102-107` documenta a revisao de 2026-09-05 (`docs/15-lore-e-visual-das-racas.md`) que trocou `Raca.bonus` por uma dupla `[Atributo, Atributo]` (ciclo de 2 atributos por raca), e `poderesDaOrigem()` soma +1 em CADA um dos dois. O total real de origem+jogador e 4 pontos (2 da raca + 1 da classe + 1 do jogador), nao 3.
+- **cenario:** quem le CLAUDE.md pra saber quanto um heroi novo recebe de bonus total confia no numero "3"; a Ficha/criacao mostra um heroi com 4 pontos de atributo - a nota de design ficou desatualizada depois do redesenho de racas do dia seguinte e ninguem voltou pra corrigir o numero.
+
+#### `Raca.icone` (dom da raca) e desenhado na arte mas nunca renderizado em nenhuma cena
+- **arquivo:** src/dados/conteudo.ts:110,129,140,151,162,173 (campo `icone` de cada `Raca`); arte/icones.py:359,578-580
+- **severidade:** baixo
+- **categoria:** otimizacao
+- **descricao:** os 5 icones de dom de raca sao desenhados de verdade em `arte/icones.py`, mas nenhuma busca em `src/cenas` le `raca.icone` - Criacao.ts e Ficha.ts mostram so o texto de `raca.dom`/`raca.domTexto`, nunca o icone.
+- **cenario:** o jogador nunca ve um icone pro dom da propria raca na criacao nem na Ficha, apesar do trabalho de arte ja existir pronto - dado morto que parece em uso porque tem sprite de verdade por tras.
+
+#### `GOBLINS_SPRITE` inclui "chefe", que nunca aparece em jogo de verdade
+- **arquivo:** src/dados/config.ts:299; src/dados/conteudo.ts:842-846 (`VARIANTES_GOBLIN`); src/cenas/Boot.ts:77
+- **severidade:** baixo
+- **categoria:** otimizacao
+- **descricao:** `GOBLINS_SPRITE` tem 4 variantes (inclui "chefe") e por isso Boot.ts carrega `goblin-chefe.png` toda partida, mas `spriteDoGoblin()` - a unica funcao que decide qual corpo de goblin nasce no mundo/combate - so sorteia entre as 3 primeiras (`VARIANTES_GOBLIN`, sem "chefe"). O unico uso real e o Provador (ferramenta de teste, nunca chega no jogo publicado).
+- **cenario:** todo carregamento do jogo baixa e decodifica um sprite de goblin que nenhum encontro de verdade jamais mostra - bytes e tempo de loading gastos por um bicho que so existe numa bancada de teste interna.
+
 ## Status
 
 - [x] sistemas do jogo (src/sistemas)
 - [x] cenas do jogo (src/cenas)
-- [ ] dados e conteudo (src/dados)
+- [x] dados e conteudo (src/dados)
 - [x] harness de testes (ferramentas/*.mjs)
 - [x] geracao de arte e som (arte/*.py, som/*.py)
 - [x] build e performance (vite, bundle, PWA)
