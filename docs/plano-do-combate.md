@@ -1,5 +1,13 @@
 # Plano do combate: onde estamos e o que falta
 
+**Nota de 2026-09-06: a coordenacao entre ambientes descrita abaixo (secao D,
+"bloqueado por fronteira", e a tabela de etapas por ambiente) e historica.**
+`ambiente/combate` foi mergeada em `principal` em 2026-09-05 (ver
+`docs/05-roadmap.md`), e `Interface.ts` ja monta o HUD de combate real
+(`sistemas/hudDeAcao.ts`) - a fronteira que este documento descreve como
+travada ja foi cruzada. Fica registrado como historico de como a integracao
+foi decidida, nao como pendencia atual.
+
 Este e o **quadro**. Ele manda na ordem do trabalho e substitui as secoes de ordem
 de implementacao dos outros dois documentos, que estavam se contradizendo.
 

@@ -58,6 +58,19 @@ em vez de "criatura de nevoa"). Ja implementado em `conteudo.ts` — ver secao
    espantalho e cavaleiro-de-cinzas, ou de recompensa de vitoria sobre os
    quatro guardioes unicos (serpente, Grulo, Bruxa Espinho, Brasanegra).
 
+**Correcao de 2026-09-06 nos "fatos" da secao 2 logo abaixo:** foram escritos
+na Segunda rodada (2026-09-05), mas a revisao de atributos daquele MESMO dia
+(`docs/15-lore-e-visual-das-racas.md`, so um dia antes da Terceira rodada
+acima) trocou os 3 atributos (FORCA/ESPERTEZA/CORACAO) por 5 (Forca, Destreza,
+Agilidade, Inteligencia, Vitalidade) - `poderesDoHeroi()` hoje soma bonus de
+raca (em CICLO DE DOIS atributos, nao um so) + classe + escolha do jogador, 4
+pontos no total, nao "tres numeros finais FORCA/ESPERTEZA/CORACAO". O dado
+tambem mudou: `sistemas/turnos.ts`/`rolar()` citado abaixo e o motor ANTIGO
+(1d6) - o motor de verdade e `sistemas/teste.ts`/`testar()` (1d20 vs ND). A
+`LOJA` tambem cresceu pra 13 itens (o "pao" do plano de moodles entrou
+depois). O resto da secao (bestiario, mochila como `string[]`, Ficha
+placeholder) continua descrevendo fatos corretos da epoca.
+
 ## 2. Onde o jogo ja esta (fatos, nao suposicao)
 
 - `src/dados/conteudo.ts`: `ARMAS` (8 compraveis + 3 lendarias) e `LOJA` (12
