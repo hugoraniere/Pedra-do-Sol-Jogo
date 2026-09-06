@@ -55,7 +55,12 @@ export function carregarIconeSVG(
   // Em produção, precisará ser copiado para public/assets/icones/ e carregado via image loader.
   if (cena.textures.exists(chave)) return; // já carregado
 
-  cena.load.image(chave, caminho);
+  // load.image() nao processa SVG sem width/height no elemento raiz (so viewBox,
+  // que e o caso de todo game-icons.net) -- o Phaser falha ao converter pra
+  // textura e o Loader nunca fecha a contagem, travando o jogo na tela de
+  // carregamento pra sempre. load.svg() com tamanho explicito e o loader que
+  // o Phaser espera pra SVG.
+  cena.load.svg(chave, caminho, { width: 64, height: 64 });
 }
 
 /** Carrega todos os ícones de atributos para uma cena.

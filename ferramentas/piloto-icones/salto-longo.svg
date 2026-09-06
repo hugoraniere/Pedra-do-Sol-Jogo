@@ -1,6 +1,6 @@
 <!-- Fonte: "Boot" por Lorc, game-icons.net (CC BY 3.0) -->
 <!-- https://game-icons.net/1x1/lorc/boot.html -->
-<!-- Elemento: Neutra -- cor #B08658 -->
+<!-- Elemento: Neutra - cor #B08658 -->
 <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
   <path d="M64 64c-17.673 0-32 14.327-32 32v352c0 17.673 14.327 32 32 32h160v-64H96v-288h128v-64H64zm224 0v64h128v288h-128v64h160c17.673 0 32-14.327 32-32V96c0-17.673-14.327-32-32-32h-160z"
         fill="#B08658" stroke="#2C2440" stroke-width="16" stroke-linejoin="round"/>

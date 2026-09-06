@@ -1,6 +1,6 @@
 <!-- Fonte: "Aura" por Lorc, game-icons.net (CC BY 3.0) -->
-<!-- Elemento: Neutra (utilitaria) -- cor #B08658 compartilhada com Aderencia, Barreira, Remendo, Salto Longo -->
-<!-- Trocado: "Bubble Field" (v2) lia como um aviao -- Aura evita colidir com o icone do Escudo de verdade -->
+<!-- Elemento: Neutra (utilitaria) - cor #B08658 compartilhada com Aderencia, Barreira, Remendo, Salto Longo -->
+<!-- Trocado: "Bubble Field" (v2) lia como um aviao - Aura evita colidir com o icone do Escudo de verdade -->
 <!-- (equipamento, ja existe em arte/itens.py) -->
 <!-- Recolorido: preenchimento #7EC4F2 (AGUA), contorno #2C2440 (TINTA) por cima da forma original -->
 <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
