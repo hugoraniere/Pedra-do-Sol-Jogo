@@ -531,6 +531,38 @@ NAO entram aqui - aquilo e decisao tomada, nao bug.
 - **descricao:** o comentario diz explicitamente "abaixo" (estritamente menor) mas o codigo usa `<=` (menor-ou-igual) - foge tambem exatamente na metade da vida, nao so abaixo dela.
 - **cenario:** hoje inofensivo (o unico "foge" e o Goblin, `coracoes: 5`, impar - a fracao nunca cai exatamente em 0.5); mas uma criatura futura "foge" com coracoes par (a Aranha ja tem 8) expoe o bug de verdade: com 4 de 8 (exatamente metade), a criatura foge quando deveria continuar lutando ate cair estritamente abaixo da metade.
 
+### Mochila, equipamento e economia
+
+#### Perda de equipamento na derrota e anulada ao recarregar o save
+- **arquivo:** src/sistemas/estado.ts:453-477 (`aplicarDerrota`) + 178-204 (`abrirEspaco`/`backfillarEquipamentoInicial`)
+- **severidade:** critico
+- **categoria:** bug
+- **descricao:** `aplicarDerrota` sorteia itens da mochila pra remover e so exclui id que comece com "chave-" - nao exclui a arma (`heroi.armaSprite`) nem a roupa (`heroi.estiloRoupa`) equipadas. Se o sorteio pegar o item equipado, ele some da mochila mas o ponteiro de equipamento continua apontando pra ele; `backfillarEquipamentoInicial()`, que roda TODA VEZ que o jogo carrega, recoloca de graca na mochila qualquer item cujo id bata com `armaSprite`/`estiloRoupa` e nao esteja mais la.
+- **cenario:** jogador perde uma luta com a arma da classe equipada, o sorteio a inclui e ela some; jogador recarrega a pagina e volta com "Continuar" - `abrirEspaco` devolve a arma sem custo nenhum. O prejuizo que o CLAUDE.md descreve ("doi de verdade") desaparece pra qualquer item equipado, bastando recarregar o jogo.
+
+#### Jogar fora item equipado nao desequipa (arma/armadura fantasma)
+- **arquivo:** src/cenas/Ficha.ts:920-955 (`acoesDoItem`), 960-965 (`jogarItemFora`); src/sistemas/estado.ts:298-302 (`jogarFora`)
+- **severidade:** critico
+- **categoria:** bug
+- **descricao:** `acoesDoItem` sempre oferece "JOGAR FORA" pra qualquer item, inclusive equipado - a checagem de "equipado" so rotula EQUIPAR/DESEQUIPAR, nunca bloqueia ou encadeia um desequipar antes do descarte. `jogarFora` mexe so na mochila, nunca em `heroi.equipamento`.
+- **cenario:** jogador arrasta a armadura equipada ate a lixeira; ela sai da mochila e vai pro chao, mas `heroi.equipamento.armadura` continua com o id antigo - o heroi segue "equipado" com uma peca que nao existe em lugar nenhum. Diferente do caso da arma/roupa (achado acima), `backfillarEquipamentoInicial` NAO cobre `equipamento.armadura`/`equipamento.acessorio` - pra esses dois o desequilibrio nunca se autocorrige nem recarregando o save.
+
+#### Item de pista duplicavel ao infinito pela mesma fala
+- **arquivo:** src/dados/dialogos.ts:225-250 (`varal`), comparar com o padrao de guarda em 40-63 (`marinheiro`, variante "ja-entregou")
+- **severidade:** medio
+- **categoria:** bug
+- **descricao:** o `varal` tem uma unica variante de fala, sem condicao tipo `etapaFeita(...)` pra trocar de fala depois da pista ja pega - diferente do `marinheiro`, que tem variante "ja-entregou" pra isso. "Examinar de perto" chama `guardar("pano-goblin")` toda vez, sem bloqueio.
+- **cenario:** jogador interage com o varal, escolhe "Examinar de perto", sai e interage de novo - a mesma escolha empilha outra unidade de "pano-goblin" indefinidamente. Item de historia (nao vendavel), entao nao gera dinheiro infinito, mas duplica algo que deveria ser unico e aparece com quantidade crescente sem sentido narrativo.
+
+#### Mochila cheia descarta item de loot silenciosamente, sem aviso
+- **arquivo:** src/sistemas/estado.ts:250-268 (`guardar`, retorno `false` ignorado pelos chamadores); src/cenas/Combate.ts:1335,1384 (loot de criatura); src/cenas/Mundo.ts:792 (item do chao)
+- **severidade:** medio
+- **categoria:** bug
+- **descricao:** `guardar()` devolve `false` sem gastar nada quando a mochila esta cheia, mas todo call site de gameplay ignora o retorno. No loot de combate, o item simplesmente nao entra e deixa de existir (a criatura ja foi removida). No item do chao, `removerItemDoChao` roda DEPOIS de `guardar`, incondicionalmente - o item some do chao mesmo quando nao coube na mochila.
+- **cenario:** mochila cheia, jogador vence um combate cujo bestiario larga item raro - `guardar(id)` falha em silencio, o item nunca aparece na Ficha, sem toast/aviso nenhum de que foi perdido.
+
+*(verificado e limpo: nao ha caminho de compra/venda que gere dinheiro infinito - so existe `comprarMochila()` (upgrade de mochila) e `venderMaterial()`; nao ha cena de loja/compra de item ainda, `LOJA` em conteudo.ts e so dado esperando a cena.)*
+
 ## Verificado e limpo (nao vira achado, mas evita reverificar)
 
 - **Seguranca de entrada do jogador**: passe dedicado (innerHTML/eval/JSON.parse de localStorage/Electron/rede externa) nao achou vulnerabilidade explaravel. O unico `innerHTML` do projeto (`src/sistemas/doutor.ts:169`) escapa tudo que interpola e so mostra dado de diagnostico interno, nunca nome do heroi nem dialogo. `contextIsolation`/`nodeIntegration` do Electron corretos. Sem `fetch`/`XMLHttpRequest` no projeto.
