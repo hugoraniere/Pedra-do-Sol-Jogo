@@ -253,8 +253,8 @@ NAO entram aqui - aquilo e decisao tomada, nao bug.
 - **arquivo:** src/sistemas/doutor.ts:220-225
 - **severidade:** medio
 - **categoria:** bug
-- **descricao:** `resumo()` consulta a chave `localStorage.getItem("reino-de-aurora-v1")`, que nunca e escrita por nada no jogo - os saves reais usam `aurora-save-0/1/2` (src/sistemas/armazenamento.ts:45).
-- **cenario:** jogador com progresso salvo abre o painel do Doutor (4 toques no canto, unico console disponivel no iPad) pra diagnosticar um problema; o resumo sempre mostra "sem save", escondendo justamente a informacao que a ferramenta existe pra mostrar quando alguem for investigar um bug relatado por quem joga.
+- **descricao:** `resumo()` consulta a chave `localStorage.getItem("reino-de-aurora-v1")`, que nunca e escrita por nada no jogo - os saves reais usam `aurora-save-${espaco}` (src/sistemas/armazenamento.ts:45), e o app desktop nem usa `localStorage` pra isso (ver `PonteApp` em armazenamento.ts:26-32).
+- **cenario:** jogador com progresso salvo abre o painel do Doutor (4 toques no canto, unico console disponivel no iPad) pra diagnosticar um problema; o resumo sempre mostra "sem save" - tanto no navegador quanto no app desktop -, escondendo justamente a informacao que a ferramenta existe pra mostrar quando alguem for investigar um bug relatado por quem joga.
 
 #### Heroi sem arma equipada ganha um golpe fantasma de espada
 - **arquivo:** src/sistemas/acao.ts:121
@@ -357,6 +357,24 @@ NAO entram aqui - aquilo e decisao tomada, nao bug.
 - **categoria:** otimizacao
 - **descricao:** o `build` do electron-builder nao declara `publish`, `electron-updater` nao esta em `dependencies`/`devDependencies`, `app/principal.cjs` nao chama `autoUpdater`, e nenhuma tela mostra a versao instalada.
 - **cenario:** um jogador que instalou o `.dmg`/`.exe`/AppImage fica preso na versao `0.1.0` pra sempre - uma correcao de bug ou balanceamento publicada depois nunca chega a quem ja instalou, sem nenhum sinal na interface de que existe versao mais nova.
+
+### Save e persistencia (armazenamento.ts, estado.ts)
+
+#### Ultimo save pode se perder ao sair do aplicativo desktop
+- **arquivo:** src/cenas/Pausa.ts:133-134; src/sistemas/armazenamento.ts:70-77; app/principal.cjs:63-71,116-118
+- **severidade:** critico
+- **categoria:** bug
+- **descricao:** `gravar()` dispara `window.aurora.gravarSave(...)` sem `await` (fire-and-forget), e a acao "SAIR DO JOGO" chama `salvar()` e, na sequencia imediata, `sairDoJogo()` (outro canal IPC) cujo handler roda `app.quit()` de forma sincrona, sem esperar a escrita em disco (`fs.writeFile`+`rename`) terminar.
+- **cenario:** no app desktop, o jogador faz uma acao (pega item, acende fogueira) e no mesmo instante aperta "SAIR DO JOGO"; a escrita async pode nao terminar antes do processo fechar, perdendo a ultima acao - o save volta ao estado anterior na proxima abertura, sem aviso nenhum.
+
+#### Duas abas do navegador no mesmo slot se sobrescrevem em silencio
+- **arquivo:** src/sistemas/armazenamento.ts:70-81; src/sistemas/estado.ts:154-190 (`atual`, `abrirEspaco`, `salvar`)
+- **severidade:** critico
+- **categoria:** bug
+- **descricao:** nao existe versao, timestamp comparado, listener de evento `storage` nem lock entre instancias; cada aba mantem seu proprio `atual` em memoria e `gravar()` sempre sobrescreve a chave inteira (`aurora-save-${espaco}`) com o estado daquela aba.
+- **cenario:** jogador abre o jogo em duas abas do mesmo slot. Joga um tempo na aba A (que salva a cada acao). Volta pra aba B, ainda com estado antigo carregado, e faz uma unica acao la - isso reescreve o save inteiro com o estado desatualizado da aba B, apagando silenciosamente todo o progresso feito na aba A, sem erro, sem aviso, sem como desfazer.
+
+*(observacao, nao e achado: a leitura de save trata JSON invalido/formato antigo com fallback seguro, faz merge raso com o estado vazio pra campos novos como fome/sono, migra os formatos historicos da mochila, e tem fallback defensivo pra ids de atributo/magia/mochila que nao existem mais - a migracao 3->5 atributos nao quebra save antigo.)*
 
 ## Status
 
