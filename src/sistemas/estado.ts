@@ -238,6 +238,24 @@ function migrarMochila(bruta: unknown, mochilaAtualId: string): SlotDaMochila[] 
 }
 
 export function salvar() {
+  // duas abas no mesmo espaco de save nao tem lock nenhum entre si - a
+  // ultima a chamar salvar() sempre vence e apaga o progresso da outra em
+  // silencio. Nao da pra resolver isso sem um mecanismo novo (BroadcastChannel
+  // ou parecido), mas da pra deixar de ser silencioso: se o que esta gravado
+  // agora e mais novo do que o que esta aba tinha em maos, outra aba escreveu
+  // por cima entre a ultima leitura/gravacao daqui e agora.
+  // so console.warn, nunca sistemas/doutor.ts: aquele arquivo importa Phaser,
+  // e este aqui e "sistema puro, separado de Phaser" de proposito (CLAUDE.md)
+  // - inclusive roda direto no Node em ferramentas/conferir-derrota.mjs, sem
+  // window nenhum, onde importar Phaser quebra o script na hora.
+  const gravado = lerEspaco(atual.espaco);
+  if (gravado && gravado.atualizadoEm > atual.atualizadoEm) {
+    console.warn(
+      "[estado] outra aba/janela gravou este mesmo save por cima",
+      `espaco ${atual.espaco}, gravado ${new Date(gravado.atualizadoEm).toLocaleTimeString()}`
+    );
+  }
+
   const decorrido = Math.floor((Date.now() - inicioDaSessao) / 60000);
   if (decorrido > 0) {
     atual.minutos += decorrido;
