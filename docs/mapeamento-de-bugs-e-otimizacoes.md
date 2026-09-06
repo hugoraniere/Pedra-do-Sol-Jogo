@@ -27,8 +27,15 @@ exagerado, lendo o codigo linha a linha e rodando script quando fazia
 sentido). De 12 achados criticos revisados, 11 foram **confirmados** por
 leitura e/ou reproducao direta, e 1 foi rebaixado pra `medio` por nao bater
 com a propria definicao de severidade deste documento (fica marcado inline
-onde acontece). Isso nao significa que o resto do documento (medio/baixo)
-passou pelo mesmo crivo adversarial - so os criticos.
+onde acontece). Uma segunda revisao adversarial, com amostra de 10 achados
+`medio` de categoria `bug` (os de cenario mais especifico e verificavel:
+diagonal cortando quina, golpe fantasma sem arma, buraco na Trilha da
+Floresta, redimensionamento na Criacao/Selo, alvo de toque da pausa/Ficha,
+`dialogo-fim` acumulando, rotina de NPC correndo com dialogo, pista
+duplicavel, mochila cheia descartando loot, ND de area usando so o primeiro
+alvo), confirmou os 10 sem nenhum rebaixamento. Isso nao significa que TODO
+achado medio/baixo do documento passou pelo mesmo crivo - so essas duas
+amostras.
 
 ## Resumo executivo (os 10 achados de maior impacto)
 
