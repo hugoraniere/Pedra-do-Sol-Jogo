@@ -151,7 +151,95 @@ fecha sem os itens abaixo:
   merge — confirmado que `encaixes.json` não mudou entre `principal` e
   `ambiente/combate`.
 
-## 5. Changelog
+## 5. Mapa de versões (traduz `docs/05-roadmap.md` pra número, sem inventar escopo)
+
+Cada linha abaixo já existia como item do roadmap — isto só dá um número de
+versão pra cada uma, na ordem em que `docs/05-roadmap.md` já as lista.
+Marcado `[x]` = já funciona hoje (corte retroativo, sem trabalho pendente);
+`[ ]` = falta fazer.
+
+### v0.0 e v0.5 — esqueleto e casca do jogo (FEITAS, anteriores a este esquema)
+Tudo que hoje roda: Phaser+Vite+TS, pixel art gerada, herói em camadas, Vila
+Semente, NPCs, save, tela de título, Electron. Sem corte interno — foi tudo
+feito antes de existir a ideia de versionar.
+
+### v1.0.x — Fase 1, o sistema (**AGORA**, quase fechando)
+- [x] `1.0.0` — dado 1d20+ND (5 desfechos), atributos (5, com bônus de raça/
+      classe/escolha), vida numérica de verdade (base×5 + Vitalidade×3),
+      dano por dado de arma/magia/criatura, derrota→Hospital, combate por
+      turnos, barra de habilidades, Selos de Herói, dom de raça + magias.
+      **Já está tudo em `principal` hoje.**
+- [ ] `1.0.1` — modo de alvo completo: confirmação em dois passos (alvo
+      único) + prévia de área (habilidades "ao redor"). Design já decidido,
+      falta implementar em `Combate.ts`.
+- [ ] `1.0.2` — comer e dormir enchem vida de verdade. **Fecha a Fase 1**
+      ("pronto quando" do roadmap).
+- [ ] `1.0.3` (opcional, em aberto) — cena do dado separada, com animação
+      própria, em vez do cartão embutido em `Combate.ts`. O roadmap marca
+      isso como "fica em aberto se vale a pena" — não é bloqueio pra fechar
+      a fase.
+
+### v1.2.x — a vila deixa de ser cenário
+- [x] `1.2.0` — sistema de missões (pistas), falas com estado/condição,
+      diário na ficha, o varal como objeto interagível. **Já funciona.**
+- [ ] `1.2.1` — fala com retrato (32×32) na caixa de diálogo.
+- [ ] `1.2.2` — som de passo, abrir fala e rolar dado.
+- [ ] `1.2.3` — sprite à mão do herói, dos 4 NPCs principais e da copa da
+      árvore.
+
+### v1.5.0 — sprites e animação (FEITA)
+Folha de 6×4, ciclo de caminhada Stardew, respiração, braço em camada
+própria, 10 NPCs, sprite próprio por criatura do bestiário. Sem corte
+pendente — só um "em aberto" de resolução (goblin em 48×96 vs. o resto em
+32×64) que nenhuma fase força a decidir ainda.
+
+### v1.6.x — criação de personagem
+- [x] `1.6.0` — tela de aparência, tom de pele/cabelo/roupa/chapéu, com/sem
+      equipamento, ficha resumida, +1 de atributo escolhido. **Já funciona.**
+- [ ] `1.6.1` — escolher a arma na criação (hoje vem fixa da classe).
+- [ ] `1.6.2` — escolher as 3 magias do Mago (hoje ganha todas de uma vez).
+- [ ] `1.6.3` — girar o boneco pra ver os 4 ângulos.
+- [ ] `1.6.4` — rosto como camada própria (sobrancelha, sardas, olhos).
+
+### v2.0.x — Fase 2, a Floresta dos Sussurros (não começou)
+`2.0.0` transição de mapa reaproveitável → `2.0.1` letra de mata no chão →
+`2.0.2` **os ecos** (mecânica central da área) → `2.0.3` os três atalhos →
+`2.0.4` criaturas com rotina própria → `2.0.5` fogueiras da área →
+`2.0.6` descarte de objeto fora da câmera (polimento, medido no iPad).
+
+### v3.0.x — Fase 3, a Ponte dos Trolls (não começou)
+`3.0.0` Grulo + pedágio + charada → `3.0.1` as três saídas (pagar/charada/
+fazer rir) → `3.0.2` a primeira negociação de verdade com o dado valendo.
+
+### v4.0.x — Fase 4, a Caverna Boca-de-Sapo, fim da aventura 1 (não começou)
+`4.0.0` mapa da caverna → `4.0.1` goblins dançando em loop → `4.0.2` as três
+entradas (força/furtividade/conversa) → `4.0.3` a virada do Zonzo →
+`4.0.4` o Cristal do Amanhecer e a recompensa.
+
+### v5.0.x — Fase 5, acabamento da aventura 1 (não começou)
+`5.0.0` afinação de ritmo/dificuldade → `5.0.1` tela de título com arte →
+`5.0.2` celular deitado e em pé → `5.0.3` teste com gente nova →
+**`5.0.4` publicar — este é o primeiro lançamento PÚBLICO, número próprio,
+não precisa herdar "5.0.x".**
+
+### Depois — aventuras 2 e 3 (v6+, ainda sem fase numerada)
+Cristal do Meio-dia (Serpente do Pântano Ronco), Cristal do Anoitecer (Bruxa
+Espinho), Pico Cinzalta, os dois finais (Brasanegra ou Aurel), Portomares,
+Fornalha, Altacoruja, pescaria completa. Existe no material de mesa, ainda
+não foi quebrado em fases — sem número de versão até isso acontecer.
+
+### Fora do mapa, de propósito
+Bastante trabalho recente (modo Depurador, ícones SVG de `game-icons.net`,
+grade de movimento do combate estilo BG3, pipeline de treino de LoRA,
+dashboard de dados) **ainda não está em `docs/05-roadmap.md`** — ou é
+ferramenta interna (Depurador, dashboard, LoRA) que não conta como fase de
+jogo, ou é melhoria de uma fase já numerada e precisa ser encaixada nela.
+Não inventei onde isso entra; fica pro Hugo decidir antes da próxima
+atualização deste mapa.
+
+---
+
+## 6. Changelog
 
 Ainda não existe nenhum corte fechado por este esquema. A primeira linha
 entra aqui quando o `1.0.1` (ou o que for decidido) fechar de verdade — não
@@ -159,7 +247,7 @@ antes.
 
 ---
 
-## 6. Estado das decisões desta rodada
+## 7. Estado das decisões desta rodada
 
 - ~~Fazer o merge de `ambiente/combate` agora, ou esperar?~~ → feito (ver
   seção 4, item 1).
