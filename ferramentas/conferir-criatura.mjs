@@ -89,6 +89,40 @@ caso(
   decidirAcaoDaCriatura("medroso", 5, 2, 3)
 );
 
+// ------------------------------------------------------ preso e assustado
+// docs/mundo-que-reage.md secao 3: PRESO e "movimento 0, mas ainda age";
+// ASSUSTADO e "anda pra longe do heroi e nao ataca".
+caso(
+  "curioso preso e longe do heroi so espera (nao pode andar)",
+  "esperar",
+  decidirAcaoDaCriatura("curioso", 3, 2, 2, false, true)
+);
+caso(
+  "curioso preso mas adjacente ainda ataca (preso nao tira a acao)",
+  "atacar",
+  decidirAcaoDaCriatura("curioso", 1, 2, 2, false, true)
+);
+caso(
+  "medroso preso e fraco so espera, nao foge (nao pode andar)",
+  "esperar",
+  decidirAcaoDaCriatura("medroso", 5, 1, 3, false, true)
+);
+caso(
+  "curioso assustado foge mesmo adjacente e saudavel",
+  "fugir",
+  decidirAcaoDaCriatura("curioso", 1, 2, 2, false, false, true)
+);
+caso(
+  "assustado nunca ataca, nem por cima de medroso de surpresa",
+  "fugir",
+  decidirAcaoDaCriatura("medroso", 1, 2, 2, false, false, true)
+);
+caso(
+  "preso E assustado ao mesmo tempo: nao pode fugir, so espera",
+  "esperar",
+  decidirAcaoDaCriatura("curioso", 1, 2, 2, false, true, true)
+);
+
 if (falhas > 0) {
   console.error(`\n${falhas} caso(s) falharam.`);
   process.exit(1);

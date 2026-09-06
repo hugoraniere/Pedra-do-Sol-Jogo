@@ -14,7 +14,7 @@ import { ALTURA, COR, LARGURA, SOLIDOS, TILE, escalaDoSprite, direcaoDe } from "
 import { acharCriatura, spriteDoGoblin, type Comportamento as ComportamentoNarrativo } from "../dados/conteudo";
 import { ICONE, MOVIMENTO, movimentoDaCriatura } from "../dados/provador";
 import { ARMAS, CRIATURAS_SOM, DADO, DESFECHO, FAMILIA_DA_CRIATURA, IMPACTOS, MAGIAS_SOM } from "../dados/sons";
-import { testar, foiSucesso, type Desfecho, type ResultadoDeTeste } from "../sistemas/teste";
+import { testar, foiSucesso, desfechoDoTeste, type Desfecho, type ResultadoDeTeste } from "../sistemas/teste";
 import { alcancaveis, caminho, chaveDaCasa, distanciaEmCasas, type Alcancada, type Casa } from "../sistemas/alcance";
 import { decidirAcaoDaCriatura, type Comportamento } from "../sistemas/criatura";
 import { acoesDoHeroi, type AcaoDeHeroi } from "../sistemas/acao";
@@ -677,9 +677,14 @@ export class Combate extends Phaser.Scene {
     const alvo = atraida ? b.pontoAtracao! : this.casaDoHeroi();
     const distancia = distanciaEmCasas(aqui, alvo);
     const comportamento = comportamentoDeCombate(ficha?.comportamento ?? "foge");
+    // PRESO/ASSUSTADO (docs/mundo-que-reage.md secao 3): Cresce-Grama e Voz
+    // de Trovao so causavam dano do dado ate aqui - decidirAcaoDaCriatura
+    // nunca sabia dessas condicoes.
+    const presa = tem(b.condicoes, "preso");
+    const assustada = tem(b.condicoes, "assustado");
     const intencao = atraida
-      ? (distancia <= 1 ? "esperar" : "avancar")
-      : decidirAcaoDaCriatura(comportamento, distancia, b.coracoes, b.coracoesMax, b.jaAtacouDeSurpresa);
+      ? (presa || distancia <= 1 ? "esperar" : "avancar")
+      : decidirAcaoDaCriatura(comportamento, distancia, b.coracoes, b.coracoesMax, b.jaAtacouDeSurpresa, presa, assustada);
 
     if (intencao === "atacar") {
       b.rota = [];
@@ -1053,9 +1058,11 @@ export class Combate extends Phaser.Scene {
     else if (acao.som === "voz") tocarFicha(MAGIAS_SOM.voz);
 
     const bonus = this.atributos[acao.atributo];
-    // o ND vem de quem esta na casa mirada - hoje todo bicho tem bonus 0, entao
-    // isto da ND 10 sempre, mas ja fica pronto pro dia que o bestiario
-    // diferenciar bicho fraco de chefe (docs/modelo-de-combate.md secao 3).
+    // o ND de exibicao (mostrarDado) e do PRIMEIRO alvo pego, so pra ter algo
+    // pra mostrar no dado antes de saber quem sera atingido de verdade - o
+    // desfecho de cada bicho é recalculado abaixo, um ND por bicho (o
+    // bestiario ja diferencia bonus 0/1/2/3/5 por criatura), reaproveitando
+    // o MESMO dado fisico (resultado.dado/total), nunca rolando de novo.
     const pegos = this.pegos(acao, casa);
     const nd = 10 + (pegos[0]?.bonus ?? 0);
     const resultado = testar(bonus, nd, this.d20);
@@ -1079,14 +1086,22 @@ export class Combate extends Phaser.Scene {
       const sucesso = foiSucesso(resultado.desfecho);
       const critico = resultado.desfecho === "critico-sucesso";
       const dano = this.danoDaAcao(acao, bonus, critico);
+      // ND por alvo: uma acao em area pode pegar bichos com bonus diferentes
+      // (ex. Goblin bonus 0 e Aranha bonus 1 no mesmo Bafo Gelado) - o MESMO
+      // dado fisico e reaproveitado (nunca rola de novo), so a comparacao
+      // contra o ND daquele bicho especifico muda. Ver desfechoDoTeste.
+      const acertouAlvo = (b: Bicho) =>
+        foiSucesso(desfechoDoTeste(resultado.dado, resultado.total, 10 + b.bonus));
       // mesmo com sucesso no dado, uma criatura agil pode esquivar por conta
       // propria -- `esquivaChance` (conteudo.ts), o atributo novo pedido pelo
       // Hugo em 2026-09-05. O DADO continua sendo de quem decide o resultado;
-      // isto so filtra por cima dele. Sem sucesso no dado ninguem tem chance
-      // de novo: ja errou por causa do dado, nao por sorte dupla.
-      const esquivaram = !sucesso
-        ? pegos
-        : pegos.filter((b) => Math.random() < (acharCriatura(b.bicharioId)?.esquivaChance ?? 0));
+      // isto so filtra por cima dele. Sem sucesso no dado (pro ND daquele
+      // bicho) ninguem tem chance de novo: ja errou por causa do dado, nao
+      // por sorte dupla.
+      const esquivaram = pegos.filter((b) => {
+        if (!acertouAlvo(b)) return true;
+        return Math.random() < (acharCriatura(b.bicharioId)?.esquivaChance ?? 0);
+      });
       if (esquivaram.length > 0) {
         // falha com bicho na mira, ou esquiva de verdade: nao "nada
         // aconteceu", ele ESQUIVOU do golpe -- e por isso que o heroi errou.
@@ -1103,7 +1118,10 @@ export class Combate extends Phaser.Scene {
       // sao diferentes e so a ultima depende da esquiva calculada acima.
       const semAlvoQuandoPrecisava = pegos.length === 0 && !semAlvoNecessario;
       const todosEsquivaram = pegos.length > 0 && atingidos.length === 0;
-      if (!sucesso || semAlvoQuandoPrecisava || todosEsquivaram) {
+      // "!sucesso" so importa aqui quando nao ha bicho pego (magia sem alvo,
+      // tipo Escudo de Bolha, pode falhar o proprio teste do heroi) - com
+      // bicho pego, cada um ja tem seu proprio sucesso/falha em `esquivaram`.
+      if ((pegos.length === 0 && !sucesso) || semAlvoQuandoPrecisava || todosEsquivaram) {
         this.poeira(cx, cy - 8);
         tocarFicha(IMPACTOS.errou);
       } else if (acao.id === "golpe-arco" || acao.id === "golpe-funda") {
