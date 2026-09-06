@@ -94,6 +94,19 @@ const quantidadeDe = (item) => estado().mochila.find((s) => s?.item === item)?.q
   caso("as duas chaves continuam la", totalNaMochila() === 2);
 }
 
+{
+  // item equipado nunca pode ser sorteado: perde-lo aqui e reganha-lo de
+  // graca no proximo carregamento (backfillarEquipamentoInicial) anulava o
+  // prejuizo da derrota pra quem estava equipado.
+  novoJogo(0, { ...heroiDeTeste(), armaSprite: "arco", equipamento: { armadura: "couraca", acessorio: null } });
+  estado().mochila = mochilaDeTeste({ arco: 1, tunica: 1, couraca: 1, isca: 1 });
+  const r = aplicarDerrota(primeiroSempre);
+  caso("arma equipada nunca e sorteada", !r.itensPerdidos.includes("arco"));
+  caso("roupa equipada nunca e sorteada", !r.itensPerdidos.includes("tunica"));
+  caso("armadura equipada nunca e sorteada", !r.itensPerdidos.includes("couraca"));
+  caso("so o item nao-equipado (isca) pode ser sorteado", r.itensPerdidos.length === 1 && r.itensPerdidos[0] === "isca");
+}
+
 if (falhas > 0) {
   console.error(`\n${falhas} caso(s) falharam.`);
   process.exit(1);
