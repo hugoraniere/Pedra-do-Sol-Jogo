@@ -10,6 +10,7 @@ import { prepararArmazenamento } from "../sistemas/armazenamento";
 import { guardarEncaixes, Encaixes } from "../sistemas/encaixes";
 import { guardarFichaDoCursor, FichaDoCursor } from "../sistemas/cursor";
 import { vigiarCarregamento } from "../sistemas/doutor";
+import { carregarIconesAtributos, carregarIconesMagia } from "../sistemas/icones-svg";
 
 export class Boot extends Phaser.Scene {
   constructor() {
@@ -104,6 +105,11 @@ export class Boot extends Phaser.Scene {
     ["painel", "painel-creme", "painel-ouro", "painel-escuro"].forEach((n) =>
       this.load.image(n, `assets/${n}.png`)
     );
+    // Ícones da família nova (game-icons.net, 2026-09-05)
+    // Durante o piloto, os SVGs ficam em ferramentas/piloto-icones/.
+    // Em produção, serão movidos para public/assets/icones/ e carregados aqui.
+    carregarIconesAtributos(this);
+    carregarIconesMagia(this);
   }
 
   async create() {
