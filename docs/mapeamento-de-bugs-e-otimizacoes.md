@@ -203,10 +203,98 @@ NAO entram aqui - aquilo e decisao tomada, nao bug.
 - **descricao:** o service worker baixa TODO o jogo (JS, CSS, PNG, mp3, fontes) de uma vez no install do PWA, sem `runtimeCaching` - certo pra "abrir sem internet", mas significa 2,7 MB de download de fundo assim que a pagina carrega, mesmo que o jogador so tenha chegado na Vila Semente.
 - **cenario:** 2.716,51 KiB e o dado medido do proprio output do build; em conexao de celular isso concorre por banda com o carregamento do Boot ao mesmo tempo, ja que o SW comeca a baixar assim que registra.
 
+### Cenas do jogo (src/cenas)
+
+#### Listeners de Interface se acumulam a cada troca de mapa - duplica item e dinheiro
+- **arquivo:** src/cenas/Mundo.ts:589-590 (registro), 792 (efeito), 1694 (restart), 663-676 (o mesmo autor ja faz o `.off()` de guarda pro Depurador, so nao aqui)
+- **severidade:** critico
+- **categoria:** bug
+- **descricao:** `create()` reassina `this.scene.get("Interface").events.on("acao"/"pausar", ...)` sem nunca dar `.off()`, mas `create()` roda de novo a cada `trocarDeMapa()` (`scene.restart()`) e a cada derrota (`Combate.ts:851`); `Interface` nunca reinicia, entao seu `events` (EventEmitter) e o mesmo objeto a vida toda, e `Systems.shutdown()` do Phaser nao limpa listener de usuario (so `destroy()` faz isso).
+- **cenario:** jogador entra/sai de 3 casas (ou apanha uma derrota e volta pro Hospital) e depois toca no botao de acao em cima de um item largado no chao: `tentarInteragir()` roda uma vez por listener acumulado, e cada chamada executa `guardar(dados.item, dados.quantidade)` de novo - o mesmo toque duplica/triplica o item e o dinheiro recolhidos. O mesmo padrao dispara `trocarDeMapa()` (portas) e `pausar()` N vezes por toque.
+
+#### Combate nunca reage a redimensionamento/rotacao
+- **arquivo:** src/cenas/Combate.ts (nenhuma chamada a `refazerAoRedimensionar` ou `this.scale.on` em 1701 linhas)
+- **severidade:** critico
+- **categoria:** bug
+- **descricao:** ao contrario de Mundo, Interface, Ficha, Pausa e Titulo, a cena de combate por turnos nao chama `refazerAoRedimensionar()` nem assina `Phaser.Scale.Events.RESIZE` - todo o HUD (slots de acao, barra de vida, trilha de iniciativa, mira, pips de movimento) e posicionado uma unica vez em `create()`.
+- **cenario:** jogador entra em combate no iPad e gira a tela (ou redimensiona a janela no desktop) no meio da luta: os botoes de acao, o botao PASSAR e a mira continuam nas coordenadas antigas - podem ficar fora da area visivel ou sobrepostos, deixando o jogador sem conseguir agir num combate que tem custo real (perder = perde moedas e itens).
+
+#### `dialogo-fim` tambem se acumula em Mundo a cada restart (mesma causa-raiz)
+- **arquivo:** src/cenas/Mundo.ts:604
+- **severidade:** medio
+- **categoria:** bug
+- **descricao:** `this.events.on("dialogo-fim", ...)` e registrado dentro de `create()`, que roda de novo em todo restart; como `Systems.shutdown()` nao limpa `this.events`, cada restart empilha mais uma copia do handler. Hoje o efeito colateral e so reatribuir `this.conversando = false` varias vezes seguidas - inofensivo na pratica, mas confirma que o vazamento e sistemico nessa cena.
+- **cenario:** apos varias trocas de mapa, fechar qualquer caixa de fala dispara o mesmo bloco N vezes no mesmo frame; qualquer codigo novo colocado dentro desse `.on()` herda execucao multipla sem aviso.
+
+#### Criacao de personagem e a tela de Selo tambem ignoram redimensionamento
+- **arquivo:** src/cenas/Criacao.ts e src/cenas/EscolhaDeSelo.ts (nenhuma chamada a `refazerAoRedimensionar`/`scale.on`)
+- **severidade:** medio
+- **categoria:** bug
+- **descricao:** o design system (`docs/07-design-system.md`) exige que "toda cena de interface chame `refazerAoRedimensionar()`"; essas duas nao chamam, diferente de Mundo/Interface/Ficha/Pausa/Titulo.
+- **cenario:** jogador cria personagem no iPad e gira a tela (ou o teclado virtual aparece ao digitar o nome), ou atinge o 3º Selo e gira o tablet antes de escolher o premio: campos/botoes ficam nas posicoes calculadas pra resolucao antiga, podendo sobrepor ou sair da area visivel - e a tela de Selo nao tem como fechar sem escolher.
+
+#### Itens largados no chao vazam no Map entre trocas de mapa
+- **arquivo:** src/cenas/Mundo.ts:162, 790, 1315-1327
+- **severidade:** baixo
+- **categoria:** otimizacao
+- **descricao:** `itensNoChao` (Map) e populado em `largarItemNoChao()` e so remove entrada em `removerItemDoChao()` (item apanhado); nunca e limpo em `create()`, ao contrario de `interagiveis`/`fontesDeLuz`/`npcs`/`criaturas`/`saidas`, resetados a cada restart.
+- **cenario:** jogador larga item no chao e muda de mapa sem apanhar de volta: a entrada continua pra sempre em `itensNoChao`, guardando referencia a um `Phaser.GameObjects.Image` ja destruido - cresce sem limite numa sessao longa (nunca e coletado pelo GC porque a Map ainda referencia o objeto).
+
+### Sistemas do jogo (src/sistemas)
+
+#### Diagonal corta quina de parede no combate (contraria a propria logica de `caminho.ts`)
+- **arquivo:** src/sistemas/alcance.ts:57-58 (comparar com src/sistemas/caminho.ts:135-137)
+- **severidade:** medio
+- **categoria:** bug
+- **descricao:** a checagem de "nao corta quina" usa `&&` em vez de `||`, entao um movimento diagonal so e bloqueado quando AMBAS as casas ortogonais ao redor estao bloqueadas - quando so uma parede existe (caso comum de canto de casa), a diagonal passa mesmo assim. `caminho.ts`, mesmo projeto e mesma intencao, implementa isso corretamente com `||`.
+- **cenario:** heroi em (0,0), parede em (1,0), chao livre em (0,1) e (1,1): `alcancaveis()` marca (1,1) como alcancavel e a diagonal aparece andavel no combate, cortando o canto da parede.
+
+#### Doutor (painel de diagnostico) sempre reporta "sem save" mesmo com save existente
+- **arquivo:** src/sistemas/doutor.ts:220-225
+- **severidade:** medio
+- **categoria:** bug
+- **descricao:** `resumo()` consulta a chave `localStorage.getItem("reino-de-aurora-v1")`, que nunca e escrita por nada no jogo - os saves reais usam `aurora-save-0/1/2` (src/sistemas/armazenamento.ts:45).
+- **cenario:** jogador com progresso salvo abre o painel do Doutor (4 toques no canto, unico console disponivel no iPad) pra diagnosticar um problema; o resumo sempre mostra "sem save", escondendo justamente a informacao que a ferramenta existe pra mostrar quando alguem for investigar um bug relatado por quem joga.
+
+#### Heroi sem arma equipada ganha um golpe fantasma de espada
+- **arquivo:** src/sistemas/acao.ts:121
+- **severidade:** medio
+- **categoria:** bug
+- **descricao:** `heroi.armaSprite || classe.arma` nunca cai no fallback quando `armaSprite === "nenhuma"`, porque a string "nenhuma" e truthy - so funciona pra string vazia. `heroi.ts::pecasDoHeroi` ja trata "nenhuma" como sentinela explicita de "sem arma"; `acao.ts` nao replica essa checagem.
+- **cenario:** jogador desequipa a arma pela mochila (`equipar("arma", null)` grava `armaSprite = "nenhuma"`, fluxo real de jogo). Em combate, `golpeDaArma("nenhuma")` nao acha nada em `TABELA_DE_GOLPE` e cai no fallback interno `TABELA_DE_GOLPE["espada-curta"]` - o heroi "desarmado" ganha uma acao rotulada GOLPE com o dado 1d6 da espada curta, alem (nao em vez) do SEM ARMA (1d3) que deveria ser o unico golpe corpo a corpo.
+
+#### Transicao de cor do ceu troca num corte seco, contrariando o proprio comentario
+- **arquivo:** src/sistemas/tempo.ts:58-62
+- **severidade:** baixo
+- **categoria:** bug
+- **descricao:** `corDoCeu()` interpola o alpha ao longo dos 90 minutos de transicao, mas a COR salta inteira em `t < 0.5 ? atual.corCeu : proximo.corCeu` - o comentario da funcao ("transicao nunca ser um corte seco") descreve exatamente o que essa linha nao entrega.
+- **cenario:** nas transicoes madrugada->aurora, tarde->por-do-sol e por-do-sol->noite a cor muda com alpha ja em ~0.14-0.36 no ponto do salto - um flash de cor perceptivel, visivel toda sessao em que o jogador fica no mundo tempo suficiente.
+
+#### `alinhamento: 0` forca centralizacao em vez de alinhar a esquerda
+- **arquivo:** src/sistemas/texto.ts:72-74
+- **severidade:** baixo
+- **categoria:** bug
+- **descricao:** `if (op.alinhamento !== undefined) t.setCenterAlign?.();` roda pra qualquer valor definido, inclusive `0` (esquerda), e nada desfaz isso depois quando o valor e `0` - so os casos `1` e `2` sao corrigidos nas linhas seguintes.
+- **cenario:** hoje nenhum chamador passa `alinhamento: 0` explicitamente, entao o bug e latente; o primeiro texto multi-linha que pedir alinhamento a esquerda de forma explicita sairia centralizado sem aviso.
+
+#### `montar()` do heroi recria todas as camadas de sprite a cada troca de cor na criacao
+- **arquivo:** src/sistemas/heroi.ts:184-246 (chamado por `trocarAparencia`, linha 417-420)
+- **severidade:** baixo
+- **categoria:** otimizacao
+- **descricao:** toda chamada a `trocarAparencia()` destroi e recria corpo, cabelo, chapeu, bracos, roupa, armadura e arma (ate 7 objetos Phaser + `criarAnimacoes` reaplicado), mesmo quando so um tint ou uma peca mudou.
+- **cenario:** em Criacao.ts, cada toque num swatch de cor dispara redesenho completo do boneco (o proprio comentario do arquivo ja registra "os bonecos sao caros de montar"); alguem testando varias cores de cabelo em sequencia rapida no iPad paga o custo de recriar sprites inteiros a cada toque, quando so o tint precisava mudar.
+
+#### `lotado()` varre todos os sons tocando a cada efeito disparado
+- **arquivo:** src/sistemas/som.ts:104-110
+- **severidade:** baixo
+- **categoria:** otimizacao
+- **descricao:** `tocarFicha()` chama `lotado()` a cada disparo, que chama `gerente.getAllPlaying()` e filtra a lista inteira de sons ativos so pra contar quantos nao sao loop, em vez de manter um contador incrementado/decrementado nos eventos de start/complete.
+- **cenario:** numa cena de combate com varios efeitos curtos por segundo (passo, golpe, voz de dado, impacto), cada um dispara essa varredura completa - custo pequeno por chamada, redundante no hot path de audio que existe justamente pra nao travar o app no iPad.
+
 ## Status
 
-- [ ] sistemas do jogo (src/sistemas)
-- [ ] cenas do jogo (src/cenas)
+- [x] sistemas do jogo (src/sistemas)
+- [x] cenas do jogo (src/cenas)
 - [ ] dados e conteudo (src/dados)
 - [x] harness de testes (ferramentas/*.mjs)
 - [x] geracao de arte e som (arte/*.py, som/*.py)
