@@ -427,6 +427,43 @@ NAO entram aqui - aquilo e decisao tomada, nao bug.
 - **descricao:** "Pao da Padeira" foi adicionado a LOJA pelo plano de moodles depois que este documento fixou a contagem em 12; o numero nao foi atualizado.
 - **cenario:** baixo risco, mas e o tipo de numero que alguem cita de cabeca em conversa de design e erra por ter lido o doc em vez de contar o array.
 
+### Toque e mobile (controles, HUD)
+
+#### Toque unico travado por padrao - so um dedo por vez no jogo inteiro
+- **arquivo:** src/main.ts:42-59 (config do `Phaser.Game`, sem bloco `input:` nenhum)
+- **severidade:** critico
+- **categoria:** bug
+- **descricao:** **confirmado** - `main.ts` nunca define `input.activePointers`; o padrao do Phaser e `1`, entao so existe UM pointer de toque disponivel (indice 0 e reservado ao mouse). Com um dedo ja ativo nesse unico slot, um segundo dedo simplesmente nao recebe pointer nenhum e o evento e descartado sem erro.
+- **cenario:** o direcional na tela e desenhado como 4 botoes separados mais um botao de acao - o proprio design pressupoe dois toques simultaneos: segurar uma seta com um polegar e tocar o botao A com o outro (atacar/interagir andando), ou tocar duas setas adjacentes ao mesmo tempo pra andar na diagonal (a "direcional de disco" de 8 direcoes que o CLAUDE.md descreve). Nos dois casos o segundo toque nao aciona nada: o botao A fica mudo com uma seta pressionada, e a diagonal via toque nao existe na pratica - quebra o controle basico do jogo em qualquer iPad/celular, a plataforma primaria do projeto.
+
+#### Dica de mira no combate chega depois da selecao e some coberta pelo dedo
+- **arquivo:** src/sistemas/hudDeAcao.ts:170-176; src/cenas/Combate.ts:355-357,428-436 (`mostrarDica`)
+- **severidade:** medio
+- **categoria:** bug
+- **descricao:** o slot de acao usa `pointerdown` pra escolher a acao e `pointerover`/`pointerout` pra mostrar a dica (nome, alcance, "uma vez por luta"). No mouse funciona (hover antes do clique). No toque, o Phaser processa `TOUCH_START` disparando `pointerdown` (ja seleciona a acao) e SO DEPOIS `pointerover` (mostra a dica); ao soltar o dedo, `TOUCH_END` sempre esconde a dica.
+- **cenario:** o jogador toca um slot de magia/ataque no combate; a acao ja e selecionada no mesmo instante, a dica de alcance so aparece um instante depois com o proprio dedo ainda em cima (encobrindo o texto) e some ao soltar - quem joga de toque nunca le a dica antes de escolher, so quem usa mouse.
+
+#### Alvos de toque do HUD principal caem abaixo de 44px mesmo na visao padrao
+- **arquivo:** src/sistemas/visao.ts:80-97 (`medidaDaJanela`, escala inteira arredondada); src/cenas/Interface.ts:186-188 (seta 26x26), :207-209 (botao A 34x34)
+- **severidade:** critico
+- **categoria:** bug
+- **descricao:** o canvas usa `Phaser.Scale.NONE` + `setZoom` com escala SEMPRE inteira. Em tela de celular pequena na horizontal (ex.: 650x340 CSS px com a barra do Safari visivel), a conta de escala ja da 1 na visao NORMAL, sem o jogador escolher LONGE. Em escala 1, um alvo desenhado com 26 ou 34 unidades logicas vira literalmente 26/34 pixels CSS reais - abaixo do minimo recomendado de 44x44 CSS px pro dedo.
+- **cenario:** num iPhone SE/mini ou Android compacto, na horizontal, com a barra de endereco ainda visivel (o caso mais comum ao abrir o link), as setas do direcional e o botao de acao ficam do tamanho de um selo postal - o jogador erra o toque ou nao aciona o botao A, sem precisar mexer em preferencia nenhuma de zoom.
+
+#### Slots de acao de combate sofrem o mesmo encolhimento, com risco de verdade em jogo
+- **arquivo:** src/sistemas/hudDeAcao.ts:31 (`SLOT = 22`), 170-173 (retangulo interativo 24x28 unidades logicas)
+- **severidade:** critico
+- **categoria:** bug
+- **descricao:** os botoes de magia/ataque do combate tem area de toque de 24x28 unidades logicas - menor ainda que o direcional (26x26). Na mesma escala 1 do achado anterior, vira 24x28 pixels CSS reais.
+- **cenario:** durante um combate por turnos com coracoes e itens de verdade em jogo (perder custa moeda e mochila), o jogador tenta tocar a segunda/terceira habilidade da barra e acerta a vizinha por engano, ou erra o toque e nada acontece - no momento exato em que a decisao errada tem custo real, nao cosmetico.
+
+#### Botao de pausa e botao da Ficha sao os menores alvos de todo o HUD
+- **arquivo:** src/cenas/Interface.ts:148-150 (engrenagem, 26x20), 115-141 (botao da Ficha, altura interativa ~15 unidades)
+- **severidade:** medio
+- **categoria:** bug
+- **descricao:** a engrenagem de pausa tem area de toque 26x20 (mais estreita em altura que qualquer seta do direcional), e o botao do nome do heroi (abre a Ficha) tem altura interativa de so ~15 unidades - ambos abaixo do direcional, ja problematico no achado acima.
+- **cenario:** na mesma tela pequena em escala 1, tocar pra pausar ou abrir a ficha (as duas unicas formas de pausar/ver status no toque) fica ainda mais impreciso que tocar o direcional - 20 e 15 pixels CSS de altura real, quase do tamanho de um dedo de lado, nao da polpa do dedo.
+
 ## Status
 
 - [x] sistemas do jogo (src/sistemas)
