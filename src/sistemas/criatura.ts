@@ -23,7 +23,9 @@ export type Intencao = "avancar" | "atacar" | "fugir" | "esperar";
  *  `distanciaEmCasas` de `sistemas/alcance.ts` ja usa em todo o resto do jogo. */
 const ADJACENTE = 1;
 
-/** Abaixo de METADE dos coracoes, todo `medroso` foge, sem excecao. */
+/** Na metade dos coracoes OU ABAIXO, todo `medroso` foge, sem excecao -
+ *  conferido explicitamente pelo caso "exatamente na metade" em
+ *  ferramentas/conferir-criatura.mjs, entao o `<=` e proposital, nao bug. */
 const FRACAO_FRACA = 0.5;
 
 export function decidirAcaoDaCriatura(
@@ -36,7 +38,7 @@ export function decidirAcaoDaCriatura(
    *  guarda isto por criatura (nao existe estado aqui dentro). */
   jaAtacouDeSurpresa = false
 ): Intencao {
-  const fraco = coracoesMax > 0 && coracoes / coracoesMax < FRACAO_FRACA;
+  const fraco = coracoesMax > 0 && coracoes / coracoesMax <= FRACAO_FRACA;
   const adjacente = distancia <= ADJACENTE;
 
   if (comportamento === "medroso") {
