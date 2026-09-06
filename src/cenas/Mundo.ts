@@ -2,7 +2,7 @@
  *  e cuida de andar, esbarrar e conversar. */
 import Phaser from "phaser";
 import { TILE, SOLIDOS, COR, ALTURA_PERSONAGEM, escalaDoSprite, direcaoDe, type NomeDirecao } from "../dados/config";
-import { MAPAS, VILA, montarChao, bordasDeGrama, plantarMata, Mapa, Saida, type Pessoa } from "../dados/mapas";
+import { MAPAS, VILA, montarChao, bordasDeGrama, plantarMata, Mapa, Saida, type Pessoa, type PontoDeRotina } from "../dados/mapas";
 import { acharCriatura, nomeDoItem, spriteDoGoblin } from "../dados/conteudo";
 import { DIALOGOS, type Escolha } from "../dados/dialogos";
 import { concluirEtapa } from "../sistemas/missoes";
@@ -85,6 +85,14 @@ type NpcComRotina = {
   direcaoAtual: NomeDirecao;
   caminho?: Ponto[];
   escondido: boolean;
+  /** true so durante o trecho de caminho que termina numa porta marcada
+   *  `entra: true` (ver `PontoDeRotina`) — `finalizarRotaDoNpc` esconde em
+   *  vez de ficar parado quando isto e verdade. */
+  entraAoChegar?: boolean;
+  /** onde o NPC sumiu pela ultima vez, pra reaparecer andando de la (nao
+   *  teleportar direto pro ponto do novo periodo). So existe enquanto
+   *  `escondido` for true. */
+  pontoDePorta?: Ponto;
 };
 
 /** A quantas casas um goblin nota o heroi e o combate comeca. Mesma ideia do
@@ -412,7 +420,10 @@ export class Mundo extends Phaser.Scene {
     this.npcs = [];
     mapa.pessoas.forEach((pessoa) => {
       const alvoInicial = pessoa.rotina?.[this.ultimoPeriodo!];
-      const escondidoInicial = alvoInicial === "escondido";
+      // uma porta "entra" comeca escondida igual "escondido" de verdade: o
+      // save carrega no meio do periodo, ninguem viu o NPC andar ate ali,
+      // entao nascer ja andando seria um passo fantasma sem origem.
+      const escondidoInicial = alvoInicial === "escondido" || alvoInicial?.entra === true;
       const pos = alvoInicial && alvoInicial !== "escondido" ? alvoInicial : { x: pessoa.x, y: pessoa.y };
       const x = pos.x * TILE + TILE / 2;
       const y = pos.y * TILE + TILE;
@@ -430,7 +441,10 @@ export class Mundo extends Phaser.Scene {
       };
       if (!escondidoInicial) this.interagiveis.push(interagivel);
       if (pessoa.rotina) {
-        this.npcs.push({ pessoa, sprite: s, corpo, interagivel, direcaoAtual: "baixo", escondido: escondidoInicial });
+        this.npcs.push({
+          pessoa, sprite: s, corpo, interagivel, direcaoAtual: "baixo", escondido: escondidoInicial,
+          pontoDePorta: escondidoInicial && typeof alvoInicial === "object" ? { x, y } : undefined,
+        });
       }
       // a respiracao agora e quadro de animacao, nao tween de escala
     });
@@ -943,22 +957,39 @@ export class Mundo extends Phaser.Scene {
    *  ver o aviso sobre ela ficar parada no lugar de descanso de cada um, no
    *  plano). Sem caminho possivel, teleporta: melhor um pulo raro do que um
    *  NPC preso pro resto do jogo. */
-  private tracarRotaDoNpc(npc: NpcComRotina, alvo: { x: number; y: number } | "escondido") {
+  private tracarRotaDoNpc(npc: NpcComRotina, alvo: PontoDeRotina | "escondido") {
     if (alvo === "escondido") {
       npc.caminho = undefined;
       this.esconderNpc(npc);
       return;
     }
     const destino = { x: alvo.x * TILE + TILE / 2, y: alvo.y * TILE + TILE };
+    npc.entraAoChegar = alvo.entra === true;
     if (npc.escondido) {
-      this.reaparecerNpc(npc, destino);
+      this.reaparecerNpc(npc, alvo, destino);
       return;
     }
     if (Math.round(npc.sprite.x) === Math.round(destino.x) && Math.round(npc.sprite.y) === Math.round(destino.y)) {
-      return; // ja estava la — nada para andar
+      // ja estava exatamente na porta (ex.: por-do-sol e noite apontando pro
+      // mesmo lugar) — sem isto, "entra" nunca dispara porque ninguem anda
+      // nem chega de verdade neste periodo.
+      if (npc.entraAoChegar) {
+        npc.pontoDePorta = destino;
+        this.esconderNpc(npc);
+      }
+      return;
     }
+    this.iniciarCaminhoAte(npc, alvo, destino);
+  }
+
+  /** Traca o caminho (A*, mesma malha do heroi) do NPC ate `alvoTile`, ou
+   *  teleporta se nao houver caminho possivel. Compartilhado entre a rotina
+   *  normal (`tracarRotaDoNpc`) e o "sair andando da porta"
+   *  (`reaparecerNpc`) — os dois terminam no mesmo lugar: ou anda ou pula,
+   *  nunca fica parado no meio do caminho. */
+  private iniciarCaminhoAte(npc: NpcComRotina, alvoTile: { x: number; y: number }, destino: Ponto) {
     const origem: Celula = { tx: Math.floor(npc.sprite.x / TILE), ty: Math.floor(npc.sprite.y / TILE) };
-    const bruto = encontrarCaminho(this.malha, origem, { tx: alvo.x, ty: alvo.y });
+    const bruto = encontrarCaminho(this.malha, origem, { tx: alvoTile.x, ty: alvoTile.y });
     if (!bruto) {
       this.moverNpcDireto(npc, destino);
       return;
@@ -974,6 +1005,13 @@ export class Mundo extends Phaser.Scene {
 
   private finalizarRotaDoNpc(npc: NpcComRotina) {
     npc.caminho = undefined;
+    // chegou na propria porta: entra de verdade, some so agora — nao andou
+    // ate aqui pra ficar plantado do lado de fora (ver `PontoDeRotina.entra`).
+    if (npc.entraAoChegar) {
+      npc.pontoDePorta = { x: npc.sprite.x, y: npc.sprite.y };
+      this.esconderNpc(npc);
+      return;
+    }
     npc.sprite.play(`npc-${npc.pessoa.sprite}-parado-${npc.direcaoAtual}`, true);
     npc.corpo.setPosition(npc.sprite.x, npc.sprite.y - 4);
     const corpo = npc.corpo.body as Phaser.Physics.Arcade.StaticBody;
@@ -986,6 +1024,11 @@ export class Mundo extends Phaser.Scene {
   private moverNpcDireto(npc: NpcComRotina, destino: Ponto) {
     npc.sprite.setPosition(destino.x, destino.y);
     npc.sprite.setDepth(destino.y);
+    if (npc.entraAoChegar) {
+      npc.pontoDePorta = destino;
+      this.esconderNpc(npc);
+      return;
+    }
     npc.sprite.play(`npc-${npc.pessoa.sprite}-parado-${npc.direcaoAtual}`, true);
     npc.corpo.setPosition(destino.x, destino.y - 4);
     (npc.corpo.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
@@ -1002,19 +1045,27 @@ export class Mundo extends Phaser.Scene {
     if (idx !== -1) this.interagiveis.splice(idx, 1);
   }
 
-  private reaparecerNpc(npc: NpcComRotina, destino: Ponto) {
+  /** Reaparece na propria porta (`pontoDePorta`, ver `finalizarRotaDoNpc`) e
+   *  sai andando de la pro ponto do novo periodo — nunca teleporta direto
+   *  pro trabalho. NPC que nunca "entrou" de verdade (rotina antiga, ou save
+   *  carregado ja escondido de proposito) nao tem `pontoDePorta`: cai de
+   *  volta no comportamento antigo, pop direto no destino. */
+  private reaparecerNpc(npc: NpcComRotina, alvo: { x: number; y: number }, destino: Ponto) {
+    const partida = npc.pontoDePorta ?? destino;
     npc.escondido = false;
+    npc.pontoDePorta = undefined;
     npc.sprite.setVisible(true);
-    npc.sprite.setPosition(destino.x, destino.y);
-    npc.sprite.setDepth(destino.y);
+    npc.sprite.setPosition(partida.x, partida.y);
+    npc.sprite.setDepth(partida.y);
     npc.sprite.play(`npc-${npc.pessoa.sprite}-parado-${npc.direcaoAtual}`, true);
-    npc.corpo.setPosition(destino.x, destino.y - 4);
+    npc.corpo.setPosition(partida.x, partida.y - 4);
     const corpo = npc.corpo.body as Phaser.Physics.Arcade.StaticBody;
     corpo.enable = true;
     corpo.updateFromGameObject();
-    npc.interagivel.x = destino.x;
-    npc.interagivel.y = destino.y - ALTURA_PERSONAGEM / 2;
+    npc.interagivel.x = partida.x;
+    npc.interagivel.y = partida.y - ALTURA_PERSONAGEM / 2;
     if (!this.interagiveis.includes(npc.interagivel)) this.interagiveis.push(npc.interagivel);
+    if (partida.x !== destino.x || partida.y !== destino.y) this.iniciarCaminhoAte(npc, alvo, destino);
   }
 
   /** Chegou perto demais de uma criatura? O mundo para e a luta comeca.

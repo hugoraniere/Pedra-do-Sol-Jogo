@@ -54,9 +54,15 @@ const LETRA_TILE: Record<string, number[]> = {
 export type Peca = { nome: string; x: number; y: number; solido?: boolean };
 
 /** Onde uma pessoa fica em cada periodo do dia (ver dados/tempo.ts).
- *  "escondido" e pra quem passa o periodo dentro de casa, fora de cena: hoje
- *  so as criancas, que somem a noite em vez de ganhar uma cama pra andar ate. */
-export type RotinaDeNpc = Record<Periodo, { x: number; y: number } | "escondido">;
+ *  "escondido" e pra quem ja esta dentro de casa, fora de cena, sem andar ate
+ *  la neste periodo (ver `entra` abaixo pra quem chega andando).
+ *  `entra: true` marca o ponto como a PORTA da propria casa: o NPC anda ate
+ *  ali de verdade (mesmo A* dos outros pontos) e so desaparece na chegada —
+ *  o proximo periodo, normalmente, e "escondido". Na volta, ele reaparece
+ *  bem na porta e anda de la pro proximo ponto, em vez de teleportar direto
+ *  pro trabalho (ver `Mundo.ts::reaparecerNpc`). */
+export type PontoDeRotina = { x: number; y: number; entra?: true };
+export type RotinaDeNpc = Record<Periodo, PontoDeRotina | "escondido">;
 
 /** `rotina` e opcional: sem ela a pessoa fica sempre no `x,y` de baixo, igual
  *  sempre foi. Com ela, `x,y` continua sendo onde a pessoa NASCE na cena (por
@@ -167,73 +173,94 @@ export const VILA: Mapa = {
     { nome: "arbusto", x: 11, y: 20 },
     { nome: "arbusto", x: 29, y: 13 },
   ],
-  // As rotinas colocam cada um perto da propria casa (ver `objetos` acima) de
-  // madrugada e de noite, e no lugar de sempre de dia. Aurora e por-do-sol (as
-  // duas janelas curtas de transicao, ver dados/tempo.ts) por padrao herdam o
-  // ponto do vizinho mais proximo (aurora ~ manha, por-do-sol ~ tarde: quem
-  // nao tem motivo pra ser diferente so comeca/termina o dia um pouco mais
-  // cedo) — exceto onde a bio (npcs.ts) ja da um motivo pra ser diferente: a
-  // padeira acorda antes do sol pra tirar o pao do forno (fica na padaria
-  // desde a madrugada, nao em casa), o pescador tem a "manha de neblina no
-  // rio" como afinidade (aurora o poe la, nao na fogueira), e as duas
-  // criancas continuam escondidas na aurora (ainda dormindo). O guarda fica
-  // no posto o dia inteiro, madrugada e noite incluidas — vigia nao larga a
-  // trilha por causa da hora — e o pescador so troca o rio pela fogueira da
-  // praca de noite/madrugada de verdade (a bio dele diz "NOITES claras"), o
-  // mesmo fogo que o dialogo da fogueira ja descreve como "alguem que
-  // passou a noite acordado aqui". Continua no rio no por-do-sol: e a
-  // janela do Dourado do Poente (dados/peixes.ts).
+  // As rotinas colocam cada um no lugar de sempre de dia, e a noite entram de
+  // verdade na propria casa: o periodo em que cada um vai pra casa ganha
+  // `entra: true` na porta (mesma conta em toda casa da vila: um tile a
+  // direita e uma linha acima da `Saida` do predio, ver `saidas` abaixo — o
+  // NPC anda ate ali e SO ALI some), e o periodo seguinte fica "escondido"
+  // (dormindo, fora de cena) ate reaparecer na propria porta e andar de la
+  // pro ponto do novo periodo (ver `Mundo.ts::reaparecerNpc`). Aurora e
+  // por-do-sol (as duas janelas curtas de transicao, ver dados/tempo.ts) por
+  // padrao herdam o ponto do vizinho mais proximo (aurora ~ manha,
+  // por-do-sol ~ tarde) — exceto onde a bio (npcs.ts) ja da um motivo pra
+  // ser diferente: a padeira acorda antes do sol pra tirar o pao do forno
+  // (fica na padaria desde a madrugada, nao em casa), o pescador tem a
+  // "manha de neblina no rio" como afinidade (aurora o poe la, nao em casa),
+  // e as duas criancas continuam escondidas na aurora (ainda dormindo). O
+  // guarda fica no posto o dia inteiro, madrugada e noite incluidas — vigia
+  // nao larga a trilha por causa da hora, e por isso e o unico dos 8 que
+  // nunca entra em casa nesta rotina — e o pescador fica na fogueira a noite
+  // inteira (a bio dele diz "NOITES claras", o mesmo fogo que o dialogo da
+  // fogueira ja descreve como "alguem que passou a noite acordado aqui"),
+  // so entrando em casa de madrugada, quando a brasa esfria. Continua no rio
+  // no por-do-sol: e a janela do Dourado do Poente (dados/peixes.ts).
   pessoas: [
     {
       quem: "vovo", sprite: "vovo", x: 4, y: 8,
+      // porta da Casa de Cura (saida x:2,y:7 -> porta em x+1,y-1, mesma
+      // conta de toda casa da vila): anda ate a porta e some so ali de
+      // noite, reaparece na porta de manha e anda de la pro dia inteiro.
       rotina: {
-        madrugada: { x: 3, y: 6 }, aurora: { x: 4, y: 8 }, manha: { x: 4, y: 8 },
-        tarde: { x: 4, y: 8 }, "por-do-sol": { x: 4, y: 8 }, noite: { x: 3, y: 6 },
+        madrugada: "escondido", aurora: { x: 4, y: 8 }, manha: { x: 4, y: 8 },
+        tarde: { x: 4, y: 8 }, "por-do-sol": { x: 4, y: 8 }, noite: { x: 3, y: 6, entra: true },
       },
     },
     {
       quem: "ferreiro", sprite: "ferreiro", x: 22, y: 8,
+      // porta da Ferraria (mesma casa do menino, ver rotina dele abaixo)
       rotina: {
-        madrugada: { x: 22, y: 6 }, aurora: { x: 22, y: 8 }, manha: { x: 22, y: 8 },
-        tarde: { x: 22, y: 8 }, "por-do-sol": { x: 22, y: 8 }, noite: { x: 22, y: 6 },
+        madrugada: "escondido", aurora: { x: 22, y: 8 }, manha: { x: 22, y: 8 },
+        tarde: { x: 22, y: 8 }, "por-do-sol": { x: 22, y: 8 }, noite: { x: 22, y: 6, entra: true },
       },
     },
     {
       quem: "menina", sprite: "menina", x: 9, y: 14,
+      // porta da Casa do Mercador (mesma casa do pai, ver rotina dele
+      // abaixo) -- agora anda ate la de noite em vez de sumir no ar
       rotina: {
         madrugada: "escondido", aurora: "escondido", manha: { x: 9, y: 14 },
-        tarde: { x: 9, y: 14 }, "por-do-sol": { x: 9, y: 14 }, noite: "escondido",
+        tarde: { x: 9, y: 14 }, "por-do-sol": { x: 9, y: 14 }, noite: { x: 15, y: 6, entra: true },
       },
     },
     {
       quem: "pescador", sprite: "pescador", x: 6, y: 19,
       // continua no rio no por-do-sol -- e quando o Dourado do Poente
-      // morde a isca (dados/peixes.ts), so sai pra fogueira quando escurece
-      // de verdade, igual a bio dele diz ("nas NOITES claras")
+      // morde a isca (dados/peixes.ts) -- e na fogueira a noite inteira
+      // ("nas NOITES claras", bio dele). So de madrugada, depois que a
+      // brasa esfria, ele enfim anda ate a Casa da Vila (porta em x:24,
+      // y:18 -- saida x:23,y:19 -- e some, reaparecendo na porta na aurora
+      // pra voltar ao rio.
       rotina: {
-        madrugada: { x: 16, y: 11 }, aurora: { x: 6, y: 19 }, manha: { x: 6, y: 19 },
+        madrugada: { x: 24, y: 18, entra: true }, aurora: { x: 6, y: 19 }, manha: { x: 6, y: 19 },
         tarde: { x: 6, y: 19 }, "por-do-sol": { x: 6, y: 19 }, noite: { x: 16, y: 11 },
       },
     },
     {
       quem: "mercador", sprite: "mercador", x: 19, y: 10,
+      // porta da Casa do Mercador (saida x:14,y:7 -> porta em x+1,y-1);
+      // Nina (menina) mora na mesma casa e usa a mesma porta
       rotina: {
-        madrugada: { x: 15, y: 6 }, aurora: { x: 19, y: 10 }, manha: { x: 19, y: 10 },
-        tarde: { x: 19, y: 10 }, "por-do-sol": { x: 19, y: 10 }, noite: { x: 15, y: 6 },
+        madrugada: "escondido", aurora: { x: 19, y: 10 }, manha: { x: 19, y: 10 },
+        tarde: { x: 19, y: 10 }, "por-do-sol": { x: 19, y: 10 }, noite: { x: 15, y: 6, entra: true },
       },
     },
     {
       quem: "menino", sprite: "menino", x: 25, y: 13,
+      // porta da Ferraria (mesma casa do pai, ver rotina do ferreiro acima)
       rotina: {
         madrugada: "escondido", aurora: "escondido", manha: { x: 25, y: 13 },
-        tarde: { x: 25, y: 13 }, "por-do-sol": { x: 25, y: 13 }, noite: "escondido",
+        tarde: { x: 25, y: 13 }, "por-do-sol": { x: 25, y: 13 }, noite: { x: 22, y: 6, entra: true },
       },
     },
     {
       quem: "padeira", sprite: "padeira", x: 11, y: 8,
+      // por-do-sol e noite ja apontavam pro mesmo lugar (a porta, saida
+      // x:9,y:7 -> porta em x+1,y-1) -- so a noite ganhou `entra`, porque
+      // ela ja estava exatamente ali quando o periodo muda (ver o caso
+      // "ja estava na porta" em Mundo.ts::tracarRotaDoNpc).
       rotina: {
         madrugada: { x: 11, y: 8 }, aurora: { x: 11, y: 8 }, manha: { x: 11, y: 8 },
-        tarde: { x: 11, y: 8 }, "por-do-sol": { x: 10, y: 6 }, noite: { x: 10, y: 6 },
+        tarde: { x: 11, y: 8 }, "por-do-sol": { x: 10, y: 6 }, noite: { x: 10, y: 6, entra: true },
       },
     },
     {
