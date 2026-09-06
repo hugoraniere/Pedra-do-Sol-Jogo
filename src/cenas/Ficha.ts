@@ -958,8 +958,23 @@ export class Ficha extends Phaser.Scene {
    *  17.5) — usado tanto pelo arrasto ate a lixeira quanto pelo menu de
    *  acoes, os dois gestos que levam ao mesmo destino final. */
   private jogarItemFora(indice: number) {
-    const slot = estado().mochila[indice];
+    const st = estado();
+    const slot = st.mochila[indice];
     if (!slot) return;
+    // desequipa antes de descartar - senao o heroi fica "vestindo" uma peca
+    // que acabou de sumir da mochila e ir pro chao, sem nenhum jeito de
+    // perceber isso na Ficha (o slot de equipamento continua apontando pro
+    // id de um item que nao existe em lugar nenhum).
+    const info = acharQualquerItem(slot.item);
+    if (info.categoria === "roupa" && st.heroi.estiloRoupa === slot.item) equipar("roupa", null);
+    else if (
+      (info.categoria === "armadura" || info.categoria === "acessorio") &&
+      st.heroi.equipamento[info.categoria] === slot.item
+    ) {
+      equipar(info.categoria, null);
+    } else if (info.categoria === "arma" && st.heroi.armaSprite === SPRITE_DA_ARMA[slot.item]) {
+      equipar("arma", null);
+    }
     jogarFora(indice, slot.quantidade);
     (this.scene.get("Mundo") as Mundo).largarItemNoChao(slot.item, slot.quantidade);
   }

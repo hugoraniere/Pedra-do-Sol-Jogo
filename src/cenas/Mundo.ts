@@ -8,7 +8,7 @@ import { DIALOGOS, type Escolha } from "../dados/dialogos";
 import { concluirEtapa } from "../sistemas/missoes";
 import {
   estado, salvar, marcarVisitado, foiDerrotado, guardar, equipar, ganharSelo,
-  foiAcesa, acenderFogueira, ultimaFogueiraAcesa,
+  foiAcesa, acenderFogueira,
 } from "../sistemas/estado";
 import { ICONE } from "../sistemas/icones";
 import { ICONE_ITEM } from "../sistemas/icones-itens";
@@ -586,8 +586,19 @@ export class Mundo extends Phaser.Scene {
     // Mundo tem que comecar de um HUD utilizavel, nao so a normal.
     this.scene.resume("Interface");
     this.scene.setVisible(true, "Interface");
-    this.scene.get("Interface").events.on("acao", () => this.tentarInteragir());
-    this.scene.get("Interface").events.on("pausar", () => this.pausar());
+    // Interface nunca reinicia (so Mundo reinicia, em cada trocarDeMapa() ou
+    // derrota) - sem tirar os listeners de uma rodada anterior primeiro,
+    // cada restart empilha mais uma copia, e um so toque no botao de acao
+    // passa a rodar tentarInteragir() (e guardar() o item do chao) uma vez
+    // por copia acumulada, duplicando item e dinheiro. Mesma causa e mesma
+    // guarda de ligarEventosDoDepurador() logo abaixo: NUNCA
+    // removeAllListeners() neste emissor, que e onde o InputPlugin do
+    // Phaser assina "preupdate".
+    const interfaceEventos = this.scene.get("Interface").events;
+    interfaceEventos.off("acao");
+    interfaceEventos.off("pausar");
+    interfaceEventos.on("acao", () => this.tentarInteragir());
+    interfaceEventos.on("pausar", () => this.pausar());
     this.ligarEventosDoDepurador();
     // sobe sozinho, minimizado, junto com o Mundo -- nunca so quando alguem
     // pede. So existe pra quem ja destravou o gesto (ver depurador-acesso.ts).
@@ -601,6 +612,9 @@ export class Mundo extends Phaser.Scene {
     this.input.on("pointerdown", (p: Phaser.Input.Pointer) => this.aoPressionarNoMundo(p));
     this.input.on("pointerup", () => this.aoSoltarNoMundo());
     this.input.on("pointermove", (p: Phaser.Input.Pointer) => this.atualizarCursorDoMundo(p));
+    // mesmo motivo do off() de "acao"/"pausar" acima: create() roda de novo
+    // a cada restart e este listener nunca e limpo sozinho.
+    this.events.off("dialogo-fim");
     this.events.on("dialogo-fim", () => {
       this.conversando = false;
       // se o botao de acao ainda estiver segurado neste exato instante (o
@@ -789,9 +803,12 @@ export class Mundo extends Phaser.Scene {
     if (alvo.chave.startsWith("item-largado:")) {
       const dados = this.itensNoChao.get(alvo.chave);
       if (dados) {
-        guardar(dados.item, dados.quantidade);
-        tocar("moeda");
-        this.removerItemDoChao(alvo.chave);
+        // mochila cheia: guardar() falha sem gastar nada - o item continua
+        // no chao (nao remove) em vez de sumir sem aviso nenhum.
+        if (guardar(dados.item, dados.quantidade)) {
+          tocar("moeda");
+          this.removerItemDoChao(alvo.chave);
+        }
       }
       return;
     }
@@ -1342,28 +1359,6 @@ export class Mundo extends Phaser.Scene {
     this.scene.resume("Interface");
   }
 
-  /** Chamado pelo Combate quando os coracoes chegam a zero. Fecha a luta e
-   *  acorda o heroi na ultima fogueira acesa — que pode estar num mapa
-   *  diferente de onde ele caiu, entao troca `estado().cena` como qualquer
-   *  saida de mapa (`conferirSaida()`) e reusa o mesmo `entradaForcada`. So
-   *  as moedas se perdem; missao, pista, afinidade e selo sao conhecimento e
-   *  nunca somem. */
-  acordarNaFogueira() {
-    this.sairDeCombate();
-    const chave = ultimaFogueiraAcesa();
-    const [cenaAlvo, coords] = chave.split(":");
-    const [tx, ty] = coords.split(",").map(Number);
-    const st = estado();
-    st.moedas = 0;
-    st.coracoes = st.coracoesMax;
-    st.cena = cenaAlvo;
-    st.lugar = MAPAS[cenaAlvo]?.lugar ?? st.lugar;
-    salvar();
-    this.cameras.main.fadeOut(500, 0, 0, 0);
-    this.cameras.main.once("camerafadeoutcomplete", () => {
-      this.scene.restart({ entrada: { x: tx, y: ty } });
-    });
-  }
 
   // ----------------------------------------------------------- o clique
   /** Um clique/toque no mundo pertence a UI, nunca ao mundo, se algum

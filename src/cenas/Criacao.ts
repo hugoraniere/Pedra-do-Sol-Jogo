@@ -54,6 +54,7 @@ import { botao, Botao } from "../sistemas/botao";
 import { texto, medirTexto } from "../sistemas/texto";
 import { ESPACO, TAMANHO, marcar, meio, pilha, colunas, quebrarMedido, Retangulo } from "../sistemas/design";
 import { criarAnimacoes, Heroi } from "../sistemas/heroi";
+import { refazerAoRedimensionar } from "../sistemas/visao";
 
 const PASSOS = ["Raca", "Classe", "Poder", "Heroi"] as const;
 
@@ -101,6 +102,7 @@ export class Criacao extends Phaser.Scene {
   private espaco = 0;
   private grupo!: Phaser.GameObjects.Container;
   private fundo!: Phaser.GameObjects.Container;
+  private fundoBranco!: Phaser.GameObjects.Rectangle;
   /** o 0 e o boneco grande; do 1 em diante sao os da vitrine */
   private bonecos: Heroi[] = [];
   private rascunho: FichaHeroi = JSON.parse(JSON.stringify(VAZIO.heroi));
@@ -123,7 +125,7 @@ export class Criacao extends Phaser.Scene {
     musica(this, "menu");
     // todas as combinacoes possiveis de camada precisam de animacao pronta
     criarAnimacoes(this, this.todasAsChaves());
-    this.add.rectangle(0, 0, LARGURA, ALTURA, 0xfff8ea).setOrigin(0);
+    this.fundoBranco = this.add.rectangle(0, 0, LARGURA, ALTURA, 0xfff8ea).setOrigin(0);
 
     // tres camadas de profundidade, nesta ordem: os palcos atras, os bonecos em
     // cima deles, e o que se toca por cima de tudo. Sem separar, o palco
@@ -131,6 +133,13 @@ export class Criacao extends Phaser.Scene {
     this.fundo = this.add.container(0, 0).setDepth(1);
     this.grupo = this.add.container(0, 0).setDepth(10);
     this.desenharPasso();
+    // troca de tamanho/orientacao no meio da criacao (giro de tablet, teclado
+    // virtual abrindo ao digitar o nome) - desenharPasso() ja limpa e
+    // remonta do zero a cada chamada, entao reusar e seguro aqui.
+    refazerAoRedimensionar(this, () => {
+      this.fundoBranco.setSize(LARGURA, ALTURA);
+      this.desenharPasso();
+    });
   }
 
   /** Aqui o jogador troca de raca e de classe a vontade, entao TODA folha que

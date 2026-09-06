@@ -28,7 +28,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 
 const silencio = process.argv.includes("--silencio");
-const arquivosDaSessao = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+let arquivosDaSessao = process.argv.slice(2).filter((a) => !a.startsWith("--"));
 
 /* ------------------------------------------------------------------ achados */
 
@@ -40,6 +40,24 @@ const aviso = (area, msg, dica) => achados.push({ nivel: "AVISO", area, msg, dic
 
 function git(...argumentos) {
   return execFileSync("git", argumentos, { encoding: "utf-8" }).trim();
+}
+
+// `npm run frente-check` sem nenhum arquivo era o unico jeito de rodar que o
+// proprio cabecalho deste arquivo cita primeiro - mas o bloco de ERRO (colisao
+// de arquivo com outra frente) so olha pra arquivosDaSessao, entao rodar sem
+// argumento nunca reprovava por colisao nenhuma. Sem um arquivo explicito pra
+// checar, cai pros arquivos que ja estao modificados/staged nesta pasta - a
+// melhor aproximacao de "o que estou prestes a mexer" quando ninguem listou.
+if (arquivosDaSessao.length === 0) {
+  try {
+    arquivosDaSessao = git("status", "--porcelain")
+      .split("\n")
+      .filter(Boolean)
+      .map((linha) => linha.slice(3).trim())
+      .filter(Boolean);
+  } catch {
+    /* fora de um repositorio git, ou git ausente - segue sem arquivo nenhum */
+  }
 }
 
 function gitEm(caminho, ...argumentos) {

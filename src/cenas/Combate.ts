@@ -14,7 +14,7 @@ import { ALTURA, COR, LARGURA, SOLIDOS, TILE, escalaDoSprite, direcaoDe } from "
 import { acharCriatura, spriteDoGoblin, type Comportamento as ComportamentoNarrativo } from "../dados/conteudo";
 import { ICONE, MOVIMENTO, movimentoDaCriatura } from "../dados/provador";
 import { ARMAS, CRIATURAS_SOM, DADO, DESFECHO, FAMILIA_DA_CRIATURA, IMPACTOS, MAGIAS_SOM } from "../dados/sons";
-import { testar, foiSucesso, type Desfecho, type ResultadoDeTeste } from "../sistemas/teste";
+import { testar, foiSucesso, desfechoDoTeste, type Desfecho, type ResultadoDeTeste } from "../sistemas/teste";
 import { alcancaveis, caminho, chaveDaCasa, distanciaEmCasas, type Alcancada, type Casa } from "../sistemas/alcance";
 import { decidirAcaoDaCriatura, type Comportamento } from "../sistemas/criatura";
 import { acoesDoHeroi, type AcaoDeHeroi } from "../sistemas/acao";
@@ -39,6 +39,7 @@ import { rolarDado, dobrar } from "../sistemas/dado";
 import { tem } from "../sistemas/condicoes";
 import { condicoesDados } from "../dados/condicoes-dados";
 import { definirPreferencia, preferencias } from "../sistemas/preferencias";
+import { refazerAoRedimensionar } from "../sistemas/visao";
 import type { Mundo } from "./Mundo";
 
 
@@ -277,6 +278,11 @@ export class Combate extends Phaser.Scene {
     // onde o corpo nasceu.
 
     this.montarInterface();
+    // reposiciona em vez de remontar: remontar perderia estado de luta em
+    // andamento (slot "gastou" de porLuta, visibilidade do PASSAR, o rotulo
+    // de quem esta na vez) que so vive nestes objetos, sem copia em
+    // sistemas/estado.ts.
+    refazerAoRedimensionar(this, () => this.reposicionarInterface());
     this.ligarEntrada();
     this.time.delayedCall(200, () => this.comecarCombate());
   }
@@ -423,6 +429,35 @@ export class Combate extends Phaser.Scene {
     this.chapaAviso.setVisible(false).setDepth(1200);
     this.aviso = fixo(texto(this, LARGURA / 2, 32, "", { cor: 0x2c2440, ancora: 0.5 }));
     this.aviso.setDepth(1201);
+  }
+
+  /** Chamado quando a resolucao muda (girar o tablet, redimensionar a
+   *  janela). So MOVE o HUD pro lugar novo, nunca remonta: remontar perderia
+   *  o "gastou" de acao porLuta ja usada nesta luta, o rotulo de quem esta
+   *  na vez e a visibilidade do PASSAR, que so existem como estado destes
+   *  proprios objetos - nao ha copia deles em sistemas/estado.ts pra
+   *  restaurar depois. */
+  private reposicionarInterface() {
+    const area = { x: 6, y: ALTURA - 24, largura: LARGURA - 6 - 76, altura: 22 };
+    this.hud.mover(area.x - this.hud.area.x, area.y - this.hud.area.y);
+    this.hud.area.largura = area.largura;
+    this.hud.area.altura = area.altura;
+    this.topoDaBarra = this.hud.area.y - 14;
+
+    const px = this.hud.area.x + this.hud.area.largura + 26;
+    const py = ALTURA - 16;
+    this.botaoPassar.setPosition(px, py);
+    const paX = px - 32, paY = py;
+    this.fundoAutoPassar.setPosition(paX, paY);
+    this.alvoAutoPassar.setPosition(paX, paY);
+    this.desenharAutoPassar(paX, paY);
+
+    this.chapaRotulo.setPosition(LARGURA / 2, this.topoDaBarra);
+    this.rotulo.setPosition(LARGURA / 2, this.topoDaBarra + 2);
+    this.chapaAviso.setPosition(LARGURA / 2, 28);
+    this.aviso.setPosition(LARGURA / 2, 32);
+    // dicaCaixa nao precisa: mostrarDicaLinhas() ja recalcula a posicao com
+    // LARGURA/topoDaBarra atuais toda vez que a dica reaparece.
   }
 
   private mostrarDica(a: AcaoDeHeroi, xSlot: number) {
@@ -642,9 +677,14 @@ export class Combate extends Phaser.Scene {
     const alvo = atraida ? b.pontoAtracao! : this.casaDoHeroi();
     const distancia = distanciaEmCasas(aqui, alvo);
     const comportamento = comportamentoDeCombate(ficha?.comportamento ?? "foge");
+    // PRESO/ASSUSTADO (docs/mundo-que-reage.md secao 3): Cresce-Grama e Voz
+    // de Trovao so causavam dano do dado ate aqui - decidirAcaoDaCriatura
+    // nunca sabia dessas condicoes.
+    const presa = tem(b.condicoes, "preso");
+    const assustada = tem(b.condicoes, "assustado");
     const intencao = atraida
-      ? (distancia <= 1 ? "esperar" : "avancar")
-      : decidirAcaoDaCriatura(comportamento, distancia, b.coracoes, b.coracoesMax, b.jaAtacouDeSurpresa);
+      ? (presa || distancia <= 1 ? "esperar" : "avancar")
+      : decidirAcaoDaCriatura(comportamento, distancia, b.coracoes, b.coracoesMax, b.jaAtacouDeSurpresa, presa, assustada);
 
     if (intencao === "atacar") {
       b.rota = [];
@@ -1018,9 +1058,11 @@ export class Combate extends Phaser.Scene {
     else if (acao.som === "voz") tocarFicha(MAGIAS_SOM.voz);
 
     const bonus = this.atributos[acao.atributo];
-    // o ND vem de quem esta na casa mirada - hoje todo bicho tem bonus 0, entao
-    // isto da ND 10 sempre, mas ja fica pronto pro dia que o bestiario
-    // diferenciar bicho fraco de chefe (docs/modelo-de-combate.md secao 3).
+    // o ND de exibicao (mostrarDado) e do PRIMEIRO alvo pego, so pra ter algo
+    // pra mostrar no dado antes de saber quem sera atingido de verdade - o
+    // desfecho de cada bicho é recalculado abaixo, um ND por bicho (o
+    // bestiario ja diferencia bonus 0/1/2/3/5 por criatura), reaproveitando
+    // o MESMO dado fisico (resultado.dado/total), nunca rolando de novo.
     const pegos = this.pegos(acao, casa);
     const nd = 10 + (pegos[0]?.bonus ?? 0);
     const resultado = testar(bonus, nd, this.d20);
@@ -1044,14 +1086,22 @@ export class Combate extends Phaser.Scene {
       const sucesso = foiSucesso(resultado.desfecho);
       const critico = resultado.desfecho === "critico-sucesso";
       const dano = this.danoDaAcao(acao, bonus, critico);
+      // ND por alvo: uma acao em area pode pegar bichos com bonus diferentes
+      // (ex. Goblin bonus 0 e Aranha bonus 1 no mesmo Bafo Gelado) - o MESMO
+      // dado fisico e reaproveitado (nunca rola de novo), so a comparacao
+      // contra o ND daquele bicho especifico muda. Ver desfechoDoTeste.
+      const acertouAlvo = (b: Bicho) =>
+        foiSucesso(desfechoDoTeste(resultado.dado, resultado.total, 10 + b.bonus));
       // mesmo com sucesso no dado, uma criatura agil pode esquivar por conta
       // propria -- `esquivaChance` (conteudo.ts), o atributo novo pedido pelo
       // Hugo em 2026-09-05. O DADO continua sendo de quem decide o resultado;
-      // isto so filtra por cima dele. Sem sucesso no dado ninguem tem chance
-      // de novo: ja errou por causa do dado, nao por sorte dupla.
-      const esquivaram = !sucesso
-        ? pegos
-        : pegos.filter((b) => Math.random() < (acharCriatura(b.bicharioId)?.esquivaChance ?? 0));
+      // isto so filtra por cima dele. Sem sucesso no dado (pro ND daquele
+      // bicho) ninguem tem chance de novo: ja errou por causa do dado, nao
+      // por sorte dupla.
+      const esquivaram = pegos.filter((b) => {
+        if (!acertouAlvo(b)) return true;
+        return Math.random() < (acharCriatura(b.bicharioId)?.esquivaChance ?? 0);
+      });
       if (esquivaram.length > 0) {
         // falha com bicho na mira, ou esquiva de verdade: nao "nada
         // aconteceu", ele ESQUIVOU do golpe -- e por isso que o heroi errou.
@@ -1068,7 +1118,10 @@ export class Combate extends Phaser.Scene {
       // sao diferentes e so a ultima depende da esquiva calculada acima.
       const semAlvoQuandoPrecisava = pegos.length === 0 && !semAlvoNecessario;
       const todosEsquivaram = pegos.length > 0 && atingidos.length === 0;
-      if (!sucesso || semAlvoQuandoPrecisava || todosEsquivaram) {
+      // "!sucesso" so importa aqui quando nao ha bicho pego (magia sem alvo,
+      // tipo Escudo de Bolha, pode falhar o proprio teste do heroi) - com
+      // bicho pego, cada um ja tem seu proprio sucesso/falha em `esquivaram`.
+      if ((pegos.length === 0 && !sucesso) || semAlvoQuandoPrecisava || todosEsquivaram) {
         this.poeira(cx, cy - 8);
         tocarFicha(IMPACTOS.errou);
       } else if (acao.id === "golpe-arco" || acao.id === "golpe-funda") {
@@ -1331,8 +1384,11 @@ export class Combate extends Phaser.Scene {
         // Ver docs/plano-de-itens-e-equipamento.md, secao 8.
         ficha?.larga.forEach(({ id, chance }) => {
           if (!ficha.unico && Math.random() > chance) return;
+          // mochila cheia: guardar() falha sem gastar nada - cai no chao aos
+          // pes do heroi em vez de sumir sem aviso nenhum (a criatura ja foi
+          // removida, entao esse loot nao tem mais outro lugar pra existir).
           if (id === "moeda") estado().moedas += 1;
-          else guardar(id);
+          else if (!guardar(id)) this.mundo.largarItemNoChao(id, 1);
         });
         salvar();
         // um Selo de Heroi por criatura vencida — o sistema de progressao do

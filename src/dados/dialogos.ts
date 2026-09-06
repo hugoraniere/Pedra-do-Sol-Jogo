@@ -226,6 +226,14 @@ export const DIALOGOS: Record<string, Fala> = {
     quem: "O varal",
     variantes: [
       {
+        // sem guarda, "Examinar de perto" podia ser escolhido de novo a cada
+        // visita e empilhava outra unidade de pano-goblin - item de historia
+        // que so faz sentido pegar uma vez.
+        id: "ja-examinado",
+        condicao: etapaFeita("sino-da-vila", "achar-pista-varal"),
+        linhas: ["So sobrou o arame vazio.", "Ja levou o retalho de pano dali."],
+      },
+      {
         id: "padrao",
         linhas: [
           "Tem um retalho de pano cinza preso no arame.",

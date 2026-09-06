@@ -44,8 +44,14 @@ As colunas sao `parado, passo-a, passo-b, respira, conjura, tonto`
 | conjurar | conjura, quadro unico, 700 ms | `conjurar()` |
 | levar susto | tonto, quadro unico, 900 ms | `ficarTonto()` |
 
-E so. **Nao existe nenhum quadro de combate.** Nem golpe, nem telegrafo, nem
-levar dano, nem cair. Nem correr, nem sacar a arma.
+**Correcao de 2026-09-06: a tabela acima e a frase abaixo sao de antes do
+combate por turnos entrar no jogo de verdade.** `ataque`, `machucado`,
+`esquiva`, `fuga` e `derrota` ja existem desenhados (`arte/pessoa.py`) e
+ligados em animacao Phaser real (`heroi.ts`, ex. `${chave}-ataque-${dir}`).
+So falta o `telegrafo` de verdade citado no proximo paragrafo - nao "nenhum
+quadro de combate".
+
+Nao existe **telegrafo** de verdade. Nem correr, nem sacar a arma.
 
 Isso nao e um detalhe estetico: e um contrato quebrado com
 `docs/modelo-de-combate.md`, que ja decidiu coisas que exigem quadros que a arte

@@ -1,8 +1,15 @@
 # Publica o jogo no GitHub Pages a cada push em principal.
 #
-# npm run build ja comeca chamando npm run verificar (ver package.json): se um
-# contrato invisivel quebrar - som faltando, fala orfa, cor fora da paleta - o
-# deploy para aqui, antes de publicar qualquer coisa quebrada para o Lele.
+# npm run build ja comeca chamando verificar, e depois teste/criatura/
+# condicoes/derrota (os 4 scripts que conferem o motor de dado/criatura/
+# condicoes/derrota direto, sem abrir navegador - ver package.json): se um
+# contrato invisivel quebrar - som faltando, fala orfa, cor fora da paleta,
+# ou o proprio motor de combate - o deploy para aqui, antes de publicar
+# qualquer coisa quebrada para o Lele.
+#
+# node-version precisa ser >=22.18 (ver "engines" em package.json): os 4
+# scripts de logica pura importam .ts direto contando com o type-stripping
+# nativo do Node, que so vem ligado por padrao a partir dessa versao.
 name: Publicar no GitHub Pages
 
 on:
@@ -26,7 +33,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run build

@@ -131,7 +131,7 @@ export class Pausa extends Phaser.Scene {
         rotulo: "SAIR DO JOGO",
         acao: () => {
           salvar();
-          sairDoJogo();
+          void sairDoJogo();
         },
       });
     }

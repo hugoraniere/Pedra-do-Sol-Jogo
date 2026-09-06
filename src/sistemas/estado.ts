@@ -238,6 +238,24 @@ function migrarMochila(bruta: unknown, mochilaAtualId: string): SlotDaMochila[] 
 }
 
 export function salvar() {
+  // duas abas no mesmo espaco de save nao tem lock nenhum entre si - a
+  // ultima a chamar salvar() sempre vence e apaga o progresso da outra em
+  // silencio. Nao da pra resolver isso sem um mecanismo novo (BroadcastChannel
+  // ou parecido), mas da pra deixar de ser silencioso: se o que esta gravado
+  // agora e mais novo do que o que esta aba tinha em maos, outra aba escreveu
+  // por cima entre a ultima leitura/gravacao daqui e agora.
+  // so console.warn, nunca sistemas/doutor.ts: aquele arquivo importa Phaser,
+  // e este aqui e "sistema puro, separado de Phaser" de proposito (CLAUDE.md)
+  // - inclusive roda direto no Node em ferramentas/conferir-derrota.mjs, sem
+  // window nenhum, onde importar Phaser quebra o script na hora.
+  const gravado = lerEspaco(atual.espaco);
+  if (gravado && gravado.atualizadoEm > atual.atualizadoEm) {
+    console.warn(
+      "[estado] outra aba/janela gravou este mesmo save por cima",
+      `espaco ${atual.espaco}, gravado ${new Date(gravado.atualizadoEm).toLocaleTimeString()}`
+    );
+  }
+
   const decorrido = Math.floor((Date.now() - inicioDaSessao) / 60000);
   if (decorrido > 0) {
     atual.minutos += decorrido;
@@ -459,9 +477,20 @@ export function aplicarDerrota(
   // a mochila e slot por posicao (SlotDaMochila[]) - achata pra uma unidade
   // por posicao, igual a lista antiga fazia sozinha, senao "sortear ate 3"
   // perderia sempre o mesmo item empilhado inteiro de uma vez.
+  // itens equipados nunca entram no sorteio: perde-los aqui e reganha-los de
+  // graca no proximo carregamento (backfillarEquipamentoInicial recoloca
+  // qualquer coisa que armaSprite/estiloRoupa/equipamento ainda apontem e
+  // que sumiu da mochila) anulava o prejuizo da derrota pra quem estava
+  // equipado - o "doi de verdade" do CLAUDE.md so valia pra quem nao usava
+  // a propria arma.
+  const idDaArmaEquipada = atual.heroi.armaSprite !== "nenhuma" ? ARMA_DO_SPRITE[atual.heroi.armaSprite] : undefined;
+  const equipados = new Set(
+    [atual.heroi.estiloRoupa, idDaArmaEquipada, atual.heroi.equipamento?.armadura, atual.heroi.equipamento?.acessorio]
+      .filter((id): id is string => !!id)
+  );
   const elegiveis: string[] = [];
   atual.mochila.forEach((slot) => {
-    if (!slot || slot.item.startsWith("chave-")) return;
+    if (!slot || slot.item.startsWith("chave-") || equipados.has(slot.item)) return;
     for (let i = 0; i < slot.quantidade; i++) elegiveis.push(slot.item);
   });
   const quantidadeAPerder = Math.min(3, Math.ceil(elegiveis.length / 2));

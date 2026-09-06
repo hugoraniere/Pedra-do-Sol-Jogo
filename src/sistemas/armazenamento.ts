@@ -48,6 +48,21 @@ const CHAVE_ULTIMO = "aurora-ultimo-espaco";
 /** cache dos saves lidos do disco, preenchido uma vez no boot do aplicativo */
 let cacheApp: Record<string, string> = {};
 
+/** As escritas/remocoes pendentes no aplicativo desktop. `gravar()` e
+ *  `remover()` disparam `window.aurora.*` sem esperar (fire-and-forget) -
+ *  bom pro jogo nunca travar num frame por causa de I/O, ruim se o processo
+ *  fechar antes da escrita terminar. `gravarEspaco()`, por exemplo, chama
+ *  `gravar()` duas vezes seguidas (o save e o "ultimo espaco"), entao
+ *  guardar so a ULTIMA promise nao bastaria se as duas nao resolverem na
+ *  ordem que foram pedidas. `sairDoJogo()` espera este conjunto inteiro
+ *  esvaziar antes de mandar `app:sair`, pra nao perder a ultima acao. */
+const operacoesPendentes = new Set<Promise<void>>();
+
+function registrarOperacao(p: Promise<void>) {
+  const rastreada = p.catch(() => {}).finally(() => operacoesPendentes.delete(rastreada));
+  operacoesPendentes.add(rastreada);
+}
+
 export async function prepararArmazenamento() {
   if (window.aurora) {
     try {
@@ -70,7 +85,7 @@ export function ler(chave: string): string | null {
 export function gravar(chave: string, valor: string) {
   if (window.aurora) {
     cacheApp[chave] = valor;
-    void window.aurora.gravarSave(chave, valor);
+    registrarOperacao(window.aurora.gravarSave(chave, valor));
     return;
   }
   try {
@@ -83,7 +98,7 @@ export function gravar(chave: string, valor: string) {
 export function remover(chave: string) {
   if (window.aurora) {
     delete cacheApp[chave];
-    void window.aurora.apagarSave(chave);
+    registrarOperacao(window.aurora.apagarSave(chave));
     return;
   }
   try {
@@ -150,6 +165,10 @@ export function fichas(): (Ficha | null)[] {
   return lista;
 }
 
-export function sairDoJogo() {
+export async function sairDoJogo() {
+  // espera toda gravacao pendente terminar antes de mandar o processo
+  // fechar - senao "salvar() + sairDoJogo() em seguida" (Pausa.ts) podia
+  // fechar o app antes do fs.writeFile terminar, perdendo a ultima acao.
+  if (window.aurora) await Promise.all(operacoesPendentes);
   window.aurora?.sair();
 }

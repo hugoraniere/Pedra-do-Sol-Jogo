@@ -103,6 +103,13 @@ trocando o estilo por cima dos mesmos buracos.
 
 ## 1. Atributos (5)
 
+**Nota de 2026-09-06: esta secao descreve o estado ANTES da decisao de
+2026-09-05 (tabela no topo deste documento) de trocar os icones de atributo
+por SVG do game-icons.net.** Hoje os 5 ja tem icone proprio -
+`src/sistemas/icones-svg.ts` mapeia forca/destreza/agilidade/inteligencia/
+vitalidade pros 5 SVGs em `public/assets/icones/`, nenhum reusando
+"esperteza" ou o coracao de vida. Fica como registro de como era antes.
+
 Fonte: `ATRIBUTOS` em `src/dados/conteudo.ts`. Aparecem na ficha do herói e
 (quando a tela de criação ganhar ícone) na criação de personagem.
 

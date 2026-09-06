@@ -69,7 +69,6 @@ export function texto(
   t.setLetterSpacing(TRACKING);
   if (op.cor !== undefined) t.setTint(op.cor);
   if (op.larguraMax) t.setMaxWidth(op.larguraMax);
-  if (op.alinhamento !== undefined) t.setCenterAlign?.();
   if (op.alinhamento === 1) t.setCenterAlign();
   if (op.alinhamento === 2) t.setRightAlign();
   if (op.entrelinha !== undefined) t.setLineSpacing(op.entrelinha);

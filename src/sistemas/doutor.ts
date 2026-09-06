@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { lerEspaco, ultimoEspaco } from "./armazenamento";
 
 /** O doutor de dentro do jogo.
  *
@@ -218,8 +219,9 @@ function resumo(): string {
   }
 
   try {
-    const save = localStorage.getItem("reino-de-aurora-v1");
-    partes.push(save ? `save ${(save.length / 1024).toFixed(1)}kb` : "sem save");
+    const espaco = ultimoEspaco();
+    const save = espaco !== null ? lerEspaco(espaco) : null;
+    partes.push(save ? `save ${(JSON.stringify(save).length / 1024).toFixed(1)}kb` : "sem save");
   } catch {
     partes.push("sem localStorage");
   }

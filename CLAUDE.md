@@ -162,9 +162,14 @@ proximidade a fonte de luz que nao existe hoje), nao reuso.
   parte: Resistencia (de Forca), Percepcao e Conhecimento (de Inteligencia), Vontade
   (de Vitalidade). "Coracao" vira "Vitalidade" tambem porque a mesma palavra fazia
   dois trabalhos (o atributo E os coracoes/vida) - agora sao coisas com nomes
-  diferentes. **Implementado**: `+1` de raca/classe/jogador continua igual (3
-  pontos, agora espalhados por 5 opcoes em vez de 3), golpe a distancia e
-  Destreza, magia e Inteligencia, iniciativa e defesa sao Agilidade. Os
+  diferentes. **Implementado**: `+1` de classe e `+1` da escolha do jogador
+  continuam. **Correcao de 2026-09-06**: o total deixou de ser 3 pontos no
+  dia seguinte a esta nota - a revisao de 2026-09-05 (`docs/15-lore-e-visual-
+  das-racas.md`) trocou o bonus de raca de `+1` num atributo so para um
+  ciclo de DOIS atributos vizinhos por raca (`Raca.bonus` virou uma dupla em
+  `conteudo.ts`), entao o total real de origem+jogador e 4 pontos (2 da
+  raca + 1 da classe + 1 do jogador), nao 3. Golpe a distancia e Destreza,
+  magia e Inteligencia, iniciativa e defesa sao Agilidade. Os
   sub-atributos (Resistencia, Percepcao, Conhecimento, Vontade) continuam so
   conceito - nenhuma acao os testa ainda, isso espera as 11 magias
   reformuladas. A criacao de personagem (mais pontos? uma Origem nova?) ainda
@@ -220,9 +225,17 @@ Ja funciona:
 - fome e sono (moodles), fora de combate: acumulam com o relogio de jogo,
   penalizam combate quando criticos, ver `docs/plano-de-moodles.md`
 
-**Nada do sistema da secao anterior existe em codigo ainda.** Nao ha dado, atributo,
-coracao, combate, derrota, fogueira nem selo. Esse e o maior buraco do projeto, e a
-proxima fase do roadmap.
+**Decisao de 2026-09-06: a frase que estava aqui ("nada do sistema existe em
+codigo ainda") ficou escrita antes do merge de `ambiente/combate` e ninguem
+atualizou depois - chegou a contradizer o resto deste proprio arquivo (a
+secao "As regras do mundo" acima ja descreve fogueira, derrota e selo como
+implementados).** O sistema da secao anterior existe de verdade: dado/teste
+(`sistemas/teste.ts`), atributos (`sistemas/poderes.ts`), coracao, combate
+por turnos (`Combate.ts`), derrota/fogueira/selo (`sistemas/estado.ts`,
+`EscolhaDeSelo.ts`). O que ainda falta de verdade: os sub-atributos
+(Resistencia, Percepcao, Conhecimento, Vontade) continuam so conceito, sem
+nenhuma acao os testando. `docs/05-roadmap.md` tem o status fase a fase,
+sempre mais atual que este resumo - leia-o antes de supor o que falta.
 
 ## Como rodar
 

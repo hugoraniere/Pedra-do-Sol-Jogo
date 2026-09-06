@@ -79,16 +79,27 @@ export type HudDeAcao = {
   atualizarVida(atual: number, max: number): void;
   atualizarSlots(porAcao: Map<string, SlotDeAcaoEstado>): void;
   atualizarItemRapido(item: ItemRapido): void;
+  /** Desloca o HUD inteiro por (dx, dy), sem destruir nada - preserva
+   *  handler de clique e estado visual de cada slot (ex: marca de "gastou").
+   *  Usado quando a resolucao muda e o HUD precisa acompanhar sem perder o
+   *  que estava em andamento na luta. */
+  mover(dx: number, dy: number): void;
   destruir(): void;
 };
 
 export function montarHudDeAcao(cena: Phaser.Scene, opcoes: OpcoesHudDeAcao): HudDeAcao {
   const { area } = opcoes;
+  // toda peca que passa por fixo() e reivindicada aqui, pra destruir() poder
+  // desfazer o HUD inteiro - sem isto so os slots eram destruidos, e quem
+  // remontasse o HUD (ex: ao redimensionar) deixava fundo/retrato/vida/item
+  // orfaos por baixo do HUD novo.
+  const todos: Phaser.GameObjects.GameObject[] = [];
   const fixo = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
     if (opcoes.fixarNaTela) {
       (o as unknown as { setScrollFactor: (n: number) => void }).setScrollFactor(0);
     }
     (o as unknown as { setDepth: (n: number) => void }).setDepth(1000);
+    todos.push(o);
     return o;
   };
 
@@ -204,6 +215,15 @@ export function montarHudDeAcao(cena: Phaser.Scene, opcoes: OpcoesHudDeAcao): Hu
     area,
     atualizarVida: atualizarVidaVisual,
     atualizarItemRapido: atualizarItemRapidoVisual,
+    mover(dx, dy) {
+      area.x += dx;
+      area.y += dy;
+      todos.forEach((o) => {
+        const t = o as unknown as { x: number; y: number };
+        t.x += dx;
+        t.y += dy;
+      });
+    },
     // mesma receita de alpha que Combate.ts ja usava sozinho pro slot
     // "indisponivel" (0.4 fundo/numero, 0.3 icone/borda) - so passou a vir
     // de fora como dado, em vez de calculada aqui dentro.
@@ -230,11 +250,12 @@ export function montarHudDeAcao(cena: Phaser.Scene, opcoes: OpcoesHudDeAcao): Hu
     },
     // os objetos sao filhos da cena - Phaser ja os destroi sozinho quando a
     // cena desliga, igual o resto do HUD sempre confiou. Isto so existe pra
-    // quem precisar trocar o HUD sem trocar de cena.
+    // quem precisar trocar o HUD sem trocar de cena (ex: remontar noutra
+    // resolucao). Destroi TODO objeto criado aqui dentro, nao so os slots -
+    // antes so os slots eram destruidos, e fundo/retrato/vida/item ficavam
+    // orfaos por baixo do HUD remontado.
     destruir() {
-      slots.forEach((s) => {
-        s.fundo.destroy(); s.icone.destroy(); s.borda.destroy(); s.marca.destroy(); s.numero.destroy();
-      });
+      todos.forEach((o) => o.destroy());
     },
   };
 }

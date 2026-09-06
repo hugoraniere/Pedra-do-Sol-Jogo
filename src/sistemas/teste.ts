@@ -29,14 +29,21 @@ export function foiSucesso(desfecho: Desfecho): boolean {
 /** A margem que separa "falha comum" de "falha perto" - ver docs/modelo-de-combate.md. */
 const MARGEM_DE_FALHA_PERTO = 3;
 
+/** So a comparacao, sem rolar dado nenhum - separado de `testar()` pra quem
+ *  precisa comparar o MESMO dado ja rolado contra ND's diferentes (uma acao
+ *  em area, um alvo por vez: o dado fisico e um so por acao, mas o ND de
+ *  cada alvo pode ser diferente, entao o desfecho de cada um tambem pode
+ *  ser - ver Combate.ts, a acao em area). */
+export function desfechoDoTeste(dado: number, total: number, nd: number): Desfecho {
+  if (dado === 20) return "critico-sucesso";
+  if (dado === 1) return "critico-fracasso";
+  if (total >= nd) return "sucesso";
+  if (nd - total <= MARGEM_DE_FALHA_PERTO) return "falha-perto";
+  return "falha";
+}
+
 export function testar(modificador: number, nd: number, sorteio: () => number): ResultadoDeTeste {
   const dado = sorteio();
   const total = dado + modificador;
-  let desfecho: Desfecho;
-  if (dado === 20) desfecho = "critico-sucesso";
-  else if (dado === 1) desfecho = "critico-fracasso";
-  else if (total >= nd) desfecho = "sucesso";
-  else if (nd - total <= MARGEM_DE_FALHA_PERTO) desfecho = "falha-perto";
-  else desfecho = "falha";
-  return { dado, total, nd, desfecho };
+  return { dado, total, nd, desfecho: desfechoDoTeste(dado, total, nd) };
 }

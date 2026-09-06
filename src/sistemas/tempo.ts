@@ -45,6 +45,15 @@ export function periodoAtual(): Periodo {
 /** Quantos minutos de jogo faltam pro periodo atual acabar. */
 const TRANSICAO_MIN = 90;
 
+/** Interpola dois inteiros 0xRRGGBB canal a canal - a cor do ceu e sempre um
+ *  desses, nunca uma string CSS. */
+function interpolarCor(de: number, para: number, t: number): number {
+  const r = Math.round(((de >> 16) & 0xff) + (((para >> 16) & 0xff) - ((de >> 16) & 0xff)) * t);
+  const g = Math.round(((de >> 8) & 0xff) + (((para >> 8) & 0xff) - ((de >> 8) & 0xff)) * t);
+  const b = Math.round((de & 0xff) + ((para & 0xff) - (de & 0xff)) * t);
+  return (r << 16) | (g << 8) | b;
+}
+
 /** A cor e o alpha do ceu agora, interpolados nos ultimos minutos de cada
  *  periodo pra transicao nunca ser um corte seco. */
 export function corDoCeu(): { cor: number; alpha: number } {
@@ -57,7 +66,7 @@ export function corDoCeu(): { cor: number; alpha: number } {
   if (faltam > TRANSICAO_MIN) return { cor: atual.corCeu, alpha: atual.alphaCeu };
   const t = 1 - faltam / TRANSICAO_MIN;
   return {
-    cor: t < 0.5 ? atual.corCeu : proximo.corCeu,
+    cor: interpolarCor(atual.corCeu, proximo.corCeu, t),
     alpha: atual.alphaCeu + (proximo.alphaCeu - atual.alphaCeu) * t,
   };
 }

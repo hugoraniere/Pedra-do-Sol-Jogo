@@ -1,8 +1,16 @@
 # O mundo que reage: superficies, condicoes, itens e progresso
 
-Plano. Nada aqui foi construido ainda. E a camada que transforma o combate de
-"bater ate acabar" em sistema: congelar o rio, acender a tocha, queimar a arvore,
-molhar o inimigo antes de congelar.
+Plano. E a camada que transforma o combate de "bater ate acabar" em sistema:
+congelar o rio, acender a tocha, queimar a arvore, molhar o inimigo antes de
+congelar.
+
+**Correcao de 2026-09-06: "nada aqui foi construido ainda" nao e mais
+verdade - o motor de condicao (secao 3) ja esta pronto.** As 13 `IdCondicao`
+desta tabela ja existem em `sistemas/condicoes.ts`, e `sistemas/marcas.ts`
+ja resolve 9 das 13 marcas ("a regra que faz tudo combinar", secao acima),
+com `Combate.ts` aplicando tudo isso em jogo real. O que genuinamente ainda
+falta e o resto: superficies de chao (secao 2) e objetos com estado (secao
+4) - nenhum dos dois tem codigo ainda.
 
 Documentos irmaos: `docs/plano-do-combate.md` manda na ordem do trabalho,
 `docs/11-combate-e-magias.md` tem as treze magias e o bestiario,
