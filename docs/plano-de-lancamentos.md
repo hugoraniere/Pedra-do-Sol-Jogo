@@ -59,8 +59,10 @@ fecha sem os itens abaixo:
 - [x] `npm run build` limpo (já roda `verificar` embutido)
 - [x] `npm run contraste` sem problema
 - [x] `npm run auditar` sem problema (fechado em 2026-09-06, ver seção 4)
-- [ ] `npm run conferir` sem problema (25 combinações de raça/classe) — **único
-      bloqueador restante**, ver seção 4
+- [x] `npm run conferir` sem problema — **verde desde `65d724e`** (2026-09-06):
+      o que quebrava era um SVG com XML inválido travando o `npm run dev`, não
+      o estudo de escala do herói como se supunha. Os 88 pontos de encaixe e as
+      25 combinações passam limpo.
 - [ ] Jogo abre e joga o pedaço em questão sem erro no console
 - [ ] `ESTADO-DO-JOGO.md` reflete o que o código faz de verdade (não o que
       foi decidido em papel e ainda não chegou)
@@ -91,14 +93,14 @@ fecha sem os itens abaixo:
    ignora "rótulo dentro do próprio botão" não reconhecia o caso). Corrigido
    em `Ficha.ts` (`09601ee`) agrupando rótulo e zona de toque no mesmo
    Container. `npm run auditar` fecha zerado agora.
-3. **`npm run conferir` continua quebrado** (as 25 combinações de raça/
-   classe, "sem pontos de encaixe"). Confirmado que não foi nenhum merge —
-   é o estudo de escala do herói que ficou parado em `stash@{0}` (ver
-   "Achados durante a execução"). **Esse stash agora está bem desatualizado**
-   (mais de 600 linhas de diff contra o `HEAD` atual, incluindo um `Ficha.ts`
-   de antes da reforma de equipamento) — resgatar ele hoje tem risco real de
-   repetir o mesmo tipo de conflito silencioso do `coracoesMax`. Precisa de
-   uma decisão do Hugo (ver seção 6) antes de mexer.
+3. ~~`npm run conferir` quebrado~~ — **RESOLVIDO em 2026-09-06** (`65d724e`,
+   por outra sessão). A causa real não era o estudo de escala do herói como
+   este documento supunha: era um SVG com XML inválido travando o
+   `npm run dev`, e o script de conferir depende do servidor pra carregar as
+   peças. Corrigido o SVG, os 88 pontos de encaixe e as 25 combinações
+   passam limpo. **Consequência:** o `stash@{0}` deixou de ser bloqueador —
+   continua guardado, mas agora é só trabalho de arte em aberto, não algo
+   que impeça fechar versão.
 4. **`arte/manifesto.json` sem `hospital.png`** — rodar `npm run arte`
    quando `arte/` não estiver em uso por outra frente.
 
@@ -255,15 +257,19 @@ antes.
   `FRENTES.md` pro resultado.
 - ~~O modo de alvo por turno~~ → decidido, ver `docs/05-roadmap.md` (Fase 1).
 
-**Ainda aberto, 2026-09-06:** só o bloqueador 3 da seção 4 (`conferir`
-quebrado pelo estudo de escala do herói, parado em `stash@{0}` e já
-desatualizado). Três caminhos, aguardando o Hugo escolher:
-- **Abandonar o stash** e resolver `conferir` do zero: reconciliar
-  `encaixes.json`/`config.ts` com a arte que existe HOJE (sem tentar
-  recuperar o estudo de escala 2x).
-- **Resgatar o stash com cuidado**, arquivo por arquivo, reconferindo cada
-  um contra o `Ficha.ts`/`config.ts` atuais antes de aplicar (mais lento,
-  preserva o trabalho de escala do herói).
-- **Deixar como está por enquanto** e fechar o primeiro corte de versão sem
-  `conferir` verde, registrando a exceção explicitamente no changelog em vez
-  de esperar.
+- ~~`conferir` quebrado~~ → resolvido por outra sessão (`65d724e`), ver
+  seção 4, item 3.
+
+**Estado em 2026-09-06, fim do dia: a checklist técnica está TODA VERDE**
+(`build`, `contraste`, `auditar`, `conferir`). Nenhum bloqueador técnico
+impede fechar o primeiro corte de versão hoje — o que falta é escopo de
+jogo, não conserto.
+
+**Ainda aberto (decisão de escopo, não de conserto):** o Hugo levantou uma
+lista grande de coisas que quer adicionar e que hoje **não têm lugar em
+`docs/05-roadmap.md`** — novos moodles, novos cenários, interfaces
+melhores, melhorias em sprites e ícones, equipamento e armas com animação e
+poder próprios, interação com objeto de mapa, e quests/side-quests com
+alerta na tela. Isso é maior que um corte: provavelmente vira uma fase nova
+(ou reorganiza as existentes). Ver `docs/roadmap-de-expansao.md` para o
+levantamento e as decisões pendentes.
