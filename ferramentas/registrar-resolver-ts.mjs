@@ -3,6 +3,5 @@
  *  isto em `--import` ativa o gancho ANTES do script principal carregar,
  *  entao os imports estaticos dele ja saem resolvidos. */
 import { register } from "node:module";
-import { pathToFileURL } from "node:url";
 
 register("./resolver-ts.mjs", { parentURL: import.meta.url });
