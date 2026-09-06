@@ -21,6 +21,7 @@ import { poderesDoHeroi } from "../sistemas/poderes";
 import { botao } from "../sistemas/botao";
 import { ESPACO, TAMANHO, caixa, meio, pilha, textoNaArea } from "../sistemas/design";
 import { tocar } from "../sistemas/som";
+import { refazerAoRedimensionar } from "../sistemas/visao";
 
 const larguraCaixa = () => Math.min(220, LARGURA - ESPACO.xl * 2);
 
@@ -28,6 +29,7 @@ type Passo = "principal" | "poder" | "magia";
 
 export class EscolhaDeSelo extends Phaser.Scene {
   private painel!: Phaser.GameObjects.Container;
+  private fundo!: Phaser.GameObjects.Rectangle;
   private passo: Passo = "principal";
   /** sorteadas uma vez por abertura da tela, pra nao reembaralhar a cada
    *  redesenho (ex.: ao girar a tela) */
@@ -41,9 +43,16 @@ export class EscolhaDeSelo extends Phaser.Scene {
     this.passo = "principal";
     this.magiasSorteadas = sortear3(magiasNaoAprendidas());
     tocar("selo");
-    this.add.rectangle(0, 0, LARGURA, ALTURA, 0x2c2440, 0.72).setOrigin(0);
+    this.fundo = this.add.rectangle(0, 0, LARGURA, ALTURA, 0x2c2440, 0.72).setOrigin(0);
     this.painel = this.add.container(0, 0).setDepth(10);
     this.desenhar();
+    // giro de tablet/redimensionar no meio da escolha - desenhar() ja limpa
+    // e remonta do zero, o comentario de magiasSorteadas acima ("ex.: ao
+    // girar a tela") ja previa isto, so faltava ligar.
+    refazerAoRedimensionar(this, () => {
+      this.fundo.setSize(LARGURA, ALTURA);
+      this.desenhar();
+    });
   }
 
   private fechar() {
