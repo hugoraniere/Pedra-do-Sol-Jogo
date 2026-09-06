@@ -56,10 +56,11 @@ grandes. Regra prática:
 Isto substitui "acho que está pronto" por uma lista fixa. Nenhuma versão
 fecha sem os itens abaixo:
 
-- [ ] `npm run build` limpo (já roda `verificar` embutido)
-- [ ] `npm run contraste` sem problema
-- [ ] `npm run auditar` sem problema (**hoje está quebrado**, ver seção 4)
-- [ ] `npm run conferir` sem problema (25 combinações de raça/classe)
+- [x] `npm run build` limpo (já roda `verificar` embutido)
+- [x] `npm run contraste` sem problema
+- [x] `npm run auditar` sem problema (fechado em 2026-09-06, ver seção 4)
+- [ ] `npm run conferir` sem problema (25 combinações de raça/classe) — **único
+      bloqueador restante**, ver seção 4
 - [ ] Jogo abre e joga o pedaço em questão sem erro no console
 - [ ] `ESTADO-DO-JOGO.md` reflete o que o código faz de verdade (não o que
       foi decidido em papel e ainda não chegou)
@@ -82,13 +83,22 @@ fecha sem os itens abaixo:
    `coracoesMaxDoHeroi()` (a versão que também conta Vitalidade). Ver
    "Achados durante a execução" abaixo — teve uma colisão com uma sessão
    concorrente no meio do caminho, contornada sem perder nada.
-2. **`npm run auditar` continua quebrado** (`TypeError` em `atualizarCeu()`,
-   vem da luz da fogueira/`RenderTexture`). Sem isso verde, a checklist da
-   seção 3 não fecha nenhum corte.
-3. **`npm run conferir` está quebrado agora** (as 25 combinações de raça/
-   classe, "sem pontos de encaixe"). Confirmado que **não foi o merge**
-   (`encaixes.json` não mudou entre as branches) — é o estudo de escala do
-   herói em andamento (ver "Achados durante a execução"), ainda não commitado.
+2. ~~`npm run auditar` quebrado~~ — **RESOLVIDO em 2026-09-06** (o crash da
+   luz da fogueira já tinha sido corrigido por outra sessão entre 09-05 e
+   09-06). Rodando de novo achou 4 sobreposições reais e novas, na janela de
+   MOCHILA (rótulos ROUPA/ARMADURA/ACESSÓRIO/ARMA por baixo da zona de toque
+   do slot — os dois não compartilhavam `Container`, então a checagem que
+   ignora "rótulo dentro do próprio botão" não reconhecia o caso). Corrigido
+   em `Ficha.ts` (`09601ee`) agrupando rótulo e zona de toque no mesmo
+   Container. `npm run auditar` fecha zerado agora.
+3. **`npm run conferir` continua quebrado** (as 25 combinações de raça/
+   classe, "sem pontos de encaixe"). Confirmado que não foi nenhum merge —
+   é o estudo de escala do herói que ficou parado em `stash@{0}` (ver
+   "Achados durante a execução"). **Esse stash agora está bem desatualizado**
+   (mais de 600 linhas de diff contra o `HEAD` atual, incluindo um `Ficha.ts`
+   de antes da reforma de equipamento) — resgatar ele hoje tem risco real de
+   repetir o mesmo tipo de conflito silencioso do `coracoesMax`. Precisa de
+   uma decisão do Hugo (ver seção 6) antes de mexer.
 4. **`arte/manifesto.json` sem `hospital.png`** — rodar `npm run arte`
    quando `arte/` não estiver em uso por outra frente.
 
@@ -157,8 +167,15 @@ antes.
   `FRENTES.md` pro resultado.
 - ~~O modo de alvo por turno~~ → decidido, ver `docs/05-roadmap.md` (Fase 1).
 
-**Ainda aberto:** os bloqueadores 2 e 3 da seção 4 (`auditar` quebrado,
-`conferir` quebrado pela frente de arte em andamento) — nenhum dos dois é
-trabalho desta conversa, ficam registrados aqui até quem estiver com essas
-frentes resolver. Nenhum corte de versão fecha (checklist da seção 3)
-enquanto os dois continuarem vermelhos.
+**Ainda aberto, 2026-09-06:** só o bloqueador 3 da seção 4 (`conferir`
+quebrado pelo estudo de escala do herói, parado em `stash@{0}` e já
+desatualizado). Três caminhos, aguardando o Hugo escolher:
+- **Abandonar o stash** e resolver `conferir` do zero: reconciliar
+  `encaixes.json`/`config.ts` com a arte que existe HOJE (sem tentar
+  recuperar o estudo de escala 2x).
+- **Resgatar o stash com cuidado**, arquivo por arquivo, reconferindo cada
+  um contra o `Ficha.ts`/`config.ts` atuais antes de aplicar (mais lento,
+  preserva o trabalho de escala do herói).
+- **Deixar como está por enquanto** e fechar o primeiro corte de versão sem
+  `conferir` verde, registrando a exceção explicitamente no changelog em vez
+  de esperar.
