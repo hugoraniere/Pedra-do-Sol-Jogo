@@ -105,6 +105,38 @@ sem julgamento, quanto dinheiro e quais itens sumiram, e devolve o controle na
 hora, com o heroi ja no Hospital. Sem musica de fracasso, sem "voce perdeu",
 sem tela de game over - so o resumo do prejuizo e um botao pra seguir.
 
+### Divergencia deliberada: combate fica por turnos, nao tempo real
+
+`docs/modelo-de-combate.md` descrevia o combate como "Baldur's Gate em
+top-down": tempo real, com mira e alcance, o dado so decidindo o resultado do
+que o dedo escolheu. Na pratica, todo o combate construido e jogado ate aqui
+(`Combate.ts`, `sistemas/turnos.ts`, a trilha de iniciativa, o HUD do rodape)
+e por turnos, estilo mesa - e funciona de ponta a ponta, testado. Decisao de
+2026-09-05: **fica por turnos**. Documento contradizendo codigo que joga bem
+nao vale reescrever o codigo, vale atualizar o documento - `docs/
+modelo-de-combate.md` tem uma nota no topo apontando pra `docs/
+plano-do-combate.md` como o que vale de verdade sobre o formato do combate.
+O dado, o ND, os 5 desfechos e "so o heroi rola" (revisto: hoje os dois lados
+rolam, ver `docs/05-roadmap.md`) continuam os mesmos - so a moldura em volta
+(turno em vez de tempo real com mira) que estava desatualizada no documento.
+
+### Divergencia deliberada: Hospital e o unico predio ligado a cura/resgate
+
+A Casa de Cura (`docs/14-casa-de-cura.md`) nasceu para cobrir "cura" sem
+contradizer a referencia de mesa, que nao tem hospital nenhum entre os oito
+lugares. Depois, o merge de `ambiente/combate` trouxe um predio literal
+chamado **Hospital** pra Vila Semente, ja ligado a mecanica de derrota (ver
+"Divergencia deliberada: a fogueira nao e mais quem resgata" acima) - os dois
+prédios passaram a cobrir o mesmo assunto, sem papel diferente. Decisao de
+2026-09-05: **o Hospital fica sendo o unico lugar com qualquer mecanica de
+cura/resgate**. A Casa de Cura perde essa funcao e vira a **Casa da Vovo
+Aurora** - so a casa dela, sem mecanica de cura nenhuma amarrada: hub de
+rumor/pista (ela ja e a figura de autoridade da vila) e respiro de ritmo,
+nada mais. `docs/14-casa-de-cura.md` tem uma nota no topo com esse
+redirecionamento; o conteudo de design do comodo (mobilia, referencias de
+arte) continua valendo pra Casa da Vovo Aurora, so a secao "Pra que serve"
+mudou.
+
 ### Divergencia deliberada: fome e sono voltaram a mesa
 
 `docs/plano-de-itens-e-equipamento.md` (secao 3) tinha excluido fome e sede de
@@ -225,6 +257,30 @@ precisar de um sprite novo, escreva a funcao que o desenha e rode `npm run arte`
 Nunca cole um PNG na mao em `public/assets`, porque ele seria apagado na proxima
 geracao. Sprite desenhado a mao entra por `arte/sprites/`, que tem prioridade sobre o
 gerado. Ver `docs/06-fluxo-de-sprites.md`.
+
+**Decisao de 2026-09-05: icone deixou de ser so pixel art - excecao aberta,
+so pra icone.** Depois de tentar desenho proprio (rejeitado pelo Hugo) e depois
+testar em cima de icones prontos, a familia de icone nova (atributo, magia,
+retrato de criatura, e futuramente acao basica) passou a nascer de vetor de
+terceiro - [game-icons.net](https://game-icons.net/) (Lorc, Delapouite e
+outros autores), licenca CC BY 3.0 - recolorido pra paleta do jogo, nunca
+pixel art gerado por `arte/*.py`. **O que NAO muda com isto**: heroi, NPC,
+criatura de corpo inteiro, tile, objeto de cenario e a tipografia (a fonte de
+bitmap de `arte/fonte.py`) continuam 100% pixel art, sem excecao - a excecao e
+so pro icone. Pendencias reais, ainda nao fechadas:
+- a licenca exige credito ("Icones por Lorc e Delapouite - game-icons.net")
+  em algum lugar do jogo (tela de creditos, por exemplo) antes de qualquer
+  icone desta familia entrar em producao de verdade;
+- a cor de cada icone segue "Nada de cor solta" em espirito (vem da mesma
+  paleta do jogo), mas duas cores novas do sistema de elemento (cinza neutro
+  `#96A0B8` de atributo/acao basica, e o tom de luz `#F7E7B8`) ainda nao
+  foram cadastradas em `arte/paleta.py`/`COR` - fazer isso antes de usar
+  qualquer uma das duas fora do piloto.
+
+Ver `docs/inventario-de-icones.md` pro levantamento completo, o sistema de
+cor por categoria (atributo/acao basica = cinza neutro, magia = cor de
+elemento) e o status de cada icone (aprovado / aposta ainda nao confirmada /
+rejeitado).
 
 **Nada de cor solta.** Toda cor vem de `arte/paleta.py` (arte) ou de `COR` em
 `src/dados/config.ts` (interface). As duas listas sao a mesma paleta do material

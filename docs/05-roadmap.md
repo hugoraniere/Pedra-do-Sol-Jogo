@@ -64,10 +64,13 @@ em mapa novo.
       faixa. Funciona, mas e um popup embutido, nao "o momento de tensao do jogo
       inteiro" com cena e animacao propria que este item pedia — fica em aberto
       se vale a pena separar.
-- [ ] **Coracoes.** Perder funciona de verdade em combate (`Combate.ts`, desconta
-      e salva no estado). Falta o resto: comer e dormir nao enchem nada ainda, e o
-      Anao continua nascendo com 3 coracoes em vez de 4 (`coracoesMax` e fixo em
-      `novoJogo()`, o dom dele nao esta ligado).
+- [x] **Coracoes viraram vida numerica de verdade.** `ambiente/combate` mergeado
+      em 2026-09-05 (`d41aac6`): heroi = base da raca x5 + Vitalidade x3
+      (`coracoesMaxDoHeroi()`, `sistemas/poderes.ts` — ja resolve o Anao nascer
+      com 4 em vez de 3, contando raca E Vitalidade), dano por dado real de
+      arma/magia/criatura (`sistemas/dado.ts`, dobra no critico), HUD de rodape
+      novo (`sistemas/hudDeAcao.ts`). **Ainda falta:** comer e dormir nao enchem
+      vida nenhuma ainda.
 - [x] **Derrota e fogueira.** Zero coracoes nocauteia de verdade. **Descricao
       original desta linha (acorda na ULTIMA fogueira acesa,
       `Mundo.acordarNaFogueira()`) ficou pra tras com o merge do
@@ -78,10 +81,18 @@ em mapa novo.
 - [x] **Combate, o laco inteiro** — mas **o modelo mudou**. Ver a decisao logo
       abaixo: nao e mais tempo real com mira, e por turnos.
 - [ ] **O modo de alvo.** A fase de mira existe de verdade (`Combate.ts`): anel de
-      alcance, alvos piscando, cancelamento por ESC ou reclique. Falta a
-      confirmacao em dois passos (hoje um toque dentro do alcance ja executa) e
-      a previa de area para acoes "ao redor", que hoje executam na hora sem
-      passar pela mira.
+      alcance, alvos piscando, cancelamento por ESC ou reclique. **Decisao de
+      design, 2026-09-05 (o combate ser por turnos nao exigia redesenhar isto —
+      so faltava a confirmacao):**
+      - **Alvo unico:** primeiro toque seleciona e destaca o alvo (contorno/
+        brilho diferente do "piscando" de alcance); um segundo toque no MESMO
+        alvo confirma e executa. Toque em outro lugar cancela a selecao.
+      - **Area ("ao redor"):** ao escolher a habilidade, uma reticula no
+        formato da area (circulo/cone) acompanha o toque/mouse dentro do
+        alcance; toca pra confirmar naquela posicao, ESC ou toque fora
+        cancela.
+      Nenhum dos dois esta implementado ainda — a decisao so fecha o design,
+      falta o trabalho em `Combate.ts`.
 - [x] **Barra de habilidades**, com recarga visivel (pontinhos) e atalho 1-6 no
       teclado. `Combate.ts`.
 - [x] **Selos de Heroi.** Cada criatura vencida rende um selo (`ganharSelo()`,
@@ -165,16 +176,17 @@ reescreve boa parte do que este roadmap dizia sobre o sistema:
   de resgate. Perde-se **todas as moedas** e uma selecao aleatoria de ate 3
   itens da mochila (nunca item `chave-*`), nao mais so "o que carregava na
   mao".
-- **Achado, nao decisao: o combate voltou a ser tempo real no PAPEL, mas o
-  CODIGO ainda e por turnos.** `docs/modelo-de-combate.md` (a fonte da
-  verdade do modelo, citado por `CLAUDE.md`) agora diz explicitamente "nao e
-  por turno" — Baldur's Gate em top-down, tempo real com mira. Mas
-  `Combate.ts` ainda importa `Ordem` de `sistemas/turnos.ts` e usa `Fase =
-  "meuTurno" | "vezDaCriatura" | ...`: a estrutura de turno de mesa que a
-  decisao "por turnos" (linha abaixo) descreve continua rodando, so com d20
-  no lugar de d6 por baixo. Ou o documento esta na frente do codigo (migracao
-  ainda por vir) ou o documento ficou desatualizado por engano — nao decidi
-  qual dos dois sozinho, so registrei a divergencia encontrada.
+- **Decisao, 2026-09-05 (fechou o que estava so "achado" acima): fica por
+  turnos.** `docs/modelo-de-combate.md` dizia tempo real com mira; o codigo
+  (`Combate.ts`, `sistemas/turnos.ts`) sempre foi por turnos e ja joga de
+  ponta a ponta, testado. Documento contradizendo codigo que funciona nao
+  vale reescrever o codigo — `docs/modelo-de-combate.md` ganhou uma nota no
+  topo apontando pra `docs/plano-do-combate.md` como o que vale hoje sobre o
+  formato. Ver "Divergencia deliberada" em `CLAUDE.md`. **Consequencia pra
+  esta fase:** o item "O modo de alvo" abaixo (anel de alcance, mira em tempo
+  real) foi escrito pensando no modelo antigo — precisa ser reavaliado como
+  "escolha de alvo por turno" antes de continuar, nao como mira em tempo
+  real.
 
 ---
 

@@ -1,8 +1,23 @@
-# A Casa de Cura, primeiro interior
+# A Casa da Vovo Aurora (antiga "Casa de Cura"), primeiro interior
+
+**Renomeada e redefinida em 2026-09-05.** Depois deste esboco, o merge de
+`ambiente/combate` trouxe um predio de verdade chamado **Hospital**, ja
+ligado a mecanica de derrota/resgate (ver `ESTADO-DO-JOGO.md` e a
+"Divergencia deliberada" correspondente em `CLAUDE.md`) — os dois prédios
+passaram a cobrir o mesmo assunto. Decisao: o Hospital fica com toda mecanica
+de cura/resgate; este comodo perde essa funcao e vira so **a casa da Vovo
+Aurora** — hub de rumor/pista e respiro de ritmo, sem cura de graca amarrada
+a ele (nunca teve mesmo, ver "Pra que serve" abaixo) e sem nenhuma ligacao
+com derrota. O resto deste documento (mobilia, referencias de arte, quem
+mora la) continua valendo como esboco de design pra esse comodo — so o nome
+e a moldura de "cura" que mudaram. O texto abaixo ainda fala em "Casa de
+Cura" porque nao foi reescrito frase a frase; leia como "Casa da Vovo Aurora"
+onde aparecer.
 
 Esboco de design. Nada aqui foi implementado. Nasceu de uma conversa que comecou
 pedindo "um hospital" e terminou em outro lugar, porque a referencia nao deixou o
-pedido original de pe.
+pedido original de pe — ironia registrada: o "hospital" acabou entrando no jogo
+de outro caminho (ver nota acima), sob outro nome e outro proposito.
 
 ## Por que nao um hospital
 

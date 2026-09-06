@@ -1,5 +1,14 @@
 # O modelo de combate
 
+**SUPERADO em 2026-09-05 no que diz respeito a tempo real vs turno.** Este
+documento descreve tempo real com mira ("Baldur's Gate em top-down"); o
+combate de verdade, construido e jogado de ponta a ponta, e **por turnos**
+(`Combate.ts`, `sistemas/turnos.ts`). Decisao registrada em `CLAUDE.md`
+("Divergencia deliberada: combate fica por turnos") e em
+`docs/plano-do-combate.md`, que e quem manda hoje sobre o formato. O resto
+deste documento (o dado decide o resultado, os 5 desfechos, ND por acao)
+continua valendo — so a moldura de tempo real com mira que ficou pra tras.
+
 Decisao tomada. Este documento e a fonte da verdade do **modelo**: como uma acao
 nasce, e mirada e resolvida.
 
