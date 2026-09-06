@@ -10,12 +10,12 @@
  * (os goblins daquele encontro). Esta cena so sabe LUTAR contra quem chegou.
  */
 import Phaser from "phaser";
-import { ALTURA, LARGURA, SOLIDOS, TILE, escalaDoSprite, direcaoDe } from "../dados/config";
+import { ALTURA, COR, LARGURA, SOLIDOS, TILE, escalaDoSprite, direcaoDe } from "../dados/config";
 import { acharCriatura, spriteDoGoblin, type Comportamento as ComportamentoNarrativo } from "../dados/conteudo";
 import { ICONE, MOVIMENTO, movimentoDaCriatura } from "../dados/provador";
 import { ARMAS, CRIATURAS_SOM, DADO, DESFECHO, FAMILIA_DA_CRIATURA, IMPACTOS, MAGIAS_SOM } from "../dados/sons";
 import { testar, foiSucesso, type Desfecho, type ResultadoDeTeste } from "../sistemas/teste";
-import { alcancaveis, caminho, chaveDaCasa, distanciaEmCasas, type Casa } from "../sistemas/alcance";
+import { alcancaveis, caminho, chaveDaCasa, distanciaEmCasas, type Alcancada, type Casa } from "../sistemas/alcance";
 import { decidirAcaoDaCriatura, type Comportamento } from "../sistemas/criatura";
 import { acoesDoHeroi, type AcaoDeHeroi } from "../sistemas/acao";
 import { criarAnimacoes, camadasDoHeroi, Heroi } from "../sistemas/heroi";
@@ -157,7 +157,14 @@ export class Combate extends Phaser.Scene {
   private heroiCondicoes: Condicao[] = [];
   private heroiCondicoesUI?: Phaser.GameObjects.Container;
   private topoDaBarra = 0;
-  private alcancadas = new Map<string, { tx: number; ty: number; custo: number; de?: string }>();
+  private alcancadas = new Map<string, Alcancada>();
+  /** busca mais generosa, so pra desenhar a linha de movimento dobrando em
+   *  paredes quando o cursor aponta alem do alcance real do turno (que
+   *  continua so em `alcancadas`, acima) - ver `desenharLinhaDeMovimento`. */
+  private alcancadasEstendidas = new Map<string, Alcancada>();
+  /** posicao de mundo do ponteiro, atualizada por `pointermove` em
+   *  `ligarEntrada()` - `desenharLinhaDeMovimento` le isto todo frame. */
+  private cursorMundo = { x: 0, y: 0 };
   /** A cena de onde o heroi e o chao de verdade vem emprestados. Nunca cria
    *  os proprios: ver docs/plano-do-combate.md, secao 3.6. */
   private mundo!: Mundo;
@@ -489,6 +496,11 @@ export class Combate extends Phaser.Scene {
   }
 
   private ligarEntrada() {
+    this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
+      if (p.y >= this.topoDaBarra) return;
+      this.cursorMundo.x = p.worldX;
+      this.cursorMundo.y = p.worldY;
+    });
     this.input.on("pointerdown", (p: Phaser.Input.Pointer) => {
       if (p.y >= this.topoDaBarra) return;
       this.tocarNoMundo(p.worldX, p.worldY);
@@ -877,18 +889,43 @@ export class Combate extends Phaser.Scene {
     const vez = this.ordem.agora();
     if (!vez) return;
     const grudento = tem(this.heroiCondicoes, "rapido");
-    this.alcancadas = alcancaveis(this.casaDoHeroi(), vez.movimento, (tx, ty) => this.passavel(tx, ty, undefined, grudento));
-    this.desenharCasas();
+    const passavel = (tx: number, ty: number) => this.passavel(tx, ty, undefined, grudento);
+    const origem = this.casaDoHeroi();
+    this.alcancadas = alcancaveis(origem, vez.movimento, passavel);
+    // teto generoso so pra saber por onde a linha de movimento dobra alem do
+    // alcance real - o BFS para sozinho quando a fronteira esvazia
+    // (alcance.ts), entao cobrir o mapa inteiro aqui e barato.
+    this.alcancadasEstendidas = alcancaveis(origem, this.largura + this.altura, passavel);
   }
 
-  private desenharCasas() {
+  /** Linha estilo Baldur's Gate 3 do heroi ate o cursor: branca enquanto o
+   *  destino cabe no movimento do turno, vermelha no trecho que excede.
+   *  Dobra em paredes porque segue a rota de verdade (`caminho()`), nunca
+   *  uma reta que atravessaria obstaculo. Substitui a grade de quadrados
+   *  que existia aqui antes - por pedido do Hugo, "mais clean". */
+  private desenharLinhaDeMovimento() {
     this.pincelCasas.clear();
     if (this.fase !== "meuTurno") return;
-    this.alcancadas.forEach((c) => {
-      if (c.custo === 0) return;
-      this.pincelCasas.fillStyle(0x7ec4f2, 0.18).fillRect(c.tx * TILE + 1, c.ty * TILE + 1, TILE - 2, TILE - 2);
-      this.pincelCasas.lineStyle(1, 0x7ec4f2, 0.32).strokeRect(c.tx * TILE + 1.5, c.ty * TILE + 1.5, TILE - 3, TILE - 3);
-    });
+    const casaCursor = this.casaDe(this.cursorMundo.x, this.cursorMundo.y);
+    const rota = caminho(this.alcancadasEstendidas, casaCursor);
+    if (rota.length === 0) return;
+
+    const pontos = rota.map((c) => this.centroDaCasa(c.tx, c.ty));
+    const indiceExtrapolou = rota.findIndex((c) => !this.alcancadas.has(chaveDaCasa(c.tx, c.ty)));
+    const fimBranco = indiceExtrapolou === -1 ? pontos.length : indiceExtrapolou;
+
+    const tracar = (de: [number, number], ate: [number, number][], cor: number) => {
+      if (ate.length === 0) return;
+      this.pincelCasas.lineStyle(2, cor, 0.85).beginPath().moveTo(de[0], de[1]);
+      ate.forEach(([x, y]) => this.pincelCasas.lineTo(x, y));
+      this.pincelCasas.strokePath();
+    };
+    tracar([this.heroi.x, this.heroi.y], pontos.slice(0, fimBranco), COR.papel);
+    tracar(pontos[fimBranco - 1] ?? [this.heroi.x, this.heroi.y], pontos.slice(fimBranco), COR.vermelho);
+
+    const [fx, fy] = pontos[pontos.length - 1];
+    const corFinal = indiceExtrapolou === -1 ? COR.papel : COR.vermelho;
+    this.pincelCasas.fillStyle(corFinal, 0.9).fillCircle(fx, fy, 2);
   }
 
   private escolher(acao: AcaoDeHeroi) {
@@ -1523,6 +1560,7 @@ export class Combate extends Phaser.Scene {
     this.andarRota();
     this.andarCriaturas();
     this.desenharMira();
+    this.desenharLinhaDeMovimento();
     this.atualizarSlots();
     this.atualizarPipsMovimento();
     this.cuidarDosPips();
