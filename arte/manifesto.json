@@ -1,6 +1,6 @@
 {
   "gerado_por": "npm run arte",
-  "total": 162,
+  "total": 163,
   "arquivos": {
     "aranha-filhote.png": {
       "hash": "ececeb0a0cfcd628",
@@ -115,6 +115,12 @@
       "bytes": 1221,
       "largura": 128,
       "altura": 40
+    },
+    "goblin-chefe.png": {
+      "hash": "3da57c652711854d",
+      "bytes": 32507,
+      "largura": 528,
+      "altura": 768
     },
     "goblin-gorducho.png": {
       "hash": "f00055460ee42951",
