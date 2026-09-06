@@ -1366,8 +1366,11 @@ export class Combate extends Phaser.Scene {
         // Ver docs/plano-de-itens-e-equipamento.md, secao 8.
         ficha?.larga.forEach(({ id, chance }) => {
           if (!ficha.unico && Math.random() > chance) return;
+          // mochila cheia: guardar() falha sem gastar nada - cai no chao aos
+          // pes do heroi em vez de sumir sem aviso nenhum (a criatura ja foi
+          // removida, entao esse loot nao tem mais outro lugar pra existir).
           if (id === "moeda") estado().moedas += 1;
-          else guardar(id);
+          else if (!guardar(id)) this.mundo.largarItemNoChao(id, 1);
         });
         salvar();
         // um Selo de Heroi por criatura vencida — o sistema de progressao do
