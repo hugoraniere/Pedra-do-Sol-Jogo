@@ -494,6 +494,43 @@ NAO entram aqui - aquilo e decisao tomada, nao bug.
 - **descricao:** o import nao e referenciado em lugar nenhum do arquivo - sobra provavel de uma versao anterior do bootstrap de resolucao de `.ts`.
 - **cenario:** sem efeito funcional hoje, mas quem for depurar por que um import nao resolve nesse hook pode perder tempo achando que esse import tem papel na resolucao, quando quem faz o trabalho e outro arquivo.
 
+### Logica de combate (dado, condicoes, ND de area)
+
+#### Condicoes de controle (Preso/Assustado) nao tem nenhum efeito de jogo
+- **arquivo:** src/sistemas/criatura.ts:29-38 (`decidirAcaoDaCriatura` nem recebe `condicoes`); src/cenas/Combate.ts:633-647 (`jogarCriatura`)
+- **severidade:** critico
+- **categoria:** bug
+- **descricao:** Cresce-Grama grava `{id:"preso", turnosRestantes:2}` e Voz de Trovao grava `{id:"assustado", turnosRestantes:2}` na criatura, mas nenhum dos dois e lido em lugar nenhum - `jogarCriatura` chama `decidirAcaoDaCriatura` sem passar `condicoes`. So "atraido" (doce) e consultado de fato.
+- **cenario:** Mago lanca Cresce-Grama num Goblin, acerta, o goblin fica "preso" por 2 turnos. No turno seguinte o goblin anda e ataca normalmente, como se nunca tivesse sido enraizado - as duas magias de controle do jogo hoje so causam dano do dado, sem nenhum efeito de controle.
+
+#### Duracao de condicao nunca decrementa em combate de verdade (so no Provador)
+- **arquivo:** src/sistemas/condicoes.ts:36-46 (`passarTurno`, nunca chamado a partir de Combate.ts); confirmado por grep, so Provador.ts chama a funcao; o proprio comentario em Combate.ts:1506-1511 reconhece a lacuna
+- **severidade:** medio
+- **categoria:** bug
+- **descricao:** na cena que o jogador realmente joga, `turnosRestantes` de qualquer condicao nunca cai - so e removida se algum codigo especifico remover na mao (ex: "protegido" ao absorver golpe). As que nao tem remocao manual (atraido, iluminado, preso, assustado) duram a luta inteira em vez da duracao documentada.
+- **cenario:** Heroi lanca Cheiro de Bolo numa aranha (marca "atraido", turnosRestantes:3); como `passarTurno` nunca roda, a aranha fica atraida e ignorando o heroi pelo RESTO DA LUTA INTEIRA, nao so por 3 turnos como a ficha da magia promete.
+
+#### Gate de cooldown por rodada existe mas nunca e alimentado (armadilha pronta pro proximo passo)
+- **arquivo:** src/cenas/Combate.ts:366,603,935-936,1644-1648
+- **severidade:** baixo
+- **categoria:** bug
+- **descricao:** existe uma maquina completa de "acao em espera por N rodadas" (checagem que bloqueia clicar, HUD com contagem regressiva), mas `slot.livreNaRodada` e inicializado em 0 e so volta a 0 no fim do combate - nunca e elevado depois de usar uma acao. `emEspera` portanto e sempre `false`.
+- **cenario:** o campo `espera` ja existe no prototipo do Provador mas nao no `AcaoDeCombate` real; quando uma habilidade real ganhar cooldown, o gate simplesmente nao vai funcionar - o jogador poderia usar a mesma acao toda rodada sem limite, porque o gate nunca e alimentado. Hoje e codigo morto sem sintoma visivel.
+
+#### ND de acao em area usa so o bonus do primeiro alvo, ignora os outros
+- **arquivo:** src/cenas/Combate.ts:1020-1026
+- **severidade:** medio
+- **categoria:** bug
+- **descricao:** `const nd = 10 + (pegos[0]?.bonus ?? 0)` roda UM UNICO teste cujo resultado e aplicado a todos os atingidos de uma acao em area (Bafo Gelado, Voz de Trovao, Cresce-Grama, Bola de Fogo, Rajada). O comentario ao lado diz "hoje todo bicho tem bonus 0" - falso, o bestiario ja tem bonus 0/1/2/3/5 por criatura, e nada impede tipos diferentes coexistirem no mesmo encontro (`Mundo.ts` junta qualquer criatura dentro da distancia de encontro).
+- **cenario:** combate com Goblin (bonus 0, ND 10) e Aranha (bonus 1, ND 11) juntos. Heroi lanca Bafo Gelado pegando os dois; `pegos[0]` e o goblin, `nd = 10`. Heroi rola 11 no d20: total 11 >= 10, sucesso contra os DOIS - a aranha (que exigiria ND 11) deveria ter dado "falha perto", nao sucesso pleno, so por estar agrupada com um alvo mais facil.
+
+#### Limiar de fuga do comportamento "medroso" com off-by-one na borda exata
+- **arquivo:** src/sistemas/criatura.ts:26-27 (comentario diz "Abaixo de METADE"), linha 39 (codigo usa `<=`)
+- **severidade:** baixo
+- **categoria:** bug
+- **descricao:** o comentario diz explicitamente "abaixo" (estritamente menor) mas o codigo usa `<=` (menor-ou-igual) - foge tambem exatamente na metade da vida, nao so abaixo dela.
+- **cenario:** hoje inofensivo (o unico "foge" e o Goblin, `coracoes: 5`, impar - a fracao nunca cai exatamente em 0.5); mas uma criatura futura "foge" com coracoes par (a Aranha ja tem 8) expoe o bug de verdade: com 4 de 8 (exatamente metade), a criatura foge quando deveria continuar lutando ate cair estritamente abaixo da metade.
+
 ## Status
 
 - [x] sistemas do jogo (src/sistemas)
@@ -502,3 +539,9 @@ NAO entram aqui - aquilo e decisao tomada, nao bug.
 - [x] harness de testes (ferramentas/*.mjs)
 - [x] geracao de arte e som (arte/*.py, som/*.py)
 - [x] build e performance (vite, bundle, PWA)
+- [x] save/estado (armazenamento.ts, estado.ts)
+- [x] toque/mobile (controles, HUD)
+- [x] consistencia docs vs codigo
+- [x] harness parte 2 (scripts restantes)
+- [x] logica de combate (dado, condicoes, ND de area)
+- [x] aplicativo de desktop (app/, Electron)
