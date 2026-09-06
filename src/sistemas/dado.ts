@@ -1,24 +1,26 @@
-/** O dado do RPG de mesa: 1d6 + atributo, em tres faixas.
+/** O dado de DANO - diferente do d20 de sistemas/teste.ts, que decide SE a
+ *  acao funciona. Este decide QUANTO ela pesa quando funciona: cada arma e
+ *  cada magia carrega o proprio (`AcaoDeCombate.dado`, dados/conteudo.ts),
+ *  igual cada criatura carrega o dela (`Criatura.dano`).
  *
- * Sistema puro: nenhuma linha de Phaser, nenhum som, nenhuma cena. A conta e
- * a do CLAUDE.md — 1 a 2 OPS (deu errado, acontece outra coisa), 3 a 4 QUASE
- * (deu certo com um probleminha), 5 ou mais OBA/INCRIVEL — e nada mais. O
- * sorteio entra de fora (nunca `Math.random()` chamado aqui dentro) para o
- * resultado poder ser conferido em teste sem depender de aleatorio de
- * verdade. So o heroi rola; a regra da mesa e essa.
+ * Revisao de 2026-09-05: substitui o dano fixo de 1 ou 2 coracoes que valia
+ * pra qualquer golpe, de qualquer arma, contra qualquer bicho - a diferenca
+ * entre uma adaga e um martelo, ou entre um goblin e o Brasanegra, comeca
+ * aqui. Sistema puro, sorteio de fora, mesmo molde de sistemas/teste.ts.
  */
 
-export type Faixa = "ops" | "quase" | "oba";
+export type Dado = { quantidade: number; lados: number };
 
-/** Qual faixa um total (dado + atributo) cai. Bate com o RPG de mesa. */
-export function faixaDoDado(total: number): Faixa {
-  if (total <= 2) return "ops";
-  if (total <= 4) return "quase";
-  return "oba";
+export function rolarDado(dado: Dado, sorteio: () => number): number {
+  let total = 0;
+  for (let i = 0; i < dado.quantidade; i++) total += Math.floor(sorteio() * dado.lados) + 1;
+  return total;
 }
 
-/** 1d6 + atributo, igual a mesa. */
-export function rolar(atributo: number, sorteio: () => number): { dado: number; total: number } {
-  const dado = sorteio();
-  return { dado, total: dado + atributo };
+/** Critico de sucesso "sempre funciona + efeito extra" (docs/modelo-de-
+ *  combate.md secao 3) - o efeito extra e dano dobrado, a mesma regra do
+ *  D&D: dobra os DADOS, nao o resultado (rola tudo de novo, nao multiplica
+ *  por 2 - preserva a variancia em vez de so inflar o numero). */
+export function dobrar(dado: Dado): Dado {
+  return { quantidade: dado.quantidade * 2, lados: dado.lados };
 }

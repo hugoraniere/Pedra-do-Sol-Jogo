@@ -77,7 +77,7 @@ export const T = {
   // bordasDeGrama() escolhe entre esta e a de cima medindo a largura real.
   beiraNFina: 36, beiraSFina: 37, beiraLFina: 38, beiraOFina: 39,
   beiraNOFina: 40, beiraNLFina: 41, beiraSOFina: 42, beiraSLFina: 43,
-  // a Casa de Cura, por dentro
+  // a Casa de Cura, por dentro (arte/tiles.py, parede_interior())
   paredeInterior: 44,
 } as const;
 

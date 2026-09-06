@@ -16,6 +16,9 @@ import { interativo } from "../sistemas/interativo";
 import type { Escolha } from "../dados/dialogos";
 import { periodoAtual } from "../sistemas/tempo";
 import type { Periodo } from "../dados/tempo";
+import { acoesDoHeroi } from "../sistemas/acao";
+import { itemRapidoAtual, usarConsumivel } from "../sistemas/consumiveis";
+import { montarHudDeAcao, type HudDeAcao, type SlotDeAcaoEstado } from "../sistemas/hudDeAcao";
 
 /** `quem` e o nome que aparece na chapinha; `chave` e a entrada de DIALOGOS,
  *  que e o que a tabela VOZ usa para achar a altura da voz. Sem chave a fala
@@ -36,10 +39,13 @@ export class Interface extends Phaser.Scene {
   private linhaCheia = "";
   private vozAtual = "";
   private maquina?: Phaser.Time.TimerEvent;
-  private coracoes: Phaser.GameObjects.Image[] = [];
   private textoMoedas!: Phaser.GameObjects.BitmapText;
   private textoSelos!: Phaser.GameObjects.BitmapText;
   private iconePeriodo!: Phaser.GameObjects.Image;
+  /** retrato+vida+item rapido+acoes, sempre no rodape - a mesma barra que
+   *  `Combate.ts` monta, so que toda acao nasce apagada (fora de combate
+   *  nunca ha alvo valido). Ver sistemas/hudDeAcao.ts. */
+  private hud!: HudDeAcao;
   /** true logo depois que uma fala abre com o botao de acao ainda segurado:
    *  bloqueia avancar a linha ate o botao ser solto uma vez. */
   private esperandoSoltarAcao = false;
@@ -57,9 +63,6 @@ export class Interface extends Phaser.Scene {
   }
 
   create() {
-    // create roda de novo em cada restart, e a instancia da cena e a mesma:
-    // sem zerar, os coracoes velhos ficariam na lista apontando para o nada
-    this.coracoes = [];
     this.linhas = [];
     this.indice = 0;
     this.cenaDona = undefined;
@@ -71,6 +74,8 @@ export class Interface extends Phaser.Scene {
     this.controles = new Controles(this);
     this.montarTopo();
     this.montarDirecional();
+    this.montarHud();
+    this.atualizarTopo();
     this.montarCaixa();
     this.events.on("falar", (p: PedidoFala) => this.falar(p));
     this.events.on("periodo-mudou", (p: Periodo) => this.iconePeriodo.setFrame(ICONE_DO_PERIODO[p]));
@@ -81,11 +86,11 @@ export class Interface extends Phaser.Scene {
   // ---------------------------------------------------------------- topo
   private montarTopo() {
     this.add.nineslice(2, 1, "painel-escuro", undefined, LARGURA - 4, 16, 8, 8, 8, 8).setOrigin(0);
-    const st = estado();
-    for (let i = 0; i < st.coracoesMax; i++) {
-      this.coracoes.push(this.add.image(10 + i * 11, 9, "ui", ICONE.coracaoCheio));
-    }
-    const xMoeda = 14 + st.coracoesMax * 11;
+    // a vida saiu daqui - agora mora no HUD do rodape (montarHud()), junto
+    // do retrato, do item rapido e das acoes, pra nao ter dois lugares
+    // mostrando o mesmo numero (foi assim que a barra de vida chegou a
+    // divergir entre esta cena e o combate antes desta revisao).
+    const xMoeda = 10;
     this.add.image(xMoeda, 9, "ui", ICONE.moeda);
     this.textoMoedas = texto(this, xMoeda + 9, 5, "0", { cor: 0xfff8ea });
     this.add.image(xMoeda + 32, 9, "ui", ICONE.selo);
@@ -97,7 +102,6 @@ export class Interface extends Phaser.Scene {
     this.iconePeriodo = this.add.image(xPeriodo, 9, "ui", ICONE_DO_PERIODO[periodoAtual()]);
     this.montarBotaoFicha(xPeriodo + 20);
     this.montarBotaoPausa();
-    this.atualizarTopo();
   }
 
   /** O nome do heroi e o botao da ficha.
@@ -152,9 +156,8 @@ export class Interface extends Phaser.Scene {
 
   atualizarTopo() {
     const st = estado();
-    this.coracoes.forEach((c, i) =>
-      c.setFrame(i < st.coracoes ? ICONE.coracaoCheio : ICONE.coracaoVazio)
-    );
+    this.hud.atualizarVida(st.coracoes, st.coracoesMax);
+    this.hud.atualizarItemRapido(this.itemRapidoComDisponibilidade());
     this.textoMoedas.setText(String(st.moedas));
     this.textoSelos.setText(String(st.selos));
   }
@@ -211,6 +214,37 @@ export class Interface extends Phaser.Scene {
     });
     alvoAcao.on("pointerup", () => acao.setScale(1.4));
     alvoAcao.on("pointerout", () => acao.setScale(1.4));
+  }
+
+  /** Retrato+vida+item rapido+acoes, sempre no rodape - `Combate.ts` monta a
+   *  MESMA barra (sistemas/hudDeAcao.ts) quando a luta comeca, no mesmo y.
+   *  A area evita o direcional (alcanca x~61) e o botao A (comeca em
+   *  x~LARGURA-45) - a faixa central entre os dois, que hoje fica vazia. */
+  private montarHud() {
+    const acoes = acoesDoHeroi(estado().heroi);
+    const area = { x: 64, y: ALTURA - 24, largura: LARGURA - 64 - 48, altura: 22 };
+    this.hud = montarHudDeAcao(this, {
+      area,
+      acoes,
+      itemRapido: this.itemRapidoComDisponibilidade(),
+      vida: { atual: estado().coracoes, max: estado().coracoesMax },
+      aoUsarItemRapido: () => {
+        const item = itemRapidoAtual();
+        if (item && usarConsumivel(item.item)) this.atualizarTopo();
+      },
+    });
+    // fora de combate nunca ha alvo valido - toda acao nasce apagada e sem
+    // handler nenhum (ver sistemas/hudDeAcao.ts). So precisa calcular uma
+    // vez: nada aqui muda enquanto o jogador nao entrar em combate, e a
+    // cena inteira reinicia se a lista de acoes do heroi mudar (aprendeu
+    // magia nova, trocou de arma).
+    const semAlvo: SlotDeAcaoEstado = { selecionada: false, indisponivel: true, gastou: false, esperaTurnos: 0 };
+    this.hud.atualizarSlots(new Map(acoes.map((a) => [a.id, semAlvo])));
+  }
+
+  private itemRapidoComDisponibilidade() {
+    const item = itemRapidoAtual();
+    return item ? { ...item, disponivel: true } : null;
   }
 
   /** o direcional vive aqui mas quem anda e o Mundo, entao repassamos o valor */

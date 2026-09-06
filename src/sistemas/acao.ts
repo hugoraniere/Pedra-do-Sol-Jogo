@@ -11,6 +11,7 @@
 import { ARMAS, acharClasse, acharMagia, acharRaca, type AcaoDeCombate, type FormaDeAcao } from "../dados/conteudo.ts";
 import type { Marca } from "./marcas.ts";
 import type { AlvoDeAcao } from "./alvo.ts";
+import type { Dado } from "./dado.ts";
 import type { Heroi } from "./estado.ts";
 
 /** Quando a acao volta a ficar disponivel. "porLuta" so existe pro Golpe
@@ -26,6 +27,7 @@ export const ACAO_SOCO: AcaoDeHeroi = {
   id: "soco", tipo: "golpe", nome: "SEM ARMA",
   dica: "Sempre da pra usar. Nunca quebra nada.",
   icone: 6, cor: 0x4a3e64, forma: "casa", alcance: 1, atributo: "forca", som: "soco",
+  dado: { quantidade: 1, lados: 3 },
   escopo: "porTurno",
 };
 
@@ -34,11 +36,14 @@ export const ACAO_SOCO: AcaoDeHeroi = {
  *  generico de `golpeDaArma()` la embaixo - melhor um golpe sem graca do que
  *  a acao sumir da barra. */
 const TABELA_DE_GOLPE: Record<string, Omit<AcaoDeCombate, "id" | "nome" | "cor" | "dica">> = {
-  "espada-curta": { tipo: "golpe", icone: 6, forma: "casa", alcance: 1, atributo: "forca", som: "soco" },
-  cajado: { tipo: "golpe", icone: 5, forma: "casa", alcance: 1, atributo: "forca", som: "cajado" },
-  martelo: { tipo: "golpe", icone: 6, forma: "casa", alcance: 1, atributo: "forca", som: "soco" },
-  arco: { tipo: "golpe", icone: 6, forma: "casa", alcance: 5, atributo: "destreza", som: "soco" },
-  funda: { tipo: "golpe", icone: 6, forma: "casa", alcance: 4, atributo: "destreza", som: "soco" },
+  "espada-curta": { tipo: "golpe", icone: 6, forma: "casa", alcance: 1, atributo: "forca", som: "soco", dado: { quantidade: 1, lados: 6 } },
+  cajado: { tipo: "golpe", icone: 5, forma: "casa", alcance: 1, atributo: "forca", som: "cajado", dado: { quantidade: 1, lados: 4 } },
+  // o martelo pesa mais que as outras armas corpo a corpo - ja tinha o
+  // micro-engasgo proprio na animacao (Combate.ts, hitstop no golpe-martelo),
+  // agora o dado bate com o peso.
+  martelo: { tipo: "golpe", icone: 6, forma: "casa", alcance: 1, atributo: "forca", som: "soco", dado: { quantidade: 1, lados: 8 } },
+  arco: { tipo: "golpe", icone: 6, forma: "casa", alcance: 5, atributo: "destreza", som: "soco", dado: { quantidade: 1, lados: 6 } },
+  funda: { tipo: "golpe", icone: 6, forma: "casa", alcance: 4, atributo: "destreza", som: "soco", dado: { quantidade: 1, lados: 4 } },
 };
 
 /** O golpe de arma do heroi. `armaSprite` e o que esta EQUIPADO agora (pode
@@ -63,26 +68,30 @@ export function golpeDaArma(armaId: string): AcaoDeHeroi {
  *  (real-time, obsoleto) pra casas (~16px cada). */
 const TABELA_DE_MAGIA: Record<
   string,
-  { forma: FormaDeAcao; alcance: number; icone: number; marca?: Marca; alvo?: AlvoDeAcao }
+  { forma: FormaDeAcao; alcance: number; icone: number; marca?: Marca; alvo?: AlvoDeAcao; dado?: Dado }
 > = {
-  luzinha: { forma: "aoRedor", alcance: 0, icone: 6, marca: "luz" },
-  "bafo-gelado": { forma: "linha", alcance: 3, icone: 8, marca: "gelo" },
-  "cresce-grama": { forma: "aoRedor", alcance: 3, icone: 6, marca: "planta" },
-  "voz-de-trovao": { forma: "aoRedor", alcance: 3, icone: 9, marca: "som-alto" },
+  luzinha: { forma: "aoRedor", alcance: 0, icone: 6, marca: "luz", dado: { quantidade: 1, lados: 4 } },
+  "bafo-gelado": { forma: "linha", alcance: 3, icone: 8, marca: "gelo", dado: { quantidade: 1, lados: 6 } },
+  "cresce-grama": { forma: "aoRedor", alcance: 3, icone: 6, marca: "planta", dado: { quantidade: 1, lados: 4 } },
+  "voz-de-trovao": { forma: "aoRedor", alcance: 3, icone: 9, marca: "som-alto", dado: { quantidade: 1, lados: 6 } },
   // salta pra qualquer casa livre dentro do alcance, sem se importar com o que
   // tem no meio do caminho - "atravessa rio, muro ou inimigo de um salto so".
   // alvo "livre": nao precisa pegar ninguem, o efeito e mover o proprio heroi.
+  // sem dado: nunca causa dano.
   "pulo-de-sapo": { forma: "casa", alcance: 4, icone: 6, marca: "pulo", alvo: "livre" },
   "dedo-colante": { forma: "aoRedor", alcance: 0, icone: 6, marca: "cola", alvo: "livre" },
   // "casa"/alcance 2 nunca fazia sentido pra um conserto no proprio corpo -
   // virou aoRedor/0, igual todo outro autocuidado (escudo, esconderijo).
   remendo: { forma: "aoRedor", alcance: 0, icone: 6, marca: "conserto", alvo: "livre" },
   "escudo-de-bolha": { forma: "aoRedor", alcance: 0, icone: 6, marca: "bolha", alvo: "livre" },
-  "cheiro-de-bolo": { forma: "aoRedor", alcance: 4, icone: 6, marca: "doce" },
+  "cheiro-de-bolo": { forma: "aoRedor", alcance: 4, icone: 6, marca: "doce", dado: { quantidade: 1, lados: 4 } },
   "fala-bicho": { forma: "casa", alcance: 2, icone: 6, marca: "fala" },
   "sumir-sumindo": { forma: "aoRedor", alcance: 0, icone: 6, marca: "invisivel", alvo: "livre" },
-  "chama-vento": { forma: "linha", alcance: 5, icone: 6, marca: "vento" },
-  "bola-de-fogo": { forma: "casa", alcance: 6, icone: 7, marca: "fogo" },
+  "chama-vento": { forma: "linha", alcance: 5, icone: 6, marca: "vento", dado: { quantidade: 1, lados: 6 } },
+  // a magia mais forte do Mago (docs/plano-de-implementacao.md, Atualizacao
+  // 3) merece pesar mais que as outras doze tambem no dado, nao so na
+  // animacao.
+  "bola-de-fogo": { forma: "casa", alcance: 6, icone: 7, marca: "fogo", dado: { quantidade: 2, lados: 6 } },
 };
 
 /** As magias tocam INTELIGENCIA (revisao de 2026-09-04 - era ESPERTEZA na

@@ -57,6 +57,22 @@ export function poderesDoHeroi(heroi: Heroi): Poderes {
   return poderes;
 }
 
+/** Vida maxima: base da raca (o "coracoes" dela, 3 ou 4 no Anao - "Casco
+ *  Duro" - vira multiplicador de tanque, nao mais contagem de icone) vezes
+ *  5, mais 3 por ponto de Vitalidade. Revisao de 2026-09-05: vida virou
+ *  numero de verdade (BG3/D&D: dado de vida + modificador de Constituicao),
+ *  não mais uma fileira pequena de coracoes - dano de arma/magia (sistemas/
+ *  dado.ts) finalmente tem numero suficiente pra variar de verdade. Antes
+ *  disto `coracoesMax` era sempre 3, ignorando raca E atributo - o dom do
+ *  Anao nunca funcionava, e Vitalidade nao mudava nada na vida do heroi, so
+ *  no nome. Chamado uma vez em `novoJogo()` (sistemas/estado.ts) - nao
+ *  recalculado toda hora feito `poderesDoHeroi`, porque nao existe ainda
+ *  como Vitalidade mudar DEPOIS da criacao (isso e o Selo de Heroi, que
+ *  ainda nao foi implementado). */
+export function coracoesMaxDoHeroi(heroi: Heroi): number {
+  return acharRaca(heroi.raca).coracoes * 5 + poderesDoHeroi(heroi).vitalidade * 3;
+}
+
 /** Quantos selos faltam para a proxima escolha.
  *
  *  No papel: a cada 3 selos pintados o jogador escolhe mais 1 coracao, mais 1

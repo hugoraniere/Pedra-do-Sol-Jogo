@@ -27,7 +27,7 @@ import { alcancaveis, caminho, chaveDaCasa, distanciaEmCasas, type Casa } from "
 import { decidirAcaoDaCriatura, type Comportamento } from "../sistemas/criatura";
 import { passarTurno, type Condicao } from "../sistemas/condicoes";
 import { condicoesDados } from "../dados/condicoes-dados";
-import { faixaDoDado, rolar } from "../sistemas/dado";
+import { faixaDoDado, rolar } from "../sistemas/dadoAntigo";
 import { aplicarMarca } from "../sistemas/marcas";
 import * as fx from "../sistemas/fx";
 import { fileira } from "../sistemas/fileira";

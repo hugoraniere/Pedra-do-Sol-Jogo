@@ -10,6 +10,7 @@
  *
  *  Sistema puro: nao decide UI, so aplica o efeito e devolve se aplicou. */
 import { estado, usar, salvar } from "./estado";
+import { acharQualquerItem } from "../dados/conteudo";
 
 const EFEITO: Partial<Record<string, () => void>> = {
   "pocao-morango": () => {
@@ -55,4 +56,17 @@ export function usarConsumivel(id: string): boolean {
   efeito();
   salvar();
   return true;
+}
+
+/** O item que o slot rapido do HUD mostra: o primeiro da mochila que seja
+ *  consumivel E tenha efeito de verdade fora de combate - mesmo predicado
+ *  que `Ficha.ts` ja usa pra decidir se mostra o botao USAR, entao os dois
+ *  nunca discordam sobre o que da pra usar agora. Sem UI de "escolher item"
+ *  de proposito: um slot so, automatico (ver docs/07-design-system.md e o
+ *  plano de HUD, revisao de 2026-09-05). */
+export function itemRapidoAtual(): { item: string; quantidade: number } | null {
+  const slot = estado().mochila.find(
+    (s) => s && acharQualquerItem(s.item).categoria === "consumivel" && temEfeitoForaDeCombate(s.item)
+  );
+  return slot ? { item: slot.item, quantidade: slot.quantidade } : null;
 }

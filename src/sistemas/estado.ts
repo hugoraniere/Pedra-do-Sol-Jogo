@@ -1,7 +1,8 @@
 /** Estado do jogo. Uma unica fonte da verdade sobre o progresso.
  *  Quem grava e le no disco e sistemas/armazenamento.ts. */
 import { gravarEspaco, lerEspaco } from "./armazenamento.ts";
-import { acharMaterial, acharMochila, acharRaca, type Atributo } from "../dados/conteudo.ts";
+import { acharMaterial, acharMochila, type Atributo } from "../dados/conteudo.ts";
+import { coracoesMaxDoHeroi } from "./poderes";
 
 /** Um slot da mochila: um item (com quantidade) ou vazio. Slot tem POSICAO
  *  fixa — e o que deixa arrastar um item de lugar (`moverItem`) fazer
@@ -157,12 +158,12 @@ export function novoJogo(espaco: number, heroi: Heroi) {
   atual = copia(VAZIO);
   atual.espaco = espaco;
   atual.heroi = heroi;
-  atual.criadoEm = Date.now();
-  // o dom do Anao ("Casco Duro") e nascer com 4 coracoes em vez de 3 — o
-  // numero ja existe em `acharRaca(heroi.raca).coracoes`, so precisava ser
-  // lido aqui em vez do 3 fixo de VAZIO.
-  atual.coracoesMax = acharRaca(heroi.raca).coracoes;
+  // antes disto todo heroi comecava com 3 corações, ponto - o "Casco Duro"
+  // do Anao (4) e a Vitalidade escolhida na criacao nunca faziam diferenca
+  // nenhuma na vida de verdade (ver coracoesMaxDoHeroi, sistemas/poderes.ts).
+  atual.coracoesMax = coracoesMaxDoHeroi(heroi);
   atual.coracoes = atual.coracoesMax;
+  atual.criadoEm = Date.now();
   inicioDaSessao = Date.now();
   salvar();
 }
