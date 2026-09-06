@@ -563,6 +563,17 @@ NAO entram aqui - aquilo e decisao tomada, nao bug.
 
 *(verificado e limpo: nao ha caminho de compra/venda que gere dinheiro infinito - so existe `comprarMochila()` (upgrade de mochila) e `venderMaterial()`; nao ha cena de loja/compra de item ainda, `LOJA` em conteudo.ts e so dado esperando a cena.)*
 
+### NPC, dialogo e ciclo do dia
+
+#### Rotina de NPC pode disparar no mesmo frame em que uma conversa comeca
+- **arquivo:** src/cenas/Mundo.ts:885-927 (tambem 1037-1046, 1082-1105, 1155-1168)
+- **severidade:** medio
+- **categoria:** bug
+- **descricao:** `update()` so verifica `this.conversando` ANTES de chamar `tentarInteragir()`, usando o valor do inicio do frame. Se `tentarInteragir()` abrir uma fala nesse mesmo frame, o metodo nao retorna mais cedo: continua ate `atualizarRotinasDeNpc(delta)`, que roda mesmo com `conversando` ja `true` naquele frame. O comentario proprio ("os dois `return` de cima ja cobrem essa pausa") so vale a partir do PROXIMO frame.
+- **cenario:** se o relogio cruzar o inicio do proximo periodo no mesmo instante em que o jogador aperta acao sobre um NPC com rotina, o NPC pode sumir da tela (se o alvo do periodo novo for "escondido") ou teleportar pro ponto do periodo novo, no mesmo frame, com a caixa de dialogo ainda aberta. Reproduzivel de forma deterministica ajustando `estado().relogio` no console; raro em jogo normal (janela de poucos frames a cada transicao de periodo, ~6 vezes a cada 20 minutos reais).
+
+*(verificado e limpo: rotinas de NPC sao exaustivas por tipo, sem horario inexistente; dialogos.ts so e indexado por chave estatica, sem template string escapando de verificar.mjs; criaturas de presenca por periodo so alternam visibilidade no mesmo lugar, sem duplicar ou nascer em parede; todo estado persistente passa por sistemas/estado.ts.)*
+
 ## Verificado e limpo (nao vira achado, mas evita reverificar)
 
 - **Seguranca de entrada do jogador**: passe dedicado (innerHTML/eval/JSON.parse de localStorage/Electron/rede externa) nao achou vulnerabilidade explaravel. O unico `innerHTML` do projeto (`src/sistemas/doutor.ts:169`) escapa tudo que interpola e so mostra dado de diagnostico interno, nunca nome do heroi nem dialogo. `contextIsolation`/`nodeIntegration` do Electron corretos. Sem `fetch`/`XMLHttpRequest` no projeto.
