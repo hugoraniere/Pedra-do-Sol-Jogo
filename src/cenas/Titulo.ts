@@ -39,12 +39,20 @@ export class Titulo extends Phaser.Scene {
   private botoes: Botao[] = [];
   private foco = 0;
   private aviso?: Phaser.GameObjects.BitmapText;
-  /** cada toque no texto de versao empilha aqui, e so os dos ultimos 2.5s
-   *  contam -- 7 toques na janela destravam o modo DEPURADOR (mesmo gesto
-   *  do "toque 7x no numero da build" que destrava opcoes de desenvolvedor
-   *  no Android: nao acontece por acidente, mas nao exige teclado nem
-   *  build separada, entao funciona igual no navegador e no app). */
-  private tapsDeVersao: number[] = [];
+  /** cada toque no cristal (a Pedra do Sol, no topo do cenario) empilha
+   *  aqui, e so os dos ultimos 2.5s contam -- 3 toques na janela destravam
+   *  o modo DEPURADOR. Pedido do Hugo depois do gesto original (7 toques no
+   *  texto de versao, inspirado no "toque 7x no numero da build" do
+   *  Android) nao ter destravado pra ele -- o cristal e um alvo bem maior e
+   *  mais facil de acertar de proposito, e 3 toques bastam porque ele so
+   *  existe nesta tela especifica, nao em qualquer texto pequeno. */
+  private tapsDoCristal: number[] = [];
+  /** posicao e raio da Pedra do Sol nesta tela, calculados por
+   *  `desenharCenario()` -- guardados aqui pra `montarGestoDoCristal()`
+   *  saber onde por a zona de toque, sem recalcular a mesma conta. */
+  private cristalX = 0;
+  private cristalY = 0;
+  private cristalRaio = 0;
 
   constructor() {
     super("Titulo");
@@ -62,26 +70,42 @@ export class Titulo extends Phaser.Scene {
     this.montarMenu();
     this.montarTeclado();
 
-    const textoVersao = texto(this, LARGURA - 4, ALTURA - 10, VERSAO, {
+    texto(this, LARGURA - 4, ALTURA - 10, VERSAO, {
       ancora: 1,
       cor: 0xfff8ea,
     }).setAlpha(0.7);
-    textoVersao.setInteractive({ useHandCursor: false });
-    textoVersao.on("pointerdown", () => {
-      const agora = Date.now();
-      this.tapsDeVersao = [...this.tapsDeVersao, agora].filter((t) => agora - t < 2500);
-      if (this.tapsDeVersao.length < 7) return;
-      this.tapsDeVersao = [];
-      desbloquearDepurador();
-      tocar("menu-confirma");
-      textoVersao.setTint(0xf5b62b);
-      this.time.delayedCall(400, () => textoVersao.clearTint());
-    });
+    this.montarGestoDoCristal();
 
     // a janela muda de tamanho (redimensionar, girar o tablet, trocar a
     // visao no meio do jogo): tudo aqui e desenhado a partir de LARGURA e
     // ALTURA de agora, entao a unica forma segura de acompanhar e remontar.
     refazerAoRedimensionar(this, () => this.scene.restart());
+  }
+
+  /** A zona de toque escondida em cima da Pedra do Sol: 3 toques dentro de
+   *  uma janela de 2.5s destravam o modo DEPURADOR (`Pausa.ts` mostra o
+   *  botao so depois disso). O alvo de toque e bem mais generoso que o
+   *  desenho da pedra em si -- ela e pequena de proposito na tela, mas
+   *  ninguem tem que mirar em 8px pra destravar. */
+  private montarGestoDoCristal() {
+    const raioToque = Math.max(this.cristalRaio * 3, 16);
+    const zona = this.add
+      .circle(this.cristalX, this.cristalY, raioToque, 0xf5b62b, 0)
+      .setInteractive({ useHandCursor: false });
+    zona.on("pointerdown", () => {
+      const agora = Date.now();
+      this.tapsDoCristal = [...this.tapsDoCristal, agora].filter((t) => agora - t < 2500);
+      if (this.tapsDoCristal.length < 3) return;
+      this.tapsDoCristal = [];
+      desbloquearDepurador();
+      tocar("menu-confirma");
+      this.tweens.add({
+        targets: zona,
+        fillAlpha: { from: 0.6, to: 0 },
+        duration: 500,
+        ease: "Sine.easeOut",
+      });
+    });
   }
 
   /** O ceu, a Pedra do Sol brilhando no horizonte, as montanhas, a mata e o
@@ -99,6 +123,11 @@ export class Titulo extends Phaser.Scene {
     // em pe tem ALTURA bem maior que LARGURA, e um brilho do tamanho da
     // altura tomava a tela inteira em vez de ficar do tamanho da pedra
     const raio = Math.min(L, A);
+    // guardado pra montarGestoDoCristal() por a zona de toque em cima da
+    // pedra de verdade, sem recalcular a mesma conta de pedraDoSol()
+    this.cristalX = pedraX;
+    this.cristalY = pedraY;
+    this.cristalRaio = Math.max(4, raio * 0.052);
     const g = this.add.graphics();
 
     // ceu: creme quente em cima, esquentando para o ouro perto do horizonte
