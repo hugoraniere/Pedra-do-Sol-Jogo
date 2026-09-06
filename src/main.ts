@@ -57,6 +57,11 @@ function comecar() {
     fullscreenTarget: "jogo",
   },
   physics: { default: "arcade", arcade: { gravity: { x: 0, y: 0 }, debug: false } },
+    // padrao do Phaser e 1 pointer de toque (o indice 0 e do mouse) - sem
+    // isto so um dedo por vez funciona no jogo inteiro, e o direcional na
+    // tela pressupoe dois toques simultaneos (segurar seta + apertar A, ou
+    // duas setas pra andar na diagonal).
+    input: { activePointers: 2 },
     // o Ponteiro e o ULTIMO de proposito: o Phaser desenha as cenas nesta ordem,
     // e o cursor tem que ficar por cima de tudo, inclusive da caixa de fala.
     scene: [
