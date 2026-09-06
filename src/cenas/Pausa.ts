@@ -19,6 +19,7 @@ import {
 } from "../sistemas/design";
 import { salvar } from "../sistemas/estado";
 import { noAplicativo, sairDoJogo } from "../sistemas/armazenamento";
+import { depuradorDesbloqueado } from "../sistemas/depurador-acesso";
 import { ORDEM_ZOOM, ZOOM, definirPreferencia, preferencias } from "../sistemas/preferencias";
 import {
   alternarTelaCheia,
@@ -106,6 +107,17 @@ export class Pausa extends Phaser.Scene {
           this.desenhar();
         },
       },
+      ...(depuradorDesbloqueado()
+        ? [
+            {
+              rotulo: "DEPURADOR",
+              acao: () => {
+                this.scene.stop();
+                this.scene.launch("Depurador");
+              },
+            },
+          ]
+        : []),
       {
         rotulo: "SAIR PARA O MENU",
         acao: () => {

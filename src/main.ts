@@ -15,6 +15,7 @@ import { Pausa } from "./cenas/Pausa";
 import { Ficha } from "./cenas/Ficha";
 import { Som } from "./cenas/Som";
 import { Provador } from "./cenas/Provador";
+import { Depurador } from "./cenas/Depurador";
 import { Combate } from "./cenas/Combate";
 import { EscolhaDeSelo } from "./cenas/EscolhaDeSelo";
 import { Ponteiro } from "./cenas/Ponteiro";
@@ -60,7 +61,7 @@ function comecar() {
     // e o cursor tem que ficar por cima de tudo, inclusive da caixa de fala.
     scene: [
       Boot, Titulo, Carregar, Criacao, Mundo, Interface, Pausa, Ficha, Som,
-      Combate, EscolhaDeSelo, Provador, Ponteiro,
+      Combate, EscolhaDeSelo, Provador, Depurador, Ponteiro,
     ],
   });
   // gancho de depuracao: no console do navegador da para fazer

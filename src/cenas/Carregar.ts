@@ -1,7 +1,8 @@
 /** Lista dos tres espacos de save. Da para abrir, e da para apagar com confirmacao. */
 import Phaser from "phaser";
 import { musica } from "../sistemas/som";
-import { LARGURA, ALTURA, COR, RACAS, CLASSES } from "../dados/config";
+import { LARGURA, ALTURA, COR } from "../dados/config";
+import { RACAS, CLASSES } from "../dados/conteudo";
 import { botao } from "../sistemas/botao";
 import { texto } from "../sistemas/texto";
 import { abrirEspaco } from "../sistemas/estado";

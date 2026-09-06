@@ -58,7 +58,7 @@ export async function prepararArmazenamento() {
   }
 }
 
-function ler(chave: string): string | null {
+export function ler(chave: string): string | null {
   if (window.aurora) return cacheApp[chave] ?? null;
   try {
     return localStorage.getItem(chave);
@@ -67,7 +67,7 @@ function ler(chave: string): string | null {
   }
 }
 
-function gravar(chave: string, valor: string) {
+export function gravar(chave: string, valor: string) {
   if (window.aurora) {
     cacheApp[chave] = valor;
     void window.aurora.gravarSave(chave, valor);
@@ -80,7 +80,7 @@ function gravar(chave: string, valor: string) {
   }
 }
 
-function remover(chave: string) {
+export function remover(chave: string) {
   if (window.aurora) {
     delete cacheApp[chave];
     void window.aurora.apagarSave(chave);

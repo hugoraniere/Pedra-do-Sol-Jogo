@@ -326,6 +326,3 @@ export const ROUPAS = [
   { nome: "Rosa", cor: 0xee7ba6 },
 ];
 
-/** Racas, classes, magias, armas, loja e bestiario vivem em conteudo.ts.
- *  Reexportados aqui so para nao quebrar quem ja importava de config. */
-export { RACAS, CLASSES, MAGIAS, ARMAS, LOJA, BESTIARIO } from "./conteudo";

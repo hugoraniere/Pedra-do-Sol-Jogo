@@ -7,9 +7,10 @@
  * codigo, e ai o teste para de servir. */
 import Phaser from "phaser";
 import {
-  RACAS, CLASSES, DIRECOES, COLUNAS_FOLHA,
+  DIRECOES, COLUNAS_FOLHA,
   ROUPA_DA_CLASSE, ARMA_DA_CLASSE, CHAPEU_DA_CLASSE,
 } from "../dados/config";
+import { RACAS, CLASSES } from "../dados/conteudo";
 import { VAZIO, Heroi as FichaHeroi } from "./estado";
 import { camadasDoHeroi, pecasDoHeroi } from "./heroi";
 import { encaixes } from "./encaixes";
@@ -43,7 +44,7 @@ export function instalarBancada(_jogo: Phaser.Game) {
           chave: c.chave,
           quadros: DIRECOES.length * COLUNAS_FOLHA,
         })),
-        { chave: p.roupa.chave, quadros: 12 },
+        ...(p.roupa ? [{ chave: p.roupa.chave, quadros: 12 }] : []),
         ...(p.arma ? [{ chave: p.arma.chave, quadros: 0 }] : []),
       ];
     },

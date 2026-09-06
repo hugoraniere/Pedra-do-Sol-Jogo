@@ -36,8 +36,6 @@ import {
   LARGURA_PERSONAGEM,
   CABELOS,
   ROUPAS,
-  RACAS,
-  CLASSES,
   tonsDaRaca,
   RACAS_SPRITE,
   TIPOS_CORPO,
@@ -49,7 +47,7 @@ import {
   ARMA_DA_CLASSE,
   CHAPEU_DA_CLASSE,
 } from "../dados/config";
-import { ATRIBUTOS, ORDEM_PODERES, acharMagia } from "../dados/conteudo";
+import { ATRIBUTOS, ORDEM_PODERES, acharMagia, RACAS, CLASSES } from "../dados/conteudo";
 import { poderesDaOrigem, poderEscolhidoDoHeroi, poderesDoHeroi } from "../sistemas/poderes";
 import { novoJogo, VAZIO, Heroi as FichaHeroi } from "../sistemas/estado";
 import { botao, Botao } from "../sistemas/botao";

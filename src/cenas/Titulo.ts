@@ -9,7 +9,7 @@
  * sobra vazia em qualquer proporcao. `refazerAoRedimensionar` reconstroi tudo
  * quando o tamanho muda. */
 import Phaser from "phaser";
-import { musica } from "../sistemas/som";
+import { musica, tocar } from "../sistemas/som";
 import { LARGURA, ALTURA, COR } from "../dados/config";
 import { texto } from "../sistemas/texto";
 import { botao, Botao } from "../sistemas/botao";
@@ -22,6 +22,7 @@ import {
   sairDoJogo,
   ultimoEspaco,
 } from "../sistemas/armazenamento";
+import { desbloquearDepurador } from "../sistemas/depurador-acesso";
 
 const VERSAO = "v0.2";
 
@@ -38,6 +39,12 @@ export class Titulo extends Phaser.Scene {
   private botoes: Botao[] = [];
   private foco = 0;
   private aviso?: Phaser.GameObjects.BitmapText;
+  /** cada toque no texto de versao empilha aqui, e so os dos ultimos 2.5s
+   *  contam -- 7 toques na janela destravam o modo DEPURADOR (mesmo gesto
+   *  do "toque 7x no numero da build" que destrava opcoes de desenvolvedor
+   *  no Android: nao acontece por acidente, mas nao exige teclado nem
+   *  build separada, entao funciona igual no navegador e no app). */
+  private tapsDeVersao: number[] = [];
 
   constructor() {
     super("Titulo");
@@ -55,7 +62,21 @@ export class Titulo extends Phaser.Scene {
     this.montarMenu();
     this.montarTeclado();
 
-    texto(this, LARGURA - 4, ALTURA - 10, VERSAO, { ancora: 1, cor: 0xfff8ea }).setAlpha(0.7);
+    const textoVersao = texto(this, LARGURA - 4, ALTURA - 10, VERSAO, {
+      ancora: 1,
+      cor: 0xfff8ea,
+    }).setAlpha(0.7);
+    textoVersao.setInteractive({ useHandCursor: false });
+    textoVersao.on("pointerdown", () => {
+      const agora = Date.now();
+      this.tapsDeVersao = [...this.tapsDeVersao, agora].filter((t) => agora - t < 2500);
+      if (this.tapsDeVersao.length < 7) return;
+      this.tapsDeVersao = [];
+      desbloquearDepurador();
+      tocar("menu-confirma");
+      textoVersao.setTint(0xf5b62b);
+      this.time.delayedCall(400, () => textoVersao.clearTint());
+    });
 
     // a janela muda de tamanho (redimensionar, girar o tablet, trocar a
     // visao no meio do jogo): tudo aqui e desenhado a partir de LARGURA e
