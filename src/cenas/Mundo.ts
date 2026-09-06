@@ -803,9 +803,12 @@ export class Mundo extends Phaser.Scene {
     if (alvo.chave.startsWith("item-largado:")) {
       const dados = this.itensNoChao.get(alvo.chave);
       if (dados) {
-        guardar(dados.item, dados.quantidade);
-        tocar("moeda");
-        this.removerItemDoChao(alvo.chave);
+        // mochila cheia: guardar() falha sem gastar nada - o item continua
+        // no chao (nao remove) em vez de sumir sem aviso nenhum.
+        if (guardar(dados.item, dados.quantidade)) {
+          tocar("moeda");
+          this.removerItemDoChao(alvo.chave);
+        }
       }
       return;
     }
