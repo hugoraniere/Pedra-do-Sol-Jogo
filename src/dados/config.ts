@@ -51,6 +51,10 @@ export const COR = {
   terraEscura: 0x9e764c,
   pinheiro: 0x4c8c68,
   pinheiroEscuro: 0x1e483c,
+  /** ícones de game-icons.net (2026-09-05): cinza neutro pra atributo/acao basica */
+  cinzaNeutro: 0x96a0b8,
+  /** ícones de game-icons.net (2026-09-05): tom de luz pra elemento Luz */
+  luzFria: 0xf7e7b8,
 } as const;
 
 /** Indices do tileset.png, na mesma ordem de arte/tiles.py */

@@ -109,6 +109,12 @@ DENTE      = (238, 234, 214)
 BRANCO     = (255, 255, 255)
 VAZIO      = (0, 0, 0, 0)
 
+# --------------------------------------------------------- icones de game-icons.net
+# Duas cores novas, cadastradas 2026-09-05 pra suportar a familia de icones nova.
+# Cinza neutro para atributo e acao basica, tom de luz para magia de elemento Luz.
+CINZA_NEUTRO = (150, 160, 184)   # #96A0B8 - atributo, acao basica
+LUZ_FRIA     = (247, 231, 184)   # #F7E7B8 - elemento Luz
+
 # cores que a crianca escolhe na criacao do personagem.
 # o sprite e desenhado em branco nas camadas de cabelo e roupa e recebe tint em runtime.
 CABELOS = [
