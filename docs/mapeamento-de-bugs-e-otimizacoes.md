@@ -138,12 +138,12 @@ NAO entram aqui - aquilo e decisao tomada, nao bug.
 - **descricao:** a secao "o que o Boot manda carregar" ignora todo caminho com `${...}` alegando "o check de objetos ja cobre" - verdade so para `OBJETOS`; `heroi-corpo-${raca}-${i}`, `roupa-${t}-${r.id}`, `armadura-${t}-${id}` e `arma-${a}` nao sao objetos de cenario e nao passam por nenhuma checagem de `verificar`.
 - **cenario:** a unica rede de seguranca real pra esses PNGs templados e `npm run conferir` (abre navegador, testa as 25 combinacoes) - script separado, nao citado como obrigatorio junto de `verificar` no fluxo rapido; se `conferir` for pulado, um PNG de armadura/arma faltando so aparece como textura ausente em producao.
 
-#### Filtro de erro de console por substring "404" pode engolir erro real
-- **arquivo:** ferramentas/auditar-ui.mjs:53-55; ferramentas/conferir-personagens.mjs:54-56
+#### Filtro de erro de console por substring "404" pode engolir erro real (em TRES scripts, nao so dois)
+- **arquivo:** ferramentas/auditar-ui.mjs:53-55; ferramentas/conferir-personagens.mjs:54-56; ferramentas/auditar-celular.mjs:84
 - **severidade:** baixo
 - **categoria:** harness
-- **descricao:** o filtro descarta qualquer mensagem `console.error` que contenha a substring "404" em qualquer lugar do texto, nao so erro de rede de asset.
-- **cenario:** um erro de aplicacao que por coincidencia cite "404" (um id de item, um id de mapa) e silenciosamente descartado da lista de erros da auditoria, em vez de reprovar a tela.
+- **descricao:** o filtro descarta qualquer mensagem `console.error` que contenha a substring "404" em qualquer lugar do texto, nao so erro de rede de asset - e a mesma logica esta duplicada nos tres scripts de auditoria via navegador.
+- **cenario:** um erro de aplicacao que por coincidencia cite "404" (um id de item, um id de mapa) e silenciosamente descartado da lista de erros de qualquer uma das tres auditorias (incluindo a de celular, que passeia por 5 aparelhos x 2 orientacoes), em vez de reprovar a tela.
 
 #### `npm run ambiente criar` tem race condition na escolha do numero da porta
 - **arquivo:** ferramentas/ambiente.mjs:117-123
@@ -463,6 +463,36 @@ NAO entram aqui - aquilo e decisao tomada, nao bug.
 - **categoria:** bug
 - **descricao:** a engrenagem de pausa tem area de toque 26x20 (mais estreita em altura que qualquer seta do direcional), e o botao do nome do heroi (abre a Ficha) tem altura interativa de so ~15 unidades - ambos abaixo do direcional, ja problematico no achado acima.
 - **cenario:** na mesma tela pequena em escala 1, tocar pra pausar ou abrir a ficha (as duas unicas formas de pausar/ver status no toque) fica ainda mais impreciso que tocar o direcional - 20 e 15 pixels CSS de altura real, quase do tamanho de um dedo de lado, nao da polpa do dedo.
+
+### Harness de testes, parte 2
+
+#### `npm run conferir` nunca reconstroi o dist - so verifica o build antigo
+- **arquivo:** package.json (script `"conferir"`) vs ferramentas/conferir-personagens.mjs:20,29-32
+- **severidade:** critico
+- **categoria:** harness
+- **descricao:** ao contrario de `"auditar": "npm run build && node ferramentas/auditar-ui.mjs"`, o script `"conferir"` e so `node ferramentas/conferir-personagens.mjs`, sem `npm run build` antes; o arquivo so checa `existsSync("dist")` - se `dist` ja existe (de um build anterior), nunca e regenerado, e o teste roda 100% contra o bundle antigo.
+- **cenario:** alguem edita `src/dados/config.ts` (troca roupa/arma de uma classe, desconfigura um encaixe) e roda so `npm run conferir` - exatamente o fluxo que `docs/estudo-de-sprites.md` recomenda. O `dist/` antigo ainda tem as texturas certas, o teste sai "tudo ok", e o bug real so aparece quando alguem rodar `npm run build` de verdade ou em producao.
+
+#### `conferir-personagens.mjs` usa espera fixa onde a ferramenta irma ja resolveu isso corretamente
+- **arquivo:** ferramentas/conferir-personagens.mjs:58-59 (comparar com ferramentas/auditar-celular.mjs:129,139 `waitForFunction`)
+- **severidade:** medio
+- **categoria:** harness
+- **descricao:** o script espera `waitForTimeout(2500)` cego antes de chamar `window.__aurora`/`window.jogo`, em vez de esperar condicao real (`waitForFunction`), padrao que `auditar-celular.mjs` ja usa.
+- **cenario:** em CI/maquina mais lenta (ou quando o dist cresce com mais bestiario/magias), o boot pode passar de 2,5s; `window.__aurora` ainda nao existe quando o `evaluate()` roda, o script imprime "erros no console" e falha por lentidao do ambiente - nao por problema real de sprite - mascarando quando o boot de fato ficou mais pesado.
+
+#### `conferir-teste.mjs` tem duas asserções que nunca podem falhar
+- **arquivo:** ferramentas/conferir-teste.mjs:23,30
+- **severidade:** baixo
+- **categoria:** harness
+- **descricao:** duas chamadas passam o literal `true` como condicao de sucesso - a funcao `caso()` so registra falha quando `!ok`, entao essas linhas sao vacuas: contam como "casos que passaram" sem checar nada de fato.
+- **cenario:** se `testar()` mudar de um jeito que quebra exatamente o comportamento que essas linhas alegam cobrir (critico ignorar modificador/ND), `npm run teste` continua imprimindo "OK" pra esses dois casos, dando falsa confianca de cobertura onde nao ha checagem nenhuma.
+
+#### `registrar-resolver-ts.mjs` importa `pathToFileURL` e nunca usa
+- **arquivo:** ferramentas/registrar-resolver-ts.mjs:6
+- **severidade:** baixo
+- **categoria:** otimizacao
+- **descricao:** o import nao e referenciado em lugar nenhum do arquivo - sobra provavel de uma versao anterior do bootstrap de resolucao de `.ts`.
+- **cenario:** sem efeito funcional hoje, mas quem for depurar por que um import nao resolve nesse hook pode perder tempo achando que esse import tem papel na resolucao, quando quem faz o trabalho e outro arquivo.
 
 ## Status
 
