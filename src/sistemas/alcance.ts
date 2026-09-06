@@ -55,7 +55,7 @@ export function alcancaveis(
         // diagonal so passa se as duas retas ao lado tambem passarem, senao o
         // heroi corta a quina de uma parede e atravessa o que era solido
         if (v.tx !== 0 && v.ty !== 0) {
-          if (!passavel(atual.tx + v.tx, atual.ty) && !passavel(atual.tx, atual.ty + v.ty)) continue;
+          if (!passavel(atual.tx + v.tx, atual.ty) || !passavel(atual.tx, atual.ty + v.ty)) continue;
         }
         const casa: Alcancada = { tx, ty, custo: passo, de: chaveDaCasa(atual.tx, atual.ty) };
         achadas.set(chave, casa);
