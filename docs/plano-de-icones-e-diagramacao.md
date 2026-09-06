@@ -3,6 +3,14 @@
 Dois pedidos, um pequeno e um grande. Nenhum dos dois foi implementado ainda —
 isto é o plano, para revisar antes de mexer.
 
+**Correção de 2026-09-06: a seção 2 (ícones) descreve o modelo de 3
+atributos (Força/Esperteza/Coração) e pixel art desenhada em `arte/ui.py` -
+os dois ficaram pra trás.** Hoje são 5 atributos, e a decisão de 2026-09-05
+trocou ícone de atributo/magia por SVG de terceiro (game-icons.net) em vez
+de pixel art - `sistemas/icones-svg.ts` já cobre os 5 atributos e as 13
+magias, `ATRIBUTOS[x].icone` deixou de ser campo morto. Ver
+`docs/inventario-de-icones.md` para o estado atual e o que ainda falta.
+
 ---
 
 ## 1. A caixa do herói muda de tamanho (bug, conserto pequeno)

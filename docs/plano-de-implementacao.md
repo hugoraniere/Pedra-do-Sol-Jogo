@@ -598,6 +598,15 @@ barra, em vez das 13 magias e das armas de verdade; e o tipo `Bicho` de
 adicionado na Fase 3, mas so la). Sem essas duas coisas nao tem onde pendurar
 nem a marca nem a condicao no jogo real. Sao o primeiro passo abaixo.
 
+**Correcao de 2026-09-06: as duas ja foram fechadas, por outro caminho do que
+este paragrafo previa.** `Bicho` em `Combate.ts` ja tem `condicoes:
+Condicao[]` de verdade. A barra nao trocou `ACOES_DE_PROVA` por um
+`dados/habilidades.ts` novo (proposta mais abaixo neste documento) - em vez
+disso, `acoesDoHeroi()` (`sistemas/acao.ts`) le `MAGIAS`/`ARMAS` direto de
+`conteudo.ts` e monta a barra a partir do heroi de verdade. `dados/
+habilidades.ts` nunca chegou a existir; quem for mexer na barra de combate
+hoje procura em `sistemas/acao.ts` e `sistemas/hudDeAcao.ts`.
+
 ---
 
 ## FASE 9 . as treze magias de verdade na barra

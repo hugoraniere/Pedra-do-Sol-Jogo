@@ -47,6 +47,15 @@ Testado no jogo rodando: sem corte reto, sem erro no console.
 
 ### 1.2 Em `ambiente/sprites`, esperando portar
 
+**Correcao de 2026-09-06: as tres pecas abaixo (maos, perfil, ciclo de
+caminhada) ja foram portadas pra pasta principal - "esperando portar" nao
+vale mais.** `arte/pessoa.py` ja trata o perfil como corpo mais fino com uma
+orelha so e ja desenha a mao com o degrau de silhueta descrito aqui;
+`arte/base.py` (`deslocamento()`) ja implementa "passada e posicao, nao
+comprimento" quase palavra por palavra. Nao tente portar de `ambiente/
+sprites` de novo - arriscaria sobrescrever a versao atual com uma copia
+desatualizada da outra worktree.
+
 Independentes do chao — a resolucao da secao 0 nao afeta nenhum destes.
 
 **As maos**, em `bracos()`: braco, pulso em sombra, mao 1 px mais larga. Vale

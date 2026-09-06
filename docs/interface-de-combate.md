@@ -1,7 +1,16 @@
 # Interface, cor e animacao do combate
 
-Plano de melhoria. Nada aqui foi executado ainda. Escrito depois de olhar o
-provador rodando (`?provador`), nao de imaginar como ele estaria.
+Plano de melhoria. Escrito depois de olhar o provador rodando (`?provador`),
+nao de imaginar como ele estaria.
+
+**Correcao de 2026-09-06: "nada aqui foi executado ainda" nao vale mais -
+isto descreve o `?provador` antigo, e `Combate.ts`/`hudDeAcao.ts` (o jogo de
+verdade) ja resolveram pelo menos 4 dos 6 defeitos da tabela abaixo**: #2
+(cada slot mostra o numero do atalho, `hudDeAcao.ts`), #4 (barra de vida de
+verdade no HUD, `atualizarVida`), #5 (golpe e magia sao poses diferentes
+desde que a folha de sprite ganhou 8 colunas) e #1 (o marcador de chao usa
+elipse, nao circulo, `Combate.ts` `strokeEllipse`). #3 e #6 nao foram
+reconferidos nesta rodada - confirme antes de supor que tambem ja mudaram.
 
 O documento irmao, `docs/11-combate-e-magias.md`, decide **o que** o combate faz.
 Este decide **como ele se parece e como ele se mexe**.

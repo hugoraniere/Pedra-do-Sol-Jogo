@@ -1,7 +1,13 @@
 # Plano: resolucao, contraste e UI
 
 Escrito depois da reforma de racas e classes, para ser executado em fases.
-Nada aqui foi implementado ainda.
+
+**Nota de 2026-09-06: a Fase 0 de contraste ja foi executada** - `arte/
+paleta.py` tem `forca=54` (nao 42, o valor citado mais abaixo como "hoje"),
+entre os 42 originais e os 56/64 que este documento sugeria testar; os
+comentarios vizinhos no proprio codigo ("os tres tons de pele subiram... o
+chao desceu") confirmam o trabalho feito. O resto do documento (resolucao,
+contorno, texto) segue valendo como plano.
 
 > **A "Escolha 1" deste documento foi retomada em `docs/estudo-de-resolucao.md`.**
 > Aqui a recomendacao era a opcao B, 32 x 64. La a recomendacao e **tile 48,
@@ -87,7 +93,9 @@ decisao de resolucao.
 - Escurecer a grama e a terra em dois passos e clarear a pele em um. O
   personagem passa a saltar do chao.
 - Aumentar a distancia entre sombra e luz na funcao `rampa()` de
-  `arte/paleta.py`. Hoje a forca padrao e 42; testar 56 e 64.
+  `arte/paleta.py`. Escrito quando a forca padrao era 42; ja foi pra 54 (ver
+  nota de 2026-09-06 no topo do documento) - se ainda nao for suficiente,
+  56 e 64 continuam os proximos valores a testar.
 - Contorno mais escuro em tudo que se move (pessoas, goblins, aranhas) e
   contorno normal no cenario. E o truque que os jogos de pixel usam para dizer
   ao olho o que e ator e o que e fundo.
