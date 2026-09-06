@@ -20,6 +20,63 @@ ferramentaria de verificacao).
 Achados que so repetem uma "Divergencia deliberada" ja escrita em `CLAUDE.md`
 NAO entram aqui - aquilo e decisao tomada, nao bug.
 
+Todo achado marcado **critico** passou por uma revisao adversarial separada
+(um agente tentando ativamente provar que cada um estava errado ou
+exagerado, lendo o codigo linha a linha e rodando script quando fazia
+sentido). De 12 achados criticos revisados, 11 foram **confirmados** por
+leitura e/ou reproducao direta, e 1 foi rebaixado pra `medio` por nao bater
+com a propria definicao de severidade deste documento (fica marcado inline
+onde acontece). Isso nao significa que o resto do documento (medio/baixo)
+passou pelo mesmo crivo adversarial - so os criticos.
+
+## Resumo executivo (os 10 achados de maior impacto)
+
+Por tema, nao por ordem de gravidade estrita - os quatro temas sao igualmente
+urgentes a sua maneira:
+
+**Controle de toque quebrado (a plataforma primaria do jogo)**
+1. `main.ts` nunca configura `input.activePointers` - o jogo inteiro so aceita
+   **um dedo por vez**. Segurar uma seta e tocar o botao A ao mesmo tempo (ou
+   andar na diagonal com dois dedos) simplesmente nao funciona.
+2. Setas do direcional (26x26) e botao de acao (34x34) caem abaixo do minimo
+   de 44px de alvo de toque em telas de celular comuns na horizontal.
+3. Os slots de habilidade/ataque do combate (24x28) sao ainda menores - erro
+   de toque no momento em que a decisao tem custo real (moedas, itens).
+
+**Progresso e prejuizo da derrota nao sao confiaveis**
+4. Perder uma luta com a arma da classe equipada: o item some da mochila no
+   sorteio da derrota, mas volta sozinho de graca ao recarregar a pagina -
+   o "prejuizo de verdade" que e o pilar de design do jogo (ver CLAUDE.md)
+   desaparece pra qualquer item equipado.
+5. Jogar fora (ou perder pra lixeira) um item de equipamento nao desequipa o
+   heroi - ele fica "vestindo" uma peca que nao existe em lugar nenhum.
+6. Entrar/sair de mapas varias vezes (ou apanhar uma derrota) acumula
+   listeners de evento na Interface sem nunca remove-los - o mesmo toque no
+   botao de acao pode **duplicar item e dinheiro recolhidos**.
+7. No app desktop, salvar e clicar em "SAIR DO JOGO" em seguida pode perder
+   a ultima acao: a escrita em disco e assincrona e o processo fecha sem
+   esperar ela terminar.
+8. Duas abas do navegador no mesmo slot de save se sobrescrevem em silencio,
+   sem versao/timestamp/lock nenhum entre elas - uma sessao inteira de jogo
+   pode ser apagada pela outra aba.
+
+**Combate por turnos com logica incompleta**
+9. As duas magias de controle do jogo (Cresce-Grama "preso", Voz de Trovao
+   "assustado") nao tem NENHUM efeito em jogo - `decidirAcaoDaCriatura` nem
+   recebe as condicoes como parametro.
+10. O Combate nunca reage a redimensionamento/rotacao da tela - girar o
+    tablet no meio de uma luta pode deixar botoes de acao fora da area
+    visivel, num combate que ja tem prejuizo real.
+
+**A propria harness deixa passar regressao**
+- `npm run derrota` esta quebrado agora mesmo (import sem extensao, node puro
+  sem o loader certo) - **confirmado rodando**, e ninguem percebeu porque os
+  4 scripts de logica pura (`teste`/`criatura`/`condicoes`/`derrota`) nao
+  entram no `npm run build` nem no workflow do GitHub Pages.
+- `npm run conferir` nunca reconstroi o `dist` antes de testar - se ele ja
+  existir de um build anterior, o teste roda contra o bundle antigo e nao
+  pega a regressao que acabou de ser introduzida.
+
 ## Achados
 
 ### Geracao de arte e som (arte/*.py, som/*.py)
@@ -380,7 +437,7 @@ NAO entram aqui - aquilo e decisao tomada, nao bug.
 
 #### CLAUDE.md contradiz a si mesmo: diz que o sistema de dado/atributo/combate nao existe, mas o resto do proprio arquivo (e o codigo) mostra que existe
 - **arquivo:** CLAUDE.md:223-224 vs CLAUDE.md:59-190 (mesmo arquivo, secao "As regras do mundo") e docs/05-roadmap.md:53-106; **confirmado em codigo**: src/sistemas/teste.ts:32 (`testar()`), src/sistemas/poderes.ts:51,72 (`poderesDoHeroi()`, `coracoesMaxDoHeroi()`), src/sistemas/estado.ts:409,453,482 (`acenderFogueira()`, `aplicarDerrota()`, `ganharSelo()`), src/cenas/Combate.ts, src/cenas/EscolhaDeSelo.ts
-- **severidade:** critico
+- **severidade:** medio *(rebaixado de "critico" apos revisao adversarial: pela propria definicao de severidade deste documento - "critico = quebra o jogo, trava build, ou perde dado do jogador" - nada disso acontece aqui; e um erro de documentacao como os outros 5 desta mesma secao, todos "medio". O risco de processo de confiar numa afirmacao falsa em CLAUDE.md e real, mas nao muda a categoria.)*
 - **categoria:** harness
 - **descricao:** CLAUDE.md afirma, em negrito: "Nada do sistema da secao anterior existe em codigo ainda. Nao ha dado, atributo, coracao, combate, derrota, fogueira nem selo." **Confirmado por grep que isso e falso**: as 6 funcoes citadas existem e implementam exatamente dado (1d20+ND), atributo, coracao, derrota, fogueira e selo.
 - **cenario:** CLAUDE.md e a fonte de verdade lida primeiro por qualquer sessao/dev nova, com instrucao explicita de valer "mais que qualquer suposicao sua sobre o projeto" - quem le so ate essa frase conclui que o maior buraco do projeto e o sistema inteiro (dado/combate/derrota), quando a Fase 1 esta com o essencial implementado - risco real de redigitar trabalho ja feito ou recomendar a fase errada do roadmap.
