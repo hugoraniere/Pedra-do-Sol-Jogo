@@ -64,6 +64,21 @@ export type Peca = { nome: string; x: number; y: number; solido?: boolean };
 export type PontoDeRotina = { x: number; y: number; entra?: true };
 export type RotinaDeNpc = Record<Periodo, PontoDeRotina | "escondido">;
 
+/** Pose tematica pra mostrar o NPC "trabalhando" sempre que ele estiver
+ *  parado longe de casa (nunca na porta, que ja some sozinha) — reusa as
+ *  poses `conjura` (braco erguido) e `ataque` (braco esticado) que toda
+ *  folha de NPC ja desenha e nunca toca fora de combate (ver
+ *  `Mundo.ts::poseParadaDoNpc`). So quem tem oficio visivel na bio
+ *  (npcs.ts) entra aqui; o resto (vovo cuidando de erva, as duas criancas
+ *  brincando) fica no `parado` de sempre — forcar uma pose pra eles ia ler
+ *  estranho. Zero arte nova: as duas poses ja existem pra todo NPC. */
+export const ATIVIDADE_DO_NPC: Partial<Record<string, "conjura" | "ataque">> = {
+  ferreiro: "conjura", // martelando na forja
+  padeira: "conjura", // mexendo no forno
+  mercador: "ataque", // gesto de oferecer/vender na barraca
+  pescador: "ataque", // braco esticado, como quem seguraria a vara
+};
+
 /** `rotina` e opcional: sem ela a pessoa fica sempre no `x,y` de baixo, igual
  *  sempre foi. Com ela, `x,y` continua sendo onde a pessoa NASCE na cena (por
  *  isso os dois costumam bater com o periodo em que o save comeca). */

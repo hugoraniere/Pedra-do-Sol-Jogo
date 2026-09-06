@@ -1,13 +1,13 @@
 /** O mundo jogavel. Monta o chao, os objetos, as pessoas e o heroi,
  *  e cuida de andar, esbarrar e conversar. */
 import Phaser from "phaser";
-import { TILE, SOLIDOS, COR, ALTURA_PERSONAGEM, escalaDoSprite, direcaoDe, type NomeDirecao } from "../dados/config";
-import { MAPAS, VILA, montarChao, bordasDeGrama, plantarMata, Mapa, Saida, type Pessoa, type PontoDeRotina } from "../dados/mapas";
-import { acharCriatura, nomeDoItem, spriteDoGoblin } from "../dados/conteudo";
+import { TILE, SOLIDOS, COR, ALTURA_PERSONAGEM, escalaDoSprite, direcaoDe, SPRITE_DA_ARMA, type NomeDirecao } from "../dados/config";
+import { MAPAS, VILA, montarChao, bordasDeGrama, plantarMata, Mapa, Saida, ATIVIDADE_DO_NPC, type Pessoa, type PontoDeRotina } from "../dados/mapas";
+import { acharCriatura, acharRaca, nomeDoItem, spriteDoGoblin } from "../dados/conteudo";
 import { DIALOGOS, type Escolha } from "../dados/dialogos";
 import { concluirEtapa } from "../sistemas/missoes";
 import {
-  estado, salvar, marcarVisitado, foiDerrotado, guardar,
+  estado, salvar, marcarVisitado, foiDerrotado, guardar, equipar, ganharSelo,
   foiAcesa, acenderFogueira, ultimaFogueiraAcesa,
 } from "../sistemas/estado";
 import { ICONE } from "../sistemas/icones";
@@ -28,7 +28,7 @@ import {
 import { definirEstado } from "../sistemas/cursor";
 import { avancarRelogio, corDoCeu, periodoAtual } from "../sistemas/tempo";
 import { avancarMoodles } from "../sistemas/moodles";
-import type { Periodo } from "../dados/tempo";
+import { MINUTOS_POR_DIA, type Periodo } from "../dados/tempo";
 
 type FichaObjeto = { w: number; h: number; cw: number; ch: number };
 /** x,y e o CENTRO da caixa de verdade do alvo (nao um ponto arbitrario perto
@@ -430,7 +430,8 @@ export class Mundo extends Phaser.Scene {
       const s = this.add.sprite(x, y, `npc-${pessoa.sprite}`, 0).setOrigin(0.5, 1);
       s.setDepth(y);
       s.setVisible(!escondidoInicial);
-      s.play(`npc-${pessoa.sprite}-parado-baixo`, true);
+      const atividadeInicial = !escondidoInicial ? ATIVIDADE_DO_NPC[pessoa.quem] : undefined;
+      s.play(`npc-${pessoa.sprite}-${atividadeInicial ?? "parado"}-baixo`, true);
       const corpo = this.add.rectangle(x, y - 4, 10, 8);
       this.solidos.add(corpo);
       (corpo.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
@@ -574,6 +575,7 @@ export class Mundo extends Phaser.Scene {
     this.scene.setVisible(true, "Interface");
     this.scene.get("Interface").events.on("acao", () => this.tentarInteragir());
     this.scene.get("Interface").events.on("pausar", () => this.pausar());
+    this.ligarEventosDoDepurador();
     if (this.derrotaPendente) this.avisarDerrota(this.derrotaPendente);
     this.input.on("pointerdown", (p: Phaser.Input.Pointer) => this.aoPressionarNoMundo(p));
     this.input.on("pointerup", () => this.aoSoltarNoMundo());
@@ -635,6 +637,94 @@ export class Mundo extends Phaser.Scene {
     this.heroi.mover(0, 0);
     this.scene.pause();
     this.scene.launch("Pausa");
+  }
+
+  /** O modo DEPURADOR (Pausa -> "DEPURADOR") fala com Mundo do mesmo jeito
+   *  que Interface fala: eventos na propria cena, nunca uma chamada direta.
+   *  `removeAllListeners()` primeiro porque `create()` roda de novo a cada
+   *  `trocarDeMapa()` (`scene.restart()`) — sem isto, cada teleporte
+   *  empilharia mais uma copia de cada listener, e um unico toque em "+10
+   *  moedas" viraria +10, +20, +30... depois de N teleportes. */
+  private ligarEventosDoDepurador() {
+    const depurador = this.scene.get("Depurador").events;
+    depurador.removeAllListeners();
+
+    depurador.on("depurar-teletransportar", ({ mapaId }: { mapaId: string }) => {
+      const destino = MAPAS[mapaId];
+      if (!destino) return;
+      this.trocarDeMapa({ x: 0, y: 0, w: 1, h: 1, para: mapaId, entrada: destino.entrada });
+    });
+
+    depurador.on("depurar-trocar-raca", ({ racaId }: { racaId: string }) => {
+      const st = estado();
+      st.heroi.raca = racaId;
+      // mesma conta que novoJogo() faz na criacao: a raca decide o teto
+      st.coracoesMax = acharRaca(racaId).coracoes;
+      st.coracoes = st.coracoesMax;
+      salvar();
+      this.heroi.trocarAparencia(st.heroi);
+    });
+
+    depurador.on("depurar-trocar-classe", ({ classeId }: { classeId: string }) => {
+      estado().heroi.classe = classeId;
+      salvar();
+      this.heroi.trocarAparencia(estado().heroi);
+    });
+
+    depurador.on("depurar-ajustar-coracoes", (p: { delta?: number; encher?: boolean }) => {
+      const st = estado();
+      st.coracoes = p.encher
+        ? st.coracoesMax
+        : Phaser.Math.Clamp(st.coracoes + (p.delta ?? 0), 0, st.coracoesMax);
+      salvar();
+    });
+
+    depurador.on("depurar-ajustar-moedas", ({ delta }: { delta: number }) => {
+      estado().moedas = Math.max(0, estado().moedas + delta);
+      salvar();
+    });
+
+    depurador.on("depurar-ganhar-selo", () => {
+      // ganharSelo() so incrementa; quem decide abrir a escolha e sempre o
+      // chamador, comparando o multiplo de 3 antes/depois -- mesmo
+      // comparador que a vitoria de combate ja usa (Combate.ts).
+      const antes = Math.floor(estado().selos / 3);
+      ganharSelo();
+      const agora = Math.floor(estado().selos / 3);
+      if (agora > antes) {
+        this.scene.stop("Depurador");
+        this.scene.pause("Mundo");
+        this.scene.pause("Interface");
+        this.scene.launch("EscolhaDeSelo");
+      }
+    });
+
+    depurador.on("depurar-equipar-arma", ({ armaId }: { armaId: string }) => {
+      // mesmo par de chamadas que a Ficha faz ao equipar de verdade:
+      // primeiro vira posse na mochila, so depois equipa
+      guardar(armaId);
+      equipar("arma", SPRITE_DA_ARMA[armaId]);
+      this.heroi.trocarAparencia(estado().heroi);
+    });
+
+    depurador.on("depurar-dar-item", ({ itemId, quantidade }: { itemId: string; quantidade: number }) => {
+      guardar(itemId, quantidade);
+    });
+
+    depurador.on("depurar-ajustar-relogio", ({ minutos }: { minutos: number }) => {
+      estado().relogio = ((minutos % MINUTOS_POR_DIA) + MINUTOS_POR_DIA) % MINUTOS_POR_DIA;
+      salvar();
+    });
+
+    depurador.on("depurar-ajustar-fome", ({ valor }: { valor: number }) => {
+      estado().fome = Phaser.Math.Clamp(valor, 0, 100);
+      salvar();
+    });
+
+    depurador.on("depurar-ajustar-sono", ({ valor }: { valor: number }) => {
+      estado().sono = Phaser.Math.Clamp(valor, 0, 100);
+      salvar();
+    });
   }
 
   /** Sem `alvoForcado`: o botao A e o espaco, que agem no que estiver na
@@ -1012,11 +1102,20 @@ export class Mundo extends Phaser.Scene {
       this.esconderNpc(npc);
       return;
     }
-    npc.sprite.play(`npc-${npc.pessoa.sprite}-parado-${npc.direcaoAtual}`, true);
+    npc.sprite.play(this.poseParadaDoNpc(npc), true);
     npc.corpo.setPosition(npc.sprite.x, npc.sprite.y - 4);
     const corpo = npc.corpo.body as Phaser.Physics.Arcade.StaticBody;
     corpo.enable = true;
     corpo.updateFromGameObject();
+  }
+
+  /** A pose de "parado" de um NPC: `conjura`/`ataque` pra quem tem oficio
+   *  visivel em `ATIVIDADE_DO_NPC` (mapas.ts), senao o `parado` de sempre.
+   *  Nunca chamada pra quem esta chegando na propria porta — esse caso
+   *  esconde em vez de mostrar qualquer pose (ver `finalizarRotaDoNpc`). */
+  private poseParadaDoNpc(npc: NpcComRotina): string {
+    const atividade = ATIVIDADE_DO_NPC[npc.pessoa.quem];
+    return `npc-${npc.pessoa.sprite}-${atividade ?? "parado"}-${npc.direcaoAtual}`;
   }
 
   /** Sem caminho possivel ate o alvo: pula direto pra la em vez de ficar
@@ -1029,7 +1128,7 @@ export class Mundo extends Phaser.Scene {
       this.esconderNpc(npc);
       return;
     }
-    npc.sprite.play(`npc-${npc.pessoa.sprite}-parado-${npc.direcaoAtual}`, true);
+    npc.sprite.play(this.poseParadaDoNpc(npc), true);
     npc.corpo.setPosition(destino.x, destino.y - 4);
     (npc.corpo.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject();
     npc.interagivel.x = destino.x;
