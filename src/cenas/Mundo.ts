@@ -8,7 +8,7 @@ import { DIALOGOS, type Escolha } from "../dados/dialogos";
 import { concluirEtapa } from "../sistemas/missoes";
 import {
   estado, salvar, marcarVisitado, foiDerrotado, guardar, equipar, ganharSelo,
-  foiAcesa, acenderFogueira, ultimaFogueiraAcesa,
+  foiAcesa, acenderFogueira,
 } from "../sistemas/estado";
 import { ICONE } from "../sistemas/icones";
 import { ICONE_ITEM } from "../sistemas/icones-itens";
@@ -1359,28 +1359,6 @@ export class Mundo extends Phaser.Scene {
     this.scene.resume("Interface");
   }
 
-  /** Chamado pelo Combate quando os coracoes chegam a zero. Fecha a luta e
-   *  acorda o heroi na ultima fogueira acesa — que pode estar num mapa
-   *  diferente de onde ele caiu, entao troca `estado().cena` como qualquer
-   *  saida de mapa (`conferirSaida()`) e reusa o mesmo `entradaForcada`. So
-   *  as moedas se perdem; missao, pista, afinidade e selo sao conhecimento e
-   *  nunca somem. */
-  acordarNaFogueira() {
-    this.sairDeCombate();
-    const chave = ultimaFogueiraAcesa();
-    const [cenaAlvo, coords] = chave.split(":");
-    const [tx, ty] = coords.split(",").map(Number);
-    const st = estado();
-    st.moedas = 0;
-    st.coracoes = st.coracoesMax;
-    st.cena = cenaAlvo;
-    st.lugar = MAPAS[cenaAlvo]?.lugar ?? st.lugar;
-    salvar();
-    this.cameras.main.fadeOut(500, 0, 0, 0);
-    this.cameras.main.once("camerafadeoutcomplete", () => {
-      this.scene.restart({ entrada: { x: tx, y: ty } });
-    });
-  }
 
   // ----------------------------------------------------------- o clique
   /** Um clique/toque no mundo pertence a UI, nunca ao mundo, se algum
