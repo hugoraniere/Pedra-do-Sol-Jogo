@@ -586,8 +586,19 @@ export class Mundo extends Phaser.Scene {
     // Mundo tem que comecar de um HUD utilizavel, nao so a normal.
     this.scene.resume("Interface");
     this.scene.setVisible(true, "Interface");
-    this.scene.get("Interface").events.on("acao", () => this.tentarInteragir());
-    this.scene.get("Interface").events.on("pausar", () => this.pausar());
+    // Interface nunca reinicia (so Mundo reinicia, em cada trocarDeMapa() ou
+    // derrota) - sem tirar os listeners de uma rodada anterior primeiro,
+    // cada restart empilha mais uma copia, e um so toque no botao de acao
+    // passa a rodar tentarInteragir() (e guardar() o item do chao) uma vez
+    // por copia acumulada, duplicando item e dinheiro. Mesma causa e mesma
+    // guarda de ligarEventosDoDepurador() logo abaixo: NUNCA
+    // removeAllListeners() neste emissor, que e onde o InputPlugin do
+    // Phaser assina "preupdate".
+    const interfaceEventos = this.scene.get("Interface").events;
+    interfaceEventos.off("acao");
+    interfaceEventos.off("pausar");
+    interfaceEventos.on("acao", () => this.tentarInteragir());
+    interfaceEventos.on("pausar", () => this.pausar());
     this.ligarEventosDoDepurador();
     // sobe sozinho, minimizado, junto com o Mundo -- nunca so quando alguem
     // pede. So existe pra quem ja destravou o gesto (ver depurador-acesso.ts).
@@ -601,6 +612,9 @@ export class Mundo extends Phaser.Scene {
     this.input.on("pointerdown", (p: Phaser.Input.Pointer) => this.aoPressionarNoMundo(p));
     this.input.on("pointerup", () => this.aoSoltarNoMundo());
     this.input.on("pointermove", (p: Phaser.Input.Pointer) => this.atualizarCursorDoMundo(p));
+    // mesmo motivo do off() de "acao"/"pausar" acima: create() roda de novo
+    // a cada restart e este listener nunca e limpo sozinho.
+    this.events.off("dialogo-fim");
     this.events.on("dialogo-fim", () => {
       this.conversando = false;
       // se o botao de acao ainda estiver segurado neste exato instante (o
