@@ -531,6 +531,10 @@ NAO entram aqui - aquilo e decisao tomada, nao bug.
 - **descricao:** o comentario diz explicitamente "abaixo" (estritamente menor) mas o codigo usa `<=` (menor-ou-igual) - foge tambem exatamente na metade da vida, nao so abaixo dela.
 - **cenario:** hoje inofensivo (o unico "foge" e o Goblin, `coracoes: 5`, impar - a fracao nunca cai exatamente em 0.5); mas uma criatura futura "foge" com coracoes par (a Aranha ja tem 8) expoe o bug de verdade: com 4 de 8 (exatamente metade), a criatura foge quando deveria continuar lutando ate cair estritamente abaixo da metade.
 
+## Verificado e limpo (nao vira achado, mas evita reverificar)
+
+- **Seguranca de entrada do jogador**: passe dedicado (innerHTML/eval/JSON.parse de localStorage/Electron/rede externa) nao achou vulnerabilidade explaravel. O unico `innerHTML` do projeto (`src/sistemas/doutor.ts:169`) escapa tudo que interpola e so mostra dado de diagnostico interno, nunca nome do heroi nem dialogo. `contextIsolation`/`nodeIntegration` do Electron corretos. Sem `fetch`/`XMLHttpRequest` no projeto.
+
 ## Status
 
 - [x] sistemas do jogo (src/sistemas)
